@@ -2,1123 +2,1114 @@
 <html lang="zh-Hant">
 <head>
   <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover" />
-  <title>小說生成器</title>
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>小說生成器（直觀介面版）</title>
   <style>
     :root{
-      --bg:#0b1020;
-      --panel:#0f1630;
-      --panel2:#111b3a;
-      --text:#e8ecff;
-      --muted:#aab3da;
-      --line:rgba(255,255,255,.09);
-      --accent:#6ee7ff;
-      --accent2:#a78bfa;
-      --danger:#ff6b6b;
-      --ok:#67e8a5;
-      --shadow: 0 18px 50px rgba(0,0,0,.45);
-      --radius: 18px;
-      --radius2: 14px;
-      --focus: 0 0 0 3px rgba(110,231,255,.18);
-      --mono: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
-      --sans: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, "Noto Sans TC", "PingFang TC","Microsoft JhengHei", sans-serif;
+      --bg:#0b1220;
+      --card:#101a33;
+      --card2:#0f1930;
+      --line:#223458;
+      --text:#e8eefc;
+      --muted:#a9b6d6;
+      --bad:#ff5a7a;
+      --ok:#37d67a;
+      --warn:#ffcc66;
+      --accent:#7aa7ff;
+      --accent2:#9b7aff;
+      --shadow: 0 16px 50px rgba(0,0,0,.45);
+      --radius:18px;
+      --radius2:22px;
     }
     *{box-sizing:border-box}
-    html,body{height:100%}
     body{
       margin:0;
-      font-family:var(--sans);
-      background:
-        radial-gradient(1200px 800px at 20% 0%, rgba(167,139,250,.20), transparent 55%),
-        radial-gradient(900px 650px at 90% 10%, rgba(110,231,255,.18), transparent 50%),
-        radial-gradient(900px 900px at 40% 120%, rgba(110,231,255,.09), transparent 55%),
-        var(--bg);
+      font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, "Noto Sans TC", "PingFang TC", "Microsoft JhengHei", Arial, sans-serif;
       color:var(--text);
+      background:
+        radial-gradient(1200px 700px at 20% 10%, rgba(122,167,255,.25), transparent 55%),
+        radial-gradient(1000px 700px at 85% 20%, rgba(155,122,255,.20), transparent 55%),
+        radial-gradient(900px 700px at 50% 90%, rgba(55,214,122,.10), transparent 60%),
+        var(--bg);
+      min-height:100vh;
     }
-    a{color:inherit}
-    .app{
-      max-width:1180px;
-      padding:22px 18px 26px;
+    .wrap{
+      max-width:1200px;
       margin:0 auto;
+      padding:24px 16px 42px;
     }
-    .topbar{
+    header{
       display:flex;
       gap:14px;
-      align-items:flex-start;
+      align-items:center;
       justify-content:space-between;
       margin-bottom:14px;
     }
     .brand{
-      display:flex; gap:12px; align-items:center;
+      display:flex;
+      align-items:center;
+      gap:12px;
     }
     .logo{
       width:44px;height:44px;border-radius:14px;
-      background:
-        radial-gradient(18px 18px at 30% 30%, rgba(255,255,255,.45), transparent 60%),
-        linear-gradient(135deg, rgba(110,231,255,.95), rgba(167,139,250,.95));
-      box-shadow: 0 12px 30px rgba(110,231,255,.12);
+      background: linear-gradient(135deg, rgba(122,167,255,.95), rgba(155,122,255,.95));
+      box-shadow: 0 12px 30px rgba(122,167,255,.25);
       position:relative;
       overflow:hidden;
     }
     .logo:after{
       content:"";
-      position:absolute; inset:-40%;
-      background:linear-gradient(45deg, rgba(255,255,255,.35), transparent 50%, rgba(255,255,255,.12));
-      transform:rotate(20deg);
+      position:absolute; inset:-30%;
+      background: radial-gradient(circle at 30% 30%, rgba(255,255,255,.35), transparent 60%);
+      transform: rotate(18deg);
     }
-    .title h1{
-      margin:0; font-size:18px; letter-spacing:.4px;
+    h1{
+      font-size:18px;
+      margin:0;
+      letter-spacing:.4px;
     }
-    .title p{
-      margin:4px 0 0;
-      color:var(--muted);
+    .subtitle{
+      margin:2px 0 0;
       font-size:13px;
-      line-height:1.35;
-    }
-    .pillrow{
-      display:flex; flex-wrap:wrap; gap:8px; justify-content:flex-end;
-      margin-top:4px;
+      color:var(--muted);
     }
     .pill{
-      display:inline-flex; align-items:center; gap:8px;
-      padding:8px 10px;
+      display:inline-flex;
+      gap:8px;
+      align-items:center;
+      padding:8px 12px;
       border:1px solid var(--line);
-      background: rgba(255,255,255,.03);
       border-radius:999px;
+      background: rgba(16,26,51,.55);
+      backdrop-filter: blur(8px);
       color:var(--muted);
       font-size:12px;
       user-select:none;
     }
-    .dot{
-      width:8px;height:8px;border-radius:99px;background:rgba(255,255,255,.10);
-      box-shadow: 0 0 0 2px rgba(255,255,255,.04) inset;
-    }
-    .dot.ok{background:rgba(103,232,165,.95)}
-    .dot.bad{background:rgba(255,107,107,.95)}
     .grid{
       display:grid;
-      grid-template-columns: 420px 1fr;
-      gap:14px;
-      align-items:stretch;
+      grid-template-columns: 1fr 1.15fr;
+      gap:16px;
+      margin-top:12px;
     }
     @media (max-width: 980px){
-      .grid{grid-template-columns: 1fr; }
-      .pillrow{justify-content:flex-start}
-      .topbar{flex-direction:column; align-items:stretch;}
+      .grid{grid-template-columns:1fr}
     }
-
     .card{
-      background: linear-gradient(180deg, rgba(255,255,255,.05), rgba(255,255,255,.02));
-      border:1px solid var(--line);
-      border-radius: var(--radius);
+      background: rgba(16,26,51,.78);
+      border:1px solid rgba(34,52,88,.85);
+      border-radius: var(--radius2);
       box-shadow: var(--shadow);
       overflow:hidden;
     }
-    .cardHeader{
-      padding:14px 14px 10px;
-      display:flex; align-items:center; justify-content:space-between; gap:10px;
-      border-bottom:1px solid var(--line);
-      background:
-        radial-gradient(600px 200px at 20% 0%, rgba(110,231,255,.08), transparent 70%),
-        radial-gradient(480px 240px at 90% 0%, rgba(167,139,250,.08), transparent 70%),
-        rgba(0,0,0,.02);
+    .card .hd{
+      padding:14px 16px;
+      display:flex;
+      align-items:center;
+      justify-content:space-between;
+      border-bottom:1px solid rgba(34,52,88,.85);
+      background: rgba(15,25,48,.55);
     }
-    .cardHeader h2{
-      margin:0; font-size:14px; letter-spacing:.35px;
+    .card .hd .title{
+      font-weight:700;
+      font-size:14px;
+      letter-spacing:.3px;
+      margin:0;
     }
-    .cardHeader small{color:var(--muted)}
-    .cardBody{padding:14px}
-    .section{
-      padding:12px;
-      border:1px solid var(--line);
-      border-radius: var(--radius2);
-      background: rgba(0,0,0,.10);
-      margin-bottom:12px;
+    .card .hd .hint{
+      font-size:12px;
+      color:var(--muted);
     }
-    .section:last-child{margin-bottom:0}
-    .sectionTitle{
-      display:flex; justify-content:space-between; align-items:center; gap:10px;
-      margin-bottom:10px;
-    }
-    .sectionTitle b{font-size:13px}
-    .sectionTitle span{color:var(--muted); font-size:12px}
-    .row{
-      display:grid;
-      grid-template-columns: 1fr 1fr;
-      gap:10px;
-    }
-    @media (max-width: 980px){
-      .row{grid-template-columns: 1fr;}
+    .card .bd{padding:14px 16px}
+    .row{display:grid; grid-template-columns:1fr 1fr; gap:12px}
+    .row3{display:grid; grid-template-columns:1fr 1fr 1fr; gap:12px}
+    @media (max-width: 520px){
+      .row, .row3{grid-template-columns:1fr}
     }
     label{
       display:block;
       font-size:12px;
       color:var(--muted);
       margin:0 0 6px;
-      letter-spacing:.2px;
     }
-    .field{
+    input, select, textarea{
       width:100%;
-      background: rgba(255,255,255,.04);
-      border:1px solid rgba(255,255,255,.10);
-      border-radius: 12px;
-      color: var(--text);
-      padding:10px 10px;
+      padding:12px 12px;
+      border-radius:14px;
+      border:1px solid rgba(34,52,88,.9);
+      background: rgba(11,18,32,.55);
+      color:var(--text);
       outline:none;
-      transition: .15s ease;
       font-size:14px;
     }
-    .field:focus{box-shadow:var(--focus); border-color: rgba(110,231,255,.5)}
-    textarea.field{min-height:92px; resize:vertical; line-height:1.45}
-    select.field{appearance:none}
-    .hint{
-      margin-top:6px;
-      font-size:12px;
-      color: rgba(170,179,218,.85);
-      line-height:1.35;
+    textarea{min-height:92px; resize:vertical}
+    input:focus, select:focus, textarea:focus{
+      border-color: rgba(122,167,255,.9);
+      box-shadow: 0 0 0 3px rgba(122,167,255,.18);
     }
     .inline{
-      display:flex; gap:8px; align-items:center;
-    }
-    .btns{
-      display:flex; flex-wrap:wrap; gap:10px; margin-top:10px;
+      display:flex; gap:10px; align-items:center;
     }
     .btn{
-      border:1px solid rgba(255,255,255,.12);
-      background: rgba(255,255,255,.05);
-      color: var(--text);
-      padding:10px 12px;
-      border-radius: 14px;
+      border:none;
+      border-radius:16px;
+      padding:12px 14px;
+      font-weight:700;
       cursor:pointer;
-      transition: .15s ease;
-      font-weight:650;
-      letter-spacing:.15px;
       user-select:none;
-    }
-    .btn:hover{transform: translateY(-1px); border-color: rgba(255,255,255,.18)}
-    .btn:active{transform: translateY(0px)}
-    .btnPrimary{
-      background: linear-gradient(135deg, rgba(110,231,255,.95), rgba(167,139,250,.95));
-      border-color: rgba(255,255,255,.22);
-      color: #0b1020;
-    }
-    .btnDanger{
-      background: rgba(255,107,107,.12);
-      border-color: rgba(255,107,107,.35);
-      color: #ffd4d4;
-    }
-    .btnGhost{
-      background: transparent;
-    }
-    .btnSmall{
-      padding:8px 10px;
-      font-size:12px;
-      border-radius: 12px;
-    }
-    .badge{
-      padding:6px 10px;
-      border-radius:999px;
-      border:1px solid var(--line);
-      background: rgba(255,255,255,.03);
-      color: var(--muted);
-      font-size:11px;
+      transition: transform .05s ease, filter .15s ease;
+      display:inline-flex;
+      gap:10px;
+      align-items:center;
+      justify-content:center;
       white-space:nowrap;
     }
-    .divider{
-      height:1px; background:var(--line); margin:12px 0;
+    .btn:active{transform: translateY(1px)}
+    .btn.primary{
+      background: linear-gradient(135deg, rgba(122,167,255,.95), rgba(155,122,255,.95));
+      color:#081026;
     }
-    .chips{
-      display:flex; flex-wrap:wrap; gap:8px;
-      padding:8px;
-      border:1px dashed rgba(255,255,255,.16);
-      border-radius: 14px;
-      background: rgba(0,0,0,.08);
-    }
-    .chip{
-      display:inline-flex; gap:8px; align-items:center;
-      padding:7px 10px;
-      border-radius: 999px;
-      border:1px solid rgba(255,255,255,.12);
-      background: rgba(255,255,255,.04);
-      font-size:12px;
+    .btn.ghost{
+      background: rgba(11,18,32,.35);
+      border:1px solid rgba(34,52,88,.9);
       color:var(--text);
     }
-    .chip button{
-      border:none;
-      background: transparent;
-      color: rgba(232,236,255,.75);
-      cursor:pointer;
-      font-size:14px;
-      line-height:1;
-      padding:0 2px;
+    .btn.warn{
+      background: rgba(255,204,102,.16);
+      border:1px solid rgba(255,204,102,.38);
+      color: var(--warn);
     }
-
-    .outputWrap{
-      display:flex; flex-direction:column;
-      min-height: 560px;
+    .btn:disabled{
+      opacity:.55; cursor:not-allowed;
+      filter: grayscale(.2);
     }
-    .outTop{
-      display:flex; align-items:center; justify-content:space-between; gap:10px;
-      padding:12px 14px;
-      border-bottom:1px solid var(--line);
-      background: rgba(0,0,0,.06);
-    }
-    .statusLine{
-      display:flex; flex-wrap:wrap; gap:8px; align-items:center;
-      color:var(--muted);
+    .small{
       font-size:12px;
+      color:var(--muted);
+      line-height:1.4;
     }
-    .statusLine strong{color:var(--text)}
-    .outBody{
+    .monos{
+      font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+    }
+    .banner{
+      border:1px solid rgba(255,204,102,.45);
+      background: rgba(255,204,102,.12);
+      color: var(--warn);
+      padding:10px 12px;
+      border-radius:16px;
+      margin:12px 0 0;
+      display:none;
+    }
+    .banner strong{color:#ffe7b0}
+    .tabs{
+      display:flex; gap:8px;
+    }
+    .tab{
+      padding:8px 10px;
+      border-radius:999px;
+      border:1px solid rgba(34,52,88,.85);
+      background: rgba(11,18,32,.35);
+      color: var(--muted);
+      cursor:pointer;
+      font-size:12px;
+      user-select:none;
+    }
+    .tab.active{
+      background: rgba(122,167,255,.18);
+      color: var(--text);
+      border-color: rgba(122,167,255,.55);
+    }
+    .outbox{
+      padding:14px 16px;
+      display:flex;
+      flex-direction:column;
+      gap:10px;
+    }
+    .toolbar{
+      display:flex;
+      justify-content:space-between;
+      align-items:center;
+      gap:10px;
+      flex-wrap:wrap;
+    }
+    .status{
+      display:flex;
+      gap:10px;
+      align-items:center;
+      font-size:12px;
+      color:var(--muted);
+    }
+    .dot{
+      width:8px;height:8px;border-radius:99px;
+      background: rgba(169,182,214,.55);
+      box-shadow: 0 0 0 4px rgba(169,182,214,.10);
+    }
+    .dot.ok{background: var(--ok); box-shadow: 0 0 0 4px rgba(55,214,122,.12)}
+    .dot.bad{background: var(--bad); box-shadow: 0 0 0 4px rgba(255,90,122,.14)}
+    .pre{
+      border:1px solid rgba(34,52,88,.85);
+      background: rgba(11,18,32,.45);
+      border-radius: 18px;
       padding:14px;
-      flex:1;
-      overflow:auto;
-    }
-    .out{
       white-space:pre-wrap;
       word-break:break-word;
-      line-height:1.6;
-      font-size:14px;
-    }
-    .out code, .out pre{
-      font-family:var(--mono);
-      font-size:12.5px;
-      background: rgba(255,255,255,.05);
-      padding:2px 6px;
-      border-radius:10px;
-    }
-    .log{
-      margin-top:12px;
-      border:1px solid var(--line);
-      border-radius: 14px;
-      background: rgba(0,0,0,.14);
-      padding:10px;
-      font-family:var(--mono);
-      font-size:12px;
-      color: rgba(232,236,255,.78);
+      line-height:1.55;
+      min-height: 360px;
       overflow:auto;
-      max-height: 220px;
-      display:none;
-      white-space:pre-wrap;
     }
-    .log.show{display:block}
-    .warn{
+    .kpi{
+      display:flex; gap:10px; flex-wrap:wrap;
+      font-size:12px; color:var(--muted);
+    }
+    .chip{
+      border:1px solid rgba(34,52,88,.85);
+      background: rgba(11,18,32,.30);
+      border-radius:999px;
+      padding:7px 10px;
+    }
+    details{
+      border:1px dashed rgba(34,52,88,.75);
+      border-radius: 16px;
+      background: rgba(11,18,32,.18);
       padding:10px 12px;
-      border-radius: 14px;
-      border:1px solid rgba(255,107,107,.30);
-      background: rgba(255,107,107,.10);
-      color: #ffd4d4;
-      font-size:12px;
-      line-height:1.4;
-      margin-bottom:12px;
-      display:none;
+      margin-top: 10px;
     }
-    .warn.show{display:block}
-    .okTip{
-      padding:10px 12px;
-      border-radius: 14px;
-      border:1px solid rgba(103,232,165,.20);
-      background: rgba(103,232,165,.08);
-      color: rgba(232,255,244,.92);
-      font-size:12px;
-      line-height:1.4;
-      margin-bottom:12px;
-      display:none;
+    summary{
+      cursor:pointer;
+      font-weight:700;
+      color: var(--text);
+      list-style:none;
     }
-    .okTip.show{display:block}
-    .kbd{
-      font-family:var(--mono);
-      font-size:11px;
-      padding:2px 6px;
-      border:1px solid var(--line);
-      border-bottom-color: rgba(255,255,255,.18);
-      border-radius: 8px;
-      background: rgba(0,0,0,.20);
-      color: rgba(232,236,255,.85);
+    summary::-webkit-details-marker{display:none}
+    .twocol{
+      display:grid; grid-template-columns:1fr 1fr; gap:12px;
+      margin-top: 10px;
+    }
+    @media (max-width: 520px){ .twocol{grid-template-columns:1fr} }
+    .footerNote{
+      margin-top:12px;
+      color: var(--muted);
+      font-size:12px;
+      line-height:1.5;
+    }
+    .toggle{
+      display:flex; align-items:center; gap:10px;
+      user-select:none;
+      font-size:13px;
+      color: var(--text);
+    }
+    .switch{
+      width:44px; height:26px; border-radius:999px;
+      border:1px solid rgba(34,52,88,.95);
+      background: rgba(11,18,32,.45);
+      position:relative;
+      cursor:pointer;
+      flex:none;
+    }
+    .knob{
+      width:20px; height:20px; border-radius:99px;
+      background: rgba(169,182,214,.9);
+      position:absolute; top:2px; left:2px;
+      transition: left .15s ease, background .15s ease;
+    }
+    .switch.on{
+      border-color: rgba(55,214,122,.55);
+      background: rgba(55,214,122,.10);
+    }
+    .switch.on .knob{
+      left:22px;
+      background: rgba(55,214,122,.95);
     }
   </style>
 </head>
 
 <body>
-  <div class="app">
-    <div class="topbar">
+  <div class="wrap">
+    <header>
       <div class="brand">
         <div class="logo" aria-hidden="true"></div>
-        <div class="title">
-          <h1>小說生成器（直觀版）</h1>
-          <p>像「生貼圖」那樣一鍵出稿：主題、人設可選可自訂，生成後可複製/下載。<br>提示：用 <span class="kbd">http://localhost</span> 開啟才不會被 <span class="kbd">file://</span> 的 CORS 搞事。</p>
+        <div>
+          <h1>小說生成器（像生貼圖一樣直覺，但這次生的是文字）</h1>
+          <div class="subtitle">支援 OpenAI / Gemini / 自訂後端；可手動輸入 Key；右側即時輸出與錯誤診斷。</div>
         </div>
       </div>
+      <div class="pill monos" id="envPill">protocol: …</div>
+    </header>
 
-      <div class="pillrow">
-        <div class="pill"><span class="dot" id="dotOrigin"></span><span id="originText">Origin：檢查中</span></div>
-        <div class="pill"><span class="dot" id="dotReady"></span><span id="readyText">API：未設定</span></div>
-        <div class="pill"><span class="badge" id="modeBadge">模式：—</span></div>
-      </div>
+    <div class="banner" id="fileBanner">
+      <strong>你是用 file:// 直接開檔</strong>，瀏覽器會把來源當成 <span class="monos">origin = null</span>，很多 fetch 會被 CORS 擋掉。<br/>
+      建議用 <span class="monos">http://localhost</span> 跑起來（例如 <span class="monos">python -m http.server 5500</span>）。
     </div>
 
     <div class="grid">
       <!-- LEFT: Controls -->
-      <div class="card">
-        <div class="cardHeader">
-          <h2>設定面板</h2>
-          <small>可保存到瀏覽器（localStorage）</small>
+      <section class="card">
+        <div class="hd">
+          <div>
+            <p class="title">設定</p>
+            <div class="hint">先把鑰匙插對洞，再開始寫作（不然 401 會很兇）</div>
+          </div>
+          <button class="btn ghost" id="btnReset" title="清空/重置">重置</button>
         </div>
-        <div class="cardBody">
-          <div class="warn" id="fileWarn">
-            你目前是用 <b>file://</b> 開啟，所以 <b>相對路徑</b> 的 fetch 會炸成 <b>origin = null</b>（CORS 直接擋）。<br>
-            建議：用 VS Code Live Server 或 <span class="kbd">python -m http.server 5500</span> 再開 <span class="kbd">http://127.0.0.1:5500</span>。
-          </div>
 
-          <div class="section">
-            <div class="sectionTitle">
-              <b>API 設定</b>
-              <span>Key 不會上傳到任何地方（除非你把它寫死進檔案）</span>
+        <div class="bd">
+          <div class="row">
+            <div>
+              <label>供應商</label>
+              <select id="provider">
+                <option value="openai">OpenAI（Responses/Chat）</option>
+                <option value="gemini">Google Gemini（Generative Language API）</option>
+                <option value="custom">自訂後端（你自己的 /api/generate）</option>
+              </select>
             </div>
-
-            <div class="row">
-              <div>
-                <label>API Base URL（OpenAI 相容）</label>
-                <input class="field" id="baseUrl" placeholder="https://api.openai.com/v1" />
-                <div class="hint">例：OpenAI / 你自己的代理 / 任何 OpenAI compatible 服務。建議結尾不要加斜線。</div>
-              </div>
-
-              <div>
-                <label>請求模式</label>
-                <select class="field" id="apiMode">
-                  <option value="responses">/responses（較新格式）</option>
-                  <option value="chat">/chat/completions（傳統格式）</option>
-                </select>
-                <div class="hint">如果你後端只支援其中一種，切換到可用的就行。</div>
-              </div>
-            </div>
-
-            <div class="row" style="margin-top:10px">
-              <div>
-                <label>Model</label>
-                <input class="field" id="model" list="modelHints" placeholder="例如：gpt-4o-mini / gpt-4.1-mini / 你後端的模型名" />
-                <datalist id="modelHints">
-                  <option value="gpt-4o-mini"></option>
-                  <option value="gpt-4.1-mini"></option>
-                  <option value="gpt-4.1"></option>
-                  <option value="gpt-4o"></option>
-                </datalist>
-              </div>
-
-              <div>
-                <label>API Key</label>
-                <div class="inline">
-                  <input class="field" id="apiKey" type="password" placeholder="貼上你的 key（不會自動送出，按生成才用）" style="flex:1" />
-                  <button class="btn btnSmall btnGhost" id="toggleKey" type="button">顯示</button>
-                </div>
-                <div class="hint">⚠️ 不要把 key 直接寫進檔案後再丟 GitHub Pages。</div>
-              </div>
-            </div>
-
-            <div class="row" style="margin-top:10px">
-              <div>
-                <label>保存設定到本機</label>
-                <div class="inline">
-                  <input id="saveLocal" type="checkbox" />
-                  <span class="hint" style="margin:0">勾選後會把 Base URL / 模式 / model / key 保存到 localStorage（同一台裝置才有效）。</span>
-                </div>
-              </div>
-              <div>
-                <label>Debug</label>
-                <div class="inline" style="gap:10px; flex-wrap:wrap">
-                  <button class="btn btnSmall" id="togglePrompt" type="button">顯示 Prompt</button>
-                  <button class="btn btnSmall" id="toggleRaw" type="button">顯示 Raw JSON</button>
-                  <button class="btn btnSmall btnDanger" id="clearLocal" type="button">清除本機保存</button>
-                </div>
-              </div>
+            <div>
+              <label>模式（OpenAI 用）</label>
+              <select id="openaiMode">
+                <option value="responses">Responses API（/v1/responses）</option>
+                <option value="chat">Chat Completions（/v1/chat/completions）</option>
+              </select>
             </div>
           </div>
 
-          <div class="section">
-            <div class="sectionTitle">
-              <b>小說輸入</b>
-              <span>可選可自訂，越具體越穩</span>
-            </div>
+          <div style="height:10px"></div>
 
+          <div>
+            <label>API Key（不會上傳到任何地方；除非你按生成才會送出）</label>
+            <div class="inline">
+              <input id="apiKey" type="password" placeholder="OpenAI: sk-... / Gemini: AIza...（看你選哪一個供應商）" autocomplete="off" />
+              <button class="btn ghost" id="btnToggleKey" title="顯示/隱藏">👁️</button>
+            </div>
+            <div style="height:8px"></div>
             <div class="row">
-              <div>
-                <label>主題 / 一句話梗概（必填）</label>
-                <textarea class="field" id="topic" placeholder="例：一個社畜工程師意外收到未來自己寄來的 Git commit，提示他今晚別加班……"></textarea>
+              <div class="toggle">
+                <div class="switch" id="swRemember" role="switch" aria-checked="false" tabindex="0"><div class="knob"></div></div>
+                記住 Key（存到本機 localStorage）
               </div>
-              <div>
-                <label>人設 / 主角設定（可選或自訂）</label>
-                <select class="field" id="personaPreset"></select>
-                <div class="hint">選一個快速套用，或在下方自訂。</div>
-              </div>
-            </div>
-
-            <div class="row" style="margin-top:10px">
-              <div>
-                <label>自訂人設（會覆蓋預設）</label>
-                <textarea class="field" id="personaCustom" placeholder="例：主角 29 歲，資深軟體工程師，外冷內熱，討厭無效會議但很在意同事…"></textarea>
-              </div>
-              <div>
-                <label>世界觀 / 場景（可選）</label>
-                <textarea class="field" id="setting" placeholder="例：近未來台北，AI 助理普及，公司導入『自動績效評分』系統…"></textarea>
+              <div class="toggle">
+                <div class="switch on" id="swPolish" role="switch" aria-checked="true" tabindex="0"><div class="knob"></div></div>
+                降低重複用語（加強去重指令）
               </div>
             </div>
-
-            <div class="row" style="margin-top:10px">
-              <div>
-                <label>類型（Genre）</label>
-                <select class="field" id="genre"></select>
-              </div>
-              <div>
-                <label>文風（Style / Tone）</label>
-                <select class="field" id="tone"></select>
-              </div>
+            <div class="footerNote">
+              若你要部署到 GitHub Pages：<b>不要把 key 寫死在程式裡</b>。這頁是讓每個使用者自己輸入自己的 key。
             </div>
-
-            <div class="row" style="margin-top:10px">
-              <div>
-                <label>視角</label>
-                <select class="field" id="pov">
-                  <option value="第一人稱">第一人稱</option>
-                  <option value="第三人稱（貼近主角）" selected>第三人稱（貼近主角）</option>
-                  <option value="第三人稱（全知）">第三人稱（全知）</option>
-                </select>
-              </div>
-              <div>
-                <label>長度目標</label>
-                <select class="field" id="length">
-                  <option value="極短篇（600～900字）">極短篇（600～900字）</option>
-                  <option value="短篇（1200～2000字）" selected>短篇（1200～2000字）</option>
-                  <option value="中短篇（2500～3500字）">中短篇（2500～3500字）</option>
-                  <option value="分章（3章，每章800～1200字）">分章（3章，每章800～1200字）</option>
-                </select>
-              </div>
-            </div>
-
-            <div class="row" style="margin-top:10px">
-              <div>
-                <label>語言</label>
-                <select class="field" id="lang">
-                  <option value="繁體中文" selected>繁體中文</option>
-                  <option value="簡體中文">簡體中文</option>
-                  <option value="English">English</option>
-                  <option value="日本語">日本語</option>
-                </select>
-              </div>
-              <div>
-                <label>分級 / 尺度</label>
-                <select class="field" id="rating">
-                  <option value="普遍級（不血腥、不露骨）" selected>普遍級（不血腥、不露骨）</option>
-                  <option value="輔導級（可緊張、可微暴力）">輔導級（可緊張、可微暴力）</option>
-                  <option value="成熟向（避免露骨描寫）">成熟向（避免露骨描寫）</option>
-                </select>
-              </div>
-            </div>
-
-            <div style="margin-top:10px">
-              <label>情節重點 / 轉折（可選）</label>
-              <textarea class="field" id="beats" placeholder="例：開頭收到未來 commit → 中段發現同事被系統陷害 → 反轉：未來自己其實是…"></textarea>
-            </div>
-
-            <div class="divider"></div>
-
-            <label>必須包含（Tag）</label>
-            <div class="inline" style="gap:10px; flex-wrap:wrap">
-              <input class="field" id="mustInput" placeholder="輸入後按 Enter（例：雨夜 / 便利商店 / 反轉）" style="flex:1" />
-              <button class="btn btnSmall" id="addMust" type="button">加入</button>
-            </div>
-            <div class="chips" id="mustChips" aria-label="must include chips"></div>
-
-            <div style="height:10px"></div>
-
-            <label>避免出現（Tag）</label>
-            <div class="inline" style="gap:10px; flex-wrap:wrap">
-              <input class="field" id="avoidInput" placeholder="輸入後按 Enter（例：爛俗失憶梗 / 過度旁白）" style="flex:1" />
-              <button class="btn btnSmall" id="addAvoid" type="button">加入</button>
-            </div>
-            <div class="chips" id="avoidChips" aria-label="avoid chips"></div>
           </div>
 
-          <div class="section">
-            <div class="sectionTitle">
-              <b>生成參數（可不改）</b>
-              <span>越高越發散，越低越穩</span>
+          <details open>
+            <summary>模型與端點</summary>
+            <div class="twocol">
+              <div>
+                <label>Model（可自行改）</label>
+                <input id="model" placeholder="例如：gpt-4.1-mini / gpt-4o-mini / gemini-1.5-flash ..." />
+              </div>
+              <div>
+                <label>Base URL（自訂後端模式必填）</label>
+                <input id="baseUrl" placeholder="OpenAI/Gemini 會自動帶入；自訂後端例：http://localhost:3000/api/generate" />
+              </div>
             </div>
-
-            <div class="row">
+            <div class="twocol">
               <div>
                 <label>Temperature</label>
-                <input class="field" id="temp" type="number" min="0" max="2" step="0.05" value="0.9" />
+                <input id="temp" type="number" min="0" max="2" step="0.1" value="0.8" />
               </div>
               <div>
-                <label>Max output tokens</label>
-                <input class="field" id="maxTokens" type="number" min="128" max="8192" step="64" value="1200" />
+                <label>輸出長度（大概字數）</label>
+                <input id="targetLen" type="number" min="300" max="5000" step="100" value="1200" />
               </div>
             </div>
+            <div class="small">
+              小提醒：OpenAI 用錯 key（像 AIza...）就會 401；Gemini 用 sk-... 也一樣會尷尬到爆。
+            </div>
+          </details>
 
-            <div class="btns">
-              <button class="btn btnPrimary" id="btnGen" type="button">🚀 生成小說</button>
-              <button class="btn btnDanger" id="btnStop" type="button" disabled>⛔ 中止</button>
-              <button class="btn" id="btnClearOut" type="button">🧹 清空輸出</button>
-              <button class="btn" id="btnCopy" type="button">📋 複製</button>
-              <button class="btn" id="btnDownload" type="button">⬇️ 下載 TXT</button>
+          <div style="height:12px"></div>
+
+          <div class="row">
+            <div>
+              <label>小說類型（可選 or 自訂）</label>
+              <select id="genre">
+                <option value="現代日常">現代日常</option>
+                <option value="戀愛喜劇">戀愛喜劇</option>
+                <option value="懸疑推理">懸疑推理</option>
+                <option value="奇幻冒險">奇幻冒險</option>
+                <option value="科幻/賽博">科幻/賽博</option>
+                <option value="職場爆笑">職場爆笑</option>
+                <option value="恐怖驚悚">恐怖驚悚</option>
+                <option value="自訂">自訂…</option>
+              </select>
+            </div>
+            <div>
+              <label>自訂類型（當上面選「自訂」才會用）</label>
+              <input id="genreCustom" placeholder="例如：台式黑色幽默、硬派科幻、日系輕小說..." />
             </div>
           </div>
+
+          <div style="height:10px"></div>
+
+          <div class="row">
+            <div>
+              <label>視角</label>
+              <select id="pov">
+                <option value="第一人稱">第一人稱</option>
+                <option value="第三人稱">第三人稱</option>
+                <option value="多視角">多視角</option>
+              </select>
+            </div>
+            <div>
+              <label>語氣/文風</label>
+              <select id="tone">
+                <option value="自然口語、節奏明快">自然口語、節奏明快</option>
+                <option value="細膩描寫、有畫面感">細膩描寫、有畫面感</option>
+                <option value="冷面吐槽、黑色幽默">冷面吐槽、黑色幽默</option>
+                <option value="熱血中二、浮誇燃">熱血中二、浮誇燃</option>
+                <option value="簡潔俐落、少廢話">簡潔俐落、少廢話</option>
+              </select>
+            </div>
+          </div>
+
+          <div style="height:10px"></div>
+
+          <div>
+            <label>主題（一句話也可以）</label>
+            <input id="theme" placeholder="例如：加班到凌晨的工程師，意外收到一封來自未來的信…" />
+          </div>
+
+          <div style="height:10px"></div>
+
+          <div class="row">
+            <div>
+              <label>主要人設（角色設定）</label>
+              <textarea id="characters" placeholder="例：主角：… 年齡/性格/缺點/目標…；配角：…"></textarea>
+            </div>
+            <div>
+              <label>世界觀 / 背景（可留空）</label>
+              <textarea id="world" placeholder="例：城市規則、科技等級、魔法系統、公司文化（咳）..."></textarea>
+            </div>
+          </div>
+
+          <div style="height:10px"></div>
+
+          <div class="row3">
+            <div>
+              <label>章節數</label>
+              <input id="chapters" type="number" min="1" max="20" step="1" value="5" />
+            </div>
+            <div>
+              <label>輸出格式</label>
+              <select id="format">
+                <option value="text">純文字（推薦）</option>
+                <option value="json">JSON（便於你後續做 UI/分頁）</option>
+              </select>
+            </div>
+            <div>
+              <label>語言</label>
+              <select id="lang">
+                <option value="繁體中文">繁體中文</option>
+                <option value="簡體中文">簡體中文</option>
+                <option value="英文">英文</option>
+                <option value="日文">日文</option>
+              </select>
+            </div>
+          </div>
+
+          <div style="height:14px"></div>
+
+          <div class="inline" style="justify-content:space-between; flex-wrap:wrap">
+            <button class="btn primary" id="btnGenerate">✨ 生成小說</button>
+            <button class="btn ghost" id="btnCopy">📋 複製輸出</button>
+            <button class="btn warn" id="btnDryRun" title="不呼叫 API、只顯示你要送出的 payload">🧪 顯示請求內容</button>
+          </div>
+
+          <div class="footerNote">
+            若你遇到 <span class="monos">429</span>：通常是<b>超出速率/配額</b>，跟 CORS 不一樣；請降低頻率或換 key/方案。 
+          </div>
         </div>
-      </div>
+      </section>
 
       <!-- RIGHT: Output -->
-      <div class="card outputWrap">
-        <div class="outTop">
-          <div class="statusLine">
-            <span class="badge" id="runBadge">狀態：待命</span>
-            <span>模型：<strong id="modelEcho">—</strong></span>
-            <span>輸出：<strong id="charCount">0</strong> 字元</span>
+      <section class="card" aria-live="polite">
+        <div class="hd">
+          <div>
+            <p class="title">輸出</p>
+            <div class="hint">右邊就是你的小說；左邊是你下的「咒語」（也就是提示詞）</div>
           </div>
-          <div class="inline" style="gap:8px; flex-wrap:wrap;">
-            <span class="badge" id="endpointEcho">Endpoint：—</span>
+          <div class="tabs">
+            <div class="tab active" data-tab="result">結果</div>
+            <div class="tab" data-tab="log">Log</div>
+            <div class="tab" data-tab="raw">Raw JSON</div>
           </div>
         </div>
 
-        <div class="outBody">
-          <div class="okTip" id="okTip"></div>
-          <div class="warn" id="errBox"></div>
-          <div id="output" class="out">在左邊填好「主題 / 梗概」後按「生成小說」。</div>
+        <div class="outbox">
+          <div class="toolbar">
+            <div class="status">
+              <span class="dot" id="statusDot"></span>
+              <span id="statusText">待命中。請先選供應商、填 key，然後按「生成」。</span>
+            </div>
+            <div class="kpi">
+              <span class="chip" id="chipProvider">provider: -</span>
+              <span class="chip" id="chipEndpoint">endpoint: -</span>
+              <span class="chip" id="chipModel">model: -</span>
+            </div>
+          </div>
 
-          <div class="log" id="promptBox"></div>
-          <div class="log" id="rawBox"></div>
+          <div class="pre" id="outResult"></div>
+          <div class="pre" id="outLog" style="display:none; min-height: 360px;"></div>
+          <div class="pre monos" id="outRaw" style="display:none; min-height: 360px;"></div>
         </div>
-      </div>
+      </section>
     </div>
   </div>
 
 <script>
-(()=> {
+(function(){
   const $ = (id)=>document.getElementById(id);
+  const state = {
+    lastText: "",
+    lastRaw: null,
+    lastLog: "",
+    showKey: false,
+    rememberKey: false,
+    polish: true,
+  };
 
-  // --- state ---
-  let mustTags = [];
-  let avoidTags = [];
-  let aborter = null;
-  let showKey = false;
-  let showPrompt = false;
-  let showRaw = false;
+  const ui = {
+    provider: $("provider"),
+    openaiMode: $("openaiMode"),
+    apiKey: $("apiKey"),
+    model: $("model"),
+    baseUrl: $("baseUrl"),
+    temp: $("temp"),
+    targetLen: $("targetLen"),
+    genre: $("genre"),
+    genreCustom: $("genreCustom"),
+    pov: $("pov"),
+    tone: $("tone"),
+    theme: $("theme"),
+    characters: $("characters"),
+    world: $("world"),
+    chapters: $("chapters"),
+    format: $("format"),
+    lang: $("lang"),
+    btnGenerate: $("btnGenerate"),
+    btnCopy: $("btnCopy"),
+    btnDryRun: $("btnDryRun"),
+    btnReset: $("btnReset"),
+    btnToggleKey: $("btnToggleKey"),
+    swRemember: $("swRemember"),
+    swPolish: $("swPolish"),
+    statusDot: $("statusDot"),
+    statusText: $("statusText"),
+    outResult: $("outResult"),
+    outLog: $("outLog"),
+    outRaw: $("outRaw"),
+    chipProvider: $("chipProvider"),
+    chipEndpoint: $("chipEndpoint"),
+    chipModel: $("chipModel"),
+    envPill: $("envPill"),
+    fileBanner: $("fileBanner"),
+  };
 
-  const personaPresets = [
-    { name: "（不指定／讓 AI 自由發揮）", text: "" },
-    { name: "社畜工程師（嘴硬心軟）", text: "主角是資深工程師，外冷內熱、吐槽功力強，擅長解決複雜問題，但其實很在意同伴；說話乾脆、帶一點黑色幽默。" },
-    { name: "冷面刑警（直覺派）", text: "主角是冷面刑警，沉默寡言、洞察力強，直覺敏銳；對正義有自己固執的標準。" },
-    { name: "溫柔系老師（治癒）", text: "主角是溫柔的老師，擅長觀察人心；遇事先安撫再引導，語氣溫暖但不矯情。" },
-    { name: "冒險型獵人（硬派）", text: "主角是硬派冒險者／獵人，行動果斷、重視契約；在危機中保持冷靜，偏寫實風格。" },
-    { name: "天才但社交苦手（輕喜劇）", text: "主角智商很高但社交苦手，常用過度理性解釋生活；在尷尬場面不自覺製造笑點。" },
-  ];
-
-  const genreOptions = [
-    "現代都市","職場","奇幻","科幻","懸疑推理","驚悚","愛情","冒險","療癒日常","黑色幽默","青春校園","末日","自訂…"
-  ];
-
-  const toneOptions = [
-    "輕鬆幽默","溫暖治癒","緊張刺激","黑暗寫實","浪漫甜","苦中帶甜","冷冽克制","熱血燃","自訂…"
-  ];
-
-  // --- init UI ---
-  function initSelects(){
-    // persona
-    const sel = $("personaPreset");
-    sel.innerHTML = personaPresets.map((p,i)=>`<option value="${i}">${p.name}</option>`).join("");
-    sel.value = "1";
-
-    // genre
-    const g = $("genre");
-    g.innerHTML = genreOptions.map(x=>`<option value="${x}">${x}</option>`).join("");
-    g.value = "職場";
-
-    // tone
-    const t = $("tone");
-    t.innerHTML = toneOptions.map(x=>`<option value="${x}">${x}</option>`).join("");
-    t.value = "輕鬆幽默";
+  function setStatus(kind, text){
+    ui.statusText.textContent = text;
+    ui.statusDot.classList.remove("ok","bad");
+    if(kind==="ok") ui.statusDot.classList.add("ok");
+    else if(kind==="bad") ui.statusDot.classList.add("bad");
+  }
+  function appendLog(line){
+    const ts = new Date().toLocaleTimeString();
+    state.lastLog += `[${ts}] ${line}\n`;
+    ui.outLog.textContent = state.lastLog;
   }
 
-  // --- local storage ---
-  const LSKEY = "novelGen.v1";
-  function loadLocal(){
-    try{
-      const raw = localStorage.getItem(LSKEY);
-      if(!raw) return;
-      const s = JSON.parse(raw);
-      if(s.baseUrl) $("baseUrl").value = s.baseUrl;
-      if(s.apiMode) $("apiMode").value = s.apiMode;
-      if(s.model) $("model").value = s.model;
-      if(s.apiKey) $("apiKey").value = s.apiKey;
-      if(Array.isArray(s.mustTags)) mustTags = s.mustTags;
-      if(Array.isArray(s.avoidTags)) avoidTags = s.avoidTags;
-      $("saveLocal").checked = !!s.saveLocal;
-      renderChips();
-    }catch(e){}
-  }
-  function saveLocal(){
-    if(!$("saveLocal").checked) return;
-    const s = {
-      baseUrl: $("baseUrl").value.trim(),
-      apiMode: $("apiMode").value,
-      model: $("model").value.trim(),
-      apiKey: $("apiKey").value,
-      mustTags, avoidTags,
-      saveLocal: $("saveLocal").checked
-    };
-    try{ localStorage.setItem(LSKEY, JSON.stringify(s)); }catch(e){}
-  }
-  function clearLocal(){
-    localStorage.removeItem(LSKEY);
+  function getGenre(){
+    const g = ui.genre.value;
+    return (g === "自訂") ? (ui.genreCustom.value || "自訂類型") : g;
   }
 
-  // --- chip helpers ---
-  function addTag(kind, v){
-    v = (v||"").trim();
-    if(!v) return;
-    const list = kind==="must" ? mustTags : avoidTags;
-    if(list.includes(v)) return;
-    list.push(v);
-    renderChips();
-    saveLocal();
-  }
-  function removeTag(kind, v){
-    const list = kind==="must" ? mustTags : avoidTags;
-    const idx = list.indexOf(v);
-    if(idx>=0) list.splice(idx,1);
-    renderChips();
-    saveLocal();
-  }
-  function renderChips(){
-    const mustBox = $("mustChips");
-    const avoidBox = $("avoidChips");
-    mustBox.innerHTML = mustTags.length
-      ? mustTags.map(x=>`<span class="chip">${escapeHtml(x)} <button data-kind="must" data-tag="${escapeHtmlAttr(x)}" title="移除">×</button></span>`).join("")
-      : `<span class="hint">（尚無）</span>`;
-    avoidBox.innerHTML = avoidTags.length
-      ? avoidTags.map(x=>`<span class="chip">${escapeHtml(x)} <button data-kind="avoid" data-tag="${escapeHtmlAttr(x)}" title="移除">×</button></span>`).join("")
-      : `<span class="hint">（尚無）</span>`;
+  function isFileProtocol(){
+    return location.protocol === "file:";
   }
 
-  // --- origin / readiness ---
-  function updateOrigin(){
-    const isFile = location.protocol === "file:";
-    const dot = $("dotOrigin");
-    const txt = $("originText");
-    if(isFile){
-      dot.classList.add("bad");
-      txt.textContent = "Origin：file://（容易 CORS）";
-      $("fileWarn").classList.add("show");
+  function setProviderDefaults(){
+    const p = ui.provider.value;
+    const mode = ui.openaiMode.value;
+    if(p === "openai"){
+      ui.openaiMode.disabled = false;
+      ui.model.placeholder = "例如：gpt-4.1-mini / gpt-4o-mini ...";
+      if(!ui.model.value) ui.model.value = "gpt-4.1-mini";
+      if(!ui.baseUrl.value || ui.baseUrl.dataset.auto === "1"){
+        ui.baseUrl.value = (mode === "responses")
+          ? "https://api.openai.com/v1/responses"
+          : "https://api.openai.com/v1/chat/completions";
+        ui.baseUrl.dataset.auto = "1";
+      }
+    }else if(p === "gemini"){
+      ui.openaiMode.disabled = true;
+      ui.model.placeholder = "例如：gemini-1.5-flash / gemini-1.5-pro ...";
+      if(!ui.model.value) ui.model.value = "gemini-1.5-flash";
+      if(!ui.baseUrl.value || ui.baseUrl.dataset.auto === "1"){
+        ui.baseUrl.value = "https://generativelanguage.googleapis.com/v1beta";
+        ui.baseUrl.dataset.auto = "1";
+      }
     }else{
-      dot.classList.add("ok");
-      txt.textContent = "Origin：" + location.origin;
-      $("fileWarn").classList.remove("show");
+      ui.openaiMode.disabled = true;
+      ui.model.placeholder = "自訂後端可忽略或當作參數";
+      if(!ui.model.value) ui.model.value = "";
+      if(!ui.baseUrl.value || ui.baseUrl.dataset.auto === "1"){
+        ui.baseUrl.value = "http://localhost:3000/api/generate";
+        ui.baseUrl.dataset.auto = "1";
+      }
     }
-  }
-  function updateReady(){
-    const baseUrl = $("baseUrl").value.trim();
-    const key = $("apiKey").value.trim();
-    const model = $("model").value.trim();
-    const mode = $("apiMode").value;
-
-    $("modeBadge").textContent = "模式：" + (mode==="responses" ? "responses" : "chat");
-    $("modelEcho").textContent = model || "—";
-
-    const dot = $("dotReady");
-    const txt = $("readyText");
-    dot.classList.remove("ok","bad");
-    if(baseUrl && key && model){
-      dot.classList.add("ok");
-      txt.textContent = "API：已設定";
-    }else{
-      dot.classList.add("bad");
-      txt.textContent = "API：未設定完整";
-    }
-
-    const endpoint = (mode==="responses") ? (baseUrl.replace(/\/$/,"") + "/responses") : (baseUrl.replace(/\/$/,"") + "/chat/completions");
-    $("endpointEcho").textContent = "Endpoint：" + (baseUrl ? endpoint : "—");
+    syncChips();
   }
 
-  // --- prompt builder ---
+  function syncChips(){
+    const p = ui.provider.value;
+    ui.chipProvider.textContent = `provider: ${p}`;
+    ui.chipModel.textContent = `model: ${ui.model.value || "-"}`;
+
+    let ep = ui.baseUrl.value || "-";
+    if(p==="gemini" && ui.model.value){
+      ep = `${ui.baseUrl.value}/models/${ui.model.value}:generateContent`;
+    }
+    ui.chipEndpoint.textContent = `endpoint: ${shorten(ep, 40)}`;
+  }
+
+  function shorten(s, n){
+    if(!s) return s;
+    return s.length > n ? s.slice(0, n-1) + "…" : s;
+  }
+
   function buildPrompt(){
-    const topic = $("topic").value.trim();
-    const personaCustom = $("personaCustom").value.trim();
-    const personaText = personaCustom || personaPresets[Number($("personaPreset").value||0)]?.text || "";
-    const setting = $("setting").value.trim();
-    const genre = $("genre").value;
-    const tone = $("tone").value;
-    const pov = $("pov").value;
-    const length = $("length").value;
-    const lang = $("lang").value;
-    const rating = $("rating").value;
-    const beats = $("beats").value.trim();
+    const genre = getGenre();
+    const lang = ui.lang.value;
+    const polish = state.polish;
 
-    const finalGenre = (genre==="自訂…" ? "（未指定 / 自由發揮）" : genre);
-    const finalTone = (tone==="自訂…" ? "（未指定 / 自由發揮）" : tone);
-
-    const must = mustTags.length ? mustTags.join("、") : "（無）";
-    const avoid = avoidTags.length ? avoidTags.join("、") : "（無）";
-
-    const system = [
-      "你是一位擅長敘事節奏、畫面感、人物對白的小說作家。",
-      "請避免重複句型與重複資訊；每個段落要推進情節或深化角色。",
-      "以具體動作、場景細節、對白呈現，不要長篇概念性說教。",
-      "文筆自然、有層次，並保持讀者可讀性（不要過度華麗堆砌）。",
-      "遵守使用者指定的分級/尺度限制。"
-    ].join("\n");
-
-    const user = [
-      `【輸出語言】${lang}`,
-      `【類型】${finalGenre}`,
-      `【文風】${finalTone}`,
-      `【敘事視角】${pov}`,
-      `【長度】${length}`,
-      `【分級/尺度】${rating}`,
-      "",
-      `【主題/梗概】\n${topic}`,
-      "",
-      personaText ? `【人設】\n${personaText}\n` : "",
-      setting ? `【世界觀/場景】\n${setting}\n` : "",
-      beats ? `【情節重點/轉折】\n${beats}\n` : "",
-      `【必須包含】${must}`,
-      `【避免出現】${avoid}`,
-      "",
-      "【格式要求】",
-      "1) 直接輸出小說正文（不要列出分析步驟）。",
-      "2) 請用自然分段；若為分章，標示第 1 章 / 第 2 章 / 第 3 章。",
-      "3) 讓結尾有餘韻或小反轉（若題材適合）。"
+    const sys = [
+      `你是一位專業小說寫作助手。請用「${lang}」輸出。`,
+      `目標：產出可讀性高、情節推進清楚、段落分明的小說。`,
+      `風格：${ui.tone.value}。類型：${genre}。視角：${ui.pov.value}。`,
+      `要求：不要自我揭露、不提及你是 AI、不描述「我正在生成」等過程。`,
+      polish ? `去重指令：避免句型與措辭重複；每段盡量有不同的節奏與轉折；不要連續使用相同開頭。` : ``,
     ].filter(Boolean).join("\n");
 
-    return { system, user };
+    const target = Number(ui.targetLen.value || 1200);
+    const ch = Math.max(1, Math.min(20, Number(ui.chapters.value || 5)));
+
+    const user = [
+      `【主題】${ui.theme.value || "（未填）"}`,
+      `【主要人設】\n${ui.characters.value || "（未填）"}`,
+      `【世界觀/背景】\n${ui.world.value || "（可自由補全）"}`,
+      ``,
+      `【輸出結構】`,
+      `1) 書名（1 個） + 一句話賣點（1 句）`,
+      `2) 故事大綱（8~12 點，條列）`,
+      `3) 正文：分成 ${ch} 章，每章有章名；總長度約 ${target} 字上下（允許合理浮動）`,
+      ``,
+      ui.format.value === "json"
+        ? `【格式】請輸出「嚴格 JSON」，不要使用反引號，不要附加註解。建議結構：` +
+          `{"title":"","hook":"","outline":[...], "chapters":[{"no":1,"title":"","content":""}, ...]}`
+        : `【格式】純文字即可，段落清楚、對話用全形引號更好。`,
+    ].join("\n");
+
+    return { sys, user };
   }
 
-  // --- request builders (openai-compatible) ---
-  function makeRequestBody(mode, model, temp, maxTokens, prompt){
-    if(mode === "responses"){
-      // Try OpenAI Responses-like schema (best-effort compatible)
-      return {
+  // ---- API Callers ----
+  async function callOpenAI({ baseUrl, mode, key, model, temperature, prompt }){
+    const headers = {
+      "Content-Type": "application/json",
+      "Authorization": `Bearer ${key}`,
+    };
+
+    let body;
+    if(mode === "chat"){
+      body = {
+        model,
+        messages: [
+          { role: "system", content: prompt.sys },
+          { role: "user", content: prompt.user },
+        ],
+        temperature,
+      };
+    }else{
+      // Responses API (best-effort compatible)
+      body = {
         model,
         input: [
-          { role: "system", content: [{ type: "text", text: prompt.system }] },
-          { role: "user", content: [{ type: "text", text: prompt.user }] }
+          { role: "system", content: prompt.sys },
+          { role: "user", content: prompt.user },
         ],
-        temperature: temp,
-        max_output_tokens: maxTokens
+        temperature,
       };
     }
-    // chat/completions
-    return {
-      model,
-      messages: [
-        { role: "system", content: prompt.system },
-        { role: "user", content: prompt.user }
-      ],
-      temperature: temp,
-      max_tokens: maxTokens
-    };
+
+    appendLog(`OpenAI request -> ${baseUrl}`);
+    const res = await fetch(baseUrl, { method:"POST", headers, body: JSON.stringify(body) });
+    const rawText = await res.text();
+    let data;
+    try{ data = JSON.parse(rawText); }catch{ data = { _raw: rawText }; }
+    if(!res.ok) throw { status: res.status, data, rawText };
+
+    const text = extractTextFromAny(data);
+    return { data, text };
   }
 
-  function extractText(mode, data){
-    // Robust extraction for different compatible backends
-    try{
-      // responses style
-      if(typeof data.output_text === "string" && data.output_text.trim()) return data.output_text;
-      if(Array.isArray(data.output)){
-        let acc = "";
-        for(const item of data.output){
-          const c = item?.content;
-          if(Array.isArray(c)){
-            for(const part of c){
-              if(part?.type === "output_text" && typeof part.text === "string") acc += part.text;
-              if(part?.type === "text" && typeof part.text === "string") acc += part.text;
-            }
+  async function callGemini({ baseUrl, key, model, temperature, prompt }){
+    // Gemini uses key as query param commonly; some setups also allow header, but this is most compatible.
+    const url = `${baseUrl}/models/${encodeURIComponent(model)}:generateContent?key=${encodeURIComponent(key)}`;
+    const body = {
+      contents: [
+        { role: "user", parts: [{ text: `${prompt.sys}\n\n${prompt.user}` }] }
+      ],
+      generationConfig: {
+        temperature,
+      }
+    };
+    appendLog(`Gemini request -> ${url}`);
+    const res = await fetch(url, { method:"POST", headers: { "Content-Type":"application/json" }, body: JSON.stringify(body) });
+    const rawText = await res.text();
+    let data;
+    try{ data = JSON.parse(rawText); }catch{ data = { _raw: rawText }; }
+    if(!res.ok) throw { status: res.status, data, rawText };
+
+    const text = extractTextFromAny(data);
+    return { data, text };
+  }
+
+  async function callCustom({ baseUrl, key, model, temperature, prompt }){
+    // You control your backend. We'll send a friendly payload.
+    const body = {
+      apiKey: key || null,
+      model: model || null,
+      temperature,
+      system: prompt.sys,
+      input: prompt.user,
+      meta: { format: ui.format.value, lang: ui.lang.value }
+    };
+    appendLog(`Custom request -> ${baseUrl}`);
+    const res = await fetch(baseUrl, { method:"POST", headers: { "Content-Type":"application/json" }, body: JSON.stringify(body) });
+    const rawText = await res.text();
+    let data;
+    try{ data = JSON.parse(rawText); }catch{ data = { _raw: rawText }; }
+    if(!res.ok) throw { status: res.status, data, rawText };
+
+    const text = (data && (data.text || data.output || data.content)) ? (data.text || data.output || data.content) : extractTextFromAny(data);
+    return { data, text };
+  }
+
+  function extractTextFromAny(data){
+    // OpenAI chat.completions
+    if(data?.choices?.[0]?.message?.content) return data.choices[0].message.content;
+
+    // OpenAI responses
+    if(typeof data?.output_text === "string") return data.output_text;
+
+    // Try typical responses shapes
+    if(Array.isArray(data?.output)){
+      for(const item of data.output){
+        if(Array.isArray(item?.content)){
+          for(const c of item.content){
+            if(typeof c?.text === "string") return c.text;
+            if(typeof c?.content === "string") return c.content;
           }
         }
-        if(acc.trim()) return acc;
       }
-      // chat style
-      const c0 = data?.choices?.[0]?.message?.content;
-      if(typeof c0 === "string" && c0.trim()) return c0;
-      // some providers: choices[0].text
-      const t0 = data?.choices?.[0]?.text;
-      if(typeof t0 === "string" && t0.trim()) return t0;
-    }catch(e){}
-    return "";
-  }
-
-  // --- output helpers ---
-  function setStatus(kind, msg){
-    const badge = $("runBadge");
-    badge.textContent = "狀態：" + msg;
-    if(kind==="run"){
-      badge.style.borderColor = "rgba(110,231,255,.35)";
-      badge.style.background = "rgba(110,231,255,.08)";
-      badge.style.color = "rgba(232,255,255,.92)";
-    }else if(kind==="ok"){
-      badge.style.borderColor = "rgba(103,232,165,.28)";
-      badge.style.background = "rgba(103,232,165,.08)";
-      badge.style.color = "rgba(232,255,244,.92)";
-    }else if(kind==="err"){
-      badge.style.borderColor = "rgba(255,107,107,.30)";
-      badge.style.background = "rgba(255,107,107,.10)";
-      badge.style.color = "#ffd4d4";
-    }else{
-      badge.style.borderColor = "var(--line)";
-      badge.style.background = "rgba(255,255,255,.03)";
-      badge.style.color = "var(--muted)";
-    }
-  }
-  function showError(text){
-    $("errBox").textContent = text;
-    $("errBox").classList.add("show");
-  }
-  function clearError(){
-    $("errBox").textContent = "";
-    $("errBox").classList.remove("show");
-  }
-  function tipOk(text){
-    $("okTip").textContent = text;
-    $("okTip").classList.add("show");
-  }
-  function clearTip(){
-    $("okTip").textContent = "";
-    $("okTip").classList.remove("show");
-  }
-
-  // --- main generate ---
-  async function generate(){
-    clearError();
-    clearTip();
-
-    const baseUrl = $("baseUrl").value.trim().replace(/\/$/,"");
-    const mode = $("apiMode").value;
-    const endpoint = mode==="responses" ? (baseUrl + "/responses") : (baseUrl + "/chat/completions");
-    const model = $("model").value.trim();
-    const apiKey = $("apiKey").value;
-    const temp = Number($("temp").value || 0.9);
-    const maxTokens = Number($("maxTokens").value || 1200);
-
-    if(!$("topic").value.trim()){
-      showError("請先填：主題 / 一句話梗概（必填）。");
-      return;
-    }
-    if(!baseUrl || !model || !apiKey){
-      showError("API 未設定完整：請填 Base URL、Model、API Key。");
-      return;
-    }
-    if(location.protocol==="file:" && endpoint.startsWith("file:")){
-      showError("你目前用 file:// 開啟，endpoint 會變成 file://... 這種一定失敗。請改用 http://localhost 方式開啟。");
-      return;
     }
 
-    // prepare request
-    const prompt = buildPrompt();
-    const body = makeRequestBody(mode, model, temp, maxTokens, prompt);
+    // Gemini
+    if(data?.candidates?.[0]?.content?.parts?.[0]?.text) return data.candidates[0].content.parts[0].text;
 
-    if(showPrompt){
-      $("promptBox").textContent = "=== SYSTEM ===\n" + prompt.system + "\n\n=== USER ===\n" + prompt.user;
-      $("promptBox").classList.add("show");
-    }
-    if(showRaw){
-      $("rawBox").textContent = "=== REQUEST JSON ===\n" + JSON.stringify({ endpoint, body }, null, 2);
-      $("rawBox").classList.add("show");
-    }
+    // Fallback: stringify
+    try{ return JSON.stringify(data, null, 2); }catch{ return String(data); }
+  }
 
-    saveLocal();
-    updateReady();
+  function classifyError(err){
+    // err: {status, data, rawText}
+    const status = err?.status;
+    const msg = err?.data?.error?.message || err?.data?.message || err?.data?.error || err?.rawText || "未知錯誤";
+    return { status, msg: String(msg) };
+  }
 
-    // run
-    $("btnGen").disabled = true;
-    $("btnStop").disabled = false;
-    setStatus("run", "生成中…");
-    $("output").textContent = "生成中…（如果卡住，多半是 CORS 或 endpoint 模式不對，試著切換 responses/chat）";
-    $("charCount").textContent = "0";
+  // ---- UI actions ----
+  function setTab(name){
+    document.querySelectorAll(".tab").forEach(t=>{
+      const active = t.dataset.tab === name;
+      t.classList.toggle("active", active);
+    });
+    ui.outResult.style.display = (name==="result") ? "block" : "none";
+    ui.outLog.style.display    = (name==="log") ? "block" : "none";
+    ui.outRaw.style.display    = (name==="raw") ? "block" : "none";
+  }
 
-    aborter = new AbortController();
-    const startedAt = Date.now();
+  document.querySelectorAll(".tab").forEach(t=>{
+    t.addEventListener("click", ()=> setTab(t.dataset.tab));
+  });
 
+  function toggleSwitch(swEl, keyName){
+    const on = !swEl.classList.contains("on");
+    swEl.classList.toggle("on", on);
+    swEl.setAttribute("aria-checked", on ? "true" : "false");
+    if(keyName === "remember"){ state.rememberKey = on; persist(); }
+    if(keyName === "polish"){ state.polish = on; }
+  }
+
+  ui.swRemember.addEventListener("click", ()=> toggleSwitch(ui.swRemember, "remember"));
+  ui.swPolish.addEventListener("click", ()=> toggleSwitch(ui.swPolish, "polish"));
+  ui.swRemember.addEventListener("keydown", (e)=>{ if(e.key==="Enter"||e.key===" "){ e.preventDefault(); toggleSwitch(ui.swRemember,"remember"); }});
+  ui.swPolish.addEventListener("keydown", (e)=>{ if(e.key==="Enter"||e.key===" "){ e.preventDefault(); toggleSwitch(ui.swPolish,"polish"); }});
+
+  ui.btnToggleKey.addEventListener("click", ()=>{
+    state.showKey = !state.showKey;
+    ui.apiKey.type = state.showKey ? "text" : "password";
+    ui.btnToggleKey.textContent = state.showKey ? "🙈" : "👁️";
+  });
+
+  ui.provider.addEventListener("change", ()=>{
+    ui.baseUrl.dataset.auto = "1";
+    setProviderDefaults();
+  });
+  ui.openaiMode.addEventListener("change", ()=>{
+    ui.baseUrl.dataset.auto = "1";
+    setProviderDefaults();
+  });
+
+  ["model","baseUrl","temp","targetLen","genre","genreCustom","pov","tone"].forEach(id=>{
+    $(id).addEventListener("input", syncChips);
+  });
+
+  ui.btnCopy.addEventListener("click", async ()=>{
+    const text = state.lastText || ui.outResult.textContent || "";
     try{
-      const res = await fetch(endpoint, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          "Authorization": "Bearer " + apiKey
-        },
-        body: JSON.stringify(body),
-        signal: aborter.signal
-      });
-
-      const text = await res.text();
-      let data = null;
-      try{ data = JSON.parse(text); }catch(e){}
-
-      if(!res.ok){
-        const maybeMsg = data?.error?.message || data?.message || text || ("HTTP " + res.status);
-        throw new Error("請求失敗：" + res.status + "\n" + maybeMsg);
-      }
-
-      const outText = extractText(mode, data);
-      if(!outText.trim()){
-        // if response schema differs, still show raw
-        $("output").textContent = "有拿到回應，但抓不到文字欄位（可能後端回傳格式不同）。\n\n已在 Raw JSON 顯示 response，請把它貼給我我幫你對齊欄位。";
-        setStatus("err", "格式不符");
-        if(!showRaw){
-          showRaw = true;
-          $("rawBox").classList.add("show");
-        }
-        $("rawBox").textContent = "=== RESPONSE RAW ===\n" + (data ? JSON.stringify(data, null, 2) : text);
-        return;
-      }
-
-      $("output").textContent = outText.trim();
-      $("charCount").textContent = String(outText.length);
-
-      const ms = Date.now() - startedAt;
-      setStatus("ok", "完成");
-      tipOk("完成 ✅ 用時 " + Math.round(ms/100)/10 + " 秒。想要更像某種風格：把「文風」改成自訂並寫得更具體。");
-
-      if(showRaw){
-        $("rawBox").textContent = "=== RESPONSE JSON ===\n" + JSON.stringify(data, null, 2);
-      }
-    }catch(err){
-      if(err?.name === "AbortError"){
-        setStatus("err", "已中止");
-        showError("已中止請求。");
-      }else{
-        setStatus("err", "失敗");
-        const msg = String(err?.message || err || "Unknown error");
-        showError(msg + "\n\n常見原因：\n- CORS：前端與 API 網域不同但後端沒開 Access-Control-Allow-Origin\n- Endpoint/模式不對：切換 responses ↔ chat\n- Base URL 多打一層 /v1 或少了 /v1\n- Model 名稱與你後端不一致");
-      }
-    }finally{
-      $("btnGen").disabled = false;
-      $("btnStop").disabled = true;
-      aborter = null;
-    }
-  }
-
-  // --- utilities ---
-  function escapeHtml(s){
-    return s.replace(/[&<>"']/g, (c)=>({ "&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#039;" }[c]));
-  }
-  function escapeHtmlAttr(s){
-    return escapeHtml(s).replace(/"/g, "&quot;");
-  }
-
-  // --- events ---
-  $("toggleKey").addEventListener("click", ()=>{
-    showKey = !showKey;
-    $("apiKey").type = showKey ? "text" : "password";
-    $("toggleKey").textContent = showKey ? "隱藏" : "顯示";
-  });
-
-  $("togglePrompt").addEventListener("click", ()=>{
-    showPrompt = !showPrompt;
-    $("promptBox").classList.toggle("show", showPrompt);
-    $("togglePrompt").textContent = showPrompt ? "隱藏 Prompt" : "顯示 Prompt";
-    if(showPrompt){
-      const p = buildPrompt();
-      $("promptBox").textContent = "=== SYSTEM ===\n" + p.system + "\n\n=== USER ===\n" + p.user;
-    }
-  });
-
-  $("toggleRaw").addEventListener("click", ()=>{
-    showRaw = !showRaw;
-    $("rawBox").classList.toggle("show", showRaw);
-    $("toggleRaw").textContent = showRaw ? "隱藏 Raw JSON" : "顯示 Raw JSON";
-    if(showRaw){
-      $("rawBox").textContent = "（將在送出後顯示 request/response）";
-    }
-  });
-
-  $("clearLocal").addEventListener("click", ()=>{
-    clearLocal();
-    tipOk("已清除本機保存。");
-  });
-
-  $("saveLocal").addEventListener("change", ()=>{
-    if(!$("saveLocal").checked){
-      tipOk("已取消保存（但現有 localStorage 不會自動刪除，可按『清除本機保存』）。");
-      return;
-    }
-    saveLocal();
-    tipOk("已啟用保存到本機。");
-  });
-
-  ["baseUrl","apiMode","model","apiKey"].forEach(id=>{
-    $(id).addEventListener("input", ()=>{ updateReady(); if($("saveLocal").checked) saveLocal(); });
-    $(id).addEventListener("change", ()=>{ updateReady(); if($("saveLocal").checked) saveLocal(); });
-  });
-
-  $("personaPreset").addEventListener("change", ()=>{
-    // just a UX tip: do not force overwrite custom
-    if($("personaCustom").value.trim()){
-      tipOk("你已填自訂人設：生成時會以「自訂」為主（不受預設影響）。");
-    }
-  });
-
-  $("addMust").addEventListener("click", ()=>{ addTag("must", $("mustInput").value); $("mustInput").value=""; $("mustInput").focus(); });
-  $("addAvoid").addEventListener("click", ()=>{ addTag("avoid", $("avoidInput").value); $("avoidInput").value=""; $("avoidInput").focus(); });
-
-  $("mustInput").addEventListener("keydown", (e)=>{ if(e.key==="Enter"){ e.preventDefault(); $("addMust").click(); }});
-  $("avoidInput").addEventListener("keydown", (e)=>{ if(e.key==="Enter"){ e.preventDefault(); $("addAvoid").click(); }});
-
-  document.addEventListener("click", (e)=>{
-    const btn = e.target?.closest?.("button[data-kind][data-tag]");
-    if(!btn) return;
-    removeTag(btn.dataset.kind, btn.dataset.tag);
-  });
-
-  $("btnGen").addEventListener("click", generate);
-  $("btnStop").addEventListener("click", ()=>{ if(aborter) aborter.abort(); });
-
-  $("btnClearOut").addEventListener("click", ()=>{
-    $("output").textContent = "已清空。";
-    $("charCount").textContent = "0";
-    clearError(); clearTip();
-  });
-
-  $("btnCopy").addEventListener("click", async ()=>{
-    try{
-      const text = $("output").textContent || "";
       await navigator.clipboard.writeText(text);
-      tipOk("已複製到剪貼簿 ✅");
-    }catch(e){
-      showError("複製失敗（可能瀏覽器不允許）。你可以手動全選複製。");
+      setStatus("ok", "已複製到剪貼簿。去吧，拿去餵你的排版器。");
+      appendLog("Copied output to clipboard.");
+    }catch{
+      setStatus("bad", "複製失敗（瀏覽器可能不給剪貼簿權限）。");
+      appendLog("Clipboard copy failed.");
     }
   });
 
-  $("btnDownload").addEventListener("click", ()=>{
-    const text = $("output").textContent || "";
-    const blob = new Blob([text], {type:"text/plain;charset=utf-8"});
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement("a");
-    a.href = url;
-    a.download = "novel.txt";
-    document.body.appendChild(a);
-    a.click();
-    a.remove();
-    URL.revokeObjectURL(url);
-    tipOk("已下載 TXT ✅");
+  ui.btnDryRun.addEventListener("click", ()=>{
+    const p = ui.provider.value;
+    const mode = ui.openaiMode.value;
+    const prompt = buildPrompt();
+    const temperature = Number(ui.temp.value || 0.8);
+    const baseUrl = ui.baseUrl.value.trim();
+    const model = ui.model.value.trim();
+    const payload = (p==="openai")
+      ? (mode==="chat"
+          ? { baseUrl, headers: {Authorization:"Bearer …"}, body: { model, messages:[{role:"system",content:prompt.sys},{role:"user",content:prompt.user}], temperature } }
+          : { baseUrl, headers: {Authorization:"Bearer …"}, body: { model, input:[{role:"system",content:prompt.sys},{role:"user",content:prompt.user}], temperature } })
+      : (p==="gemini"
+          ? { url: `${baseUrl}/models/${model}:generateContent?key=…`, body: { contents:[{role:"user",parts:[{text:prompt.sys+"\\n\\n"+prompt.user}]}], generationConfig:{temperature} } }
+          : { baseUrl, body: { apiKey:"…(optional)", model, temperature, system: prompt.sys, input: prompt.user } });
+
+    state.lastRaw = payload;
+    ui.outRaw.textContent = JSON.stringify(payload, null, 2);
+    setTab("raw");
+    setStatus("ok","已顯示你即將送出的請求內容（Dry Run）。");
+    appendLog("Dry run payload displayed.");
   });
 
-  // --- start ---
-  initSelects();
-  loadLocal();
+  ui.btnReset.addEventListener("click", ()=>{
+    // keep provider
+    ui.apiKey.value = "";
+    ui.theme.value = "";
+    ui.characters.value = "";
+    ui.world.value = "";
+    ui.genre.value = "現代日常";
+    ui.genreCustom.value = "";
+    ui.pov.value = "第一人稱";
+    ui.tone.value = "自然口語、節奏明快";
+    ui.chapters.value = 5;
+    ui.format.value = "text";
+    ui.lang.value = "繁體中文";
+    ui.temp.value = 0.8;
+    ui.targetLen.value = 1200;
+    ui.baseUrl.dataset.auto = "1";
+    ui.model.value = "";
+    state.lastText = "";
+    state.lastRaw = null;
+    state.lastLog = "";
+    ui.outResult.textContent = "";
+    ui.outRaw.textContent = "";
+    ui.outLog.textContent = "";
+    setStatus(null, "已重置（供應商保留）。");
+    appendLog("Reset.");
+    setProviderDefaults();
+    persist();
+  });
 
-  // defaults if empty
-  if(!$("baseUrl").value.trim()) $("baseUrl").value = "https://api.openai.com/v1";
-  if(!$("model").value.trim()) $("model").value = "gpt-4o-mini";
-  if(typeof $("saveLocal").checked !== "boolean") $("saveLocal").checked = true;
-  if($("saveLocal").checked === false){
-    // keep as user choice
-  }else{
-    $("saveLocal").checked = true;
+  function persist(){
+    const save = {
+      provider: ui.provider.value,
+      openaiMode: ui.openaiMode.value,
+      model: ui.model.value,
+      baseUrl: ui.baseUrl.value,
+      temp: ui.temp.value,
+      targetLen: ui.targetLen.value,
+      genre: ui.genre.value,
+      genreCustom: ui.genreCustom.value,
+      pov: ui.pov.value,
+      tone: ui.tone.value,
+      chapters: ui.chapters.value,
+      format: ui.format.value,
+      lang: ui.lang.value,
+      rememberKey: state.rememberKey,
+      polish: state.polish,
+    };
+    localStorage.setItem("novel_ui_cfg", JSON.stringify(save));
+    if(state.rememberKey){
+      localStorage.setItem("novel_ui_key", ui.apiKey.value || "");
+    }else{
+      localStorage.removeItem("novel_ui_key");
+    }
   }
 
-  // fill persona preset select label
-  // injecting options already done; no need.
-  renderChips();
-  updateOrigin();
-  updateReady();
+  function restore(){
+    try{
+      const cfg = JSON.parse(localStorage.getItem("novel_ui_cfg") || "{}");
+      if(cfg.provider) ui.provider.value = cfg.provider;
+      if(cfg.openaiMode) ui.openaiMode.value = cfg.openaiMode;
+
+      state.rememberKey = !!cfg.rememberKey;
+      state.polish = (cfg.polish !== undefined) ? !!cfg.polish : true;
+
+      ui.swRemember.classList.toggle("on", state.rememberKey);
+      ui.swRemember.setAttribute("aria-checked", state.rememberKey ? "true" : "false");
+
+      ui.swPolish.classList.toggle("on", state.polish);
+      ui.swPolish.setAttribute("aria-checked", state.polish ? "true" : "false");
+
+      if(cfg.model) ui.model.value = cfg.model;
+      if(cfg.baseUrl) { ui.baseUrl.value = cfg.baseUrl; ui.baseUrl.dataset.auto = "0"; }
+      if(cfg.temp) ui.temp.value = cfg.temp;
+      if(cfg.targetLen) ui.targetLen.value = cfg.targetLen;
+      if(cfg.genre) ui.genre.value = cfg.genre;
+      if(cfg.genreCustom) ui.genreCustom.value = cfg.genreCustom;
+      if(cfg.pov) ui.pov.value = cfg.pov;
+      if(cfg.tone) ui.tone.value = cfg.tone;
+      if(cfg.chapters) ui.chapters.value = cfg.chapters;
+      if(cfg.format) ui.format.value = cfg.format;
+      if(cfg.lang) ui.lang.value = cfg.lang;
+
+      if(state.rememberKey){
+        ui.apiKey.value = localStorage.getItem("novel_ui_key") || "";
+      }
+    }catch(e){
+      // ignore
+    }
+  }
+
+  ["input","change"].forEach(ev=>{
+    ["provider","openaiMode","model","baseUrl","temp","targetLen","genre","genreCustom","pov","tone","chapters","format","lang","apiKey"].forEach(id=>{
+      $(id).addEventListener(ev, persist);
+    });
+  });
+
+  ui.btnGenerate.addEventListener("click", async ()=>{
+    const provider = ui.provider.value;
+    const key = (ui.apiKey.value || "").trim();
+    const model = (ui.model.value || "").trim();
+    const baseUrl = (ui.baseUrl.value || "").trim();
+    const mode = ui.openaiMode.value;
+    const temperature = Number(ui.temp.value || 0.8);
+
+    setProviderDefaults();
+    syncChips();
+
+    if(isFileProtocol()){
+      setStatus("bad", "你現在是 file:// 開啟，建議用 http://localhost 跑起來，不然 CORS 會一直搗蛋。");
+      appendLog("Blocked: running on file:// (origin null).");
+      return;
+    }
+
+    if(!baseUrl){
+      setStatus("bad", "Base URL 不能空。");
+      return;
+    }
+
+    if(provider !== "custom" && !key){
+      setStatus("bad","你還沒填 API Key。");
+      return;
+    }
+
+    if(provider !== "custom" && !model){
+      setStatus("bad","你還沒填 model。");
+      return;
+    }
+
+    // quick sanity hints
+    if(provider === "openai" && key.startsWith("AIza")){
+      setStatus("bad","你選的是 OpenAI，但你填的像是 Google 的 AIza key；請換 OpenAI key（通常是 sk- 開頭）。");
+      return;
+    }
+    if(provider === "gemini" && key.startsWith("sk-")){
+      setStatus("bad","你選的是 Gemini，但你填的像是 OpenAI 的 sk- key；請換成 AIza...（或你的 Gemini key）。");
+      return;
+    }
+
+    ui.btnGenerate.disabled = true;
+    setStatus(null, "生成中…（如果卡住，通常不是你的人設太複雜，是你端點或 key 太倔強）");
+    appendLog("Generate clicked.");
+
+    const prompt = buildPrompt();
+
+    try{
+      let result;
+      if(provider === "openai"){
+        result = await callOpenAI({ baseUrl, mode, key, model, temperature, prompt });
+      }else if(provider === "gemini"){
+        result = await callGemini({ baseUrl, key, model, temperature, prompt });
+      }else{
+        result = await callCustom({ baseUrl, key, model, temperature, prompt });
+      }
+
+      state.lastRaw = result.data;
+      state.lastText = result.text || "";
+      ui.outResult.textContent = state.lastText || "(空白輸出)";
+
+      ui.outRaw.textContent = JSON.stringify(result.data, null, 2);
+      setTab("result");
+      setStatus("ok", "完成！右邊是小說；如果你覺得太好看，請記得是你提示詞下得好（我只是打字員）。");
+      appendLog("Success.");
+    }catch(err){
+      const {status, msg} = classifyError(err);
+      state.lastRaw = err?.data || err;
+      ui.outRaw.textContent = JSON.stringify(state.lastRaw, null, 2);
+
+      // Friendly diagnosis for common cases
+      let hint = "";
+      if(status === 401){
+        hint = "（401：未授權/Key 錯誤。最常見是供應商選錯、key 格式不對，或打錯 endpoint。）";
+      }else if(status === 429){
+        hint = "（429：速率/配額超限。降低請求頻率、換 key 或檢查方案/額度。）";
+      }else if(status === 0 || !status){
+        hint = "（可能是 CORS、網路、或 Base URL 根本沒跑起來。）";
+      }
+
+      ui.outResult.textContent = `請求失敗：${status || "?"}\n${msg}\n${hint}`;
+      setTab("result");
+      setStatus("bad", `失敗：${status || "?"} ${hint}`);
+      appendLog(`Error: ${status || "?"} ${msg}`);
+    }finally{
+      ui.btnGenerate.disabled = false;
+      syncChips();
+    }
+  });
+
+  // boot
+  ui.envPill.textContent = `protocol: ${location.protocol}`;
+  if(isFileProtocol()){
+    ui.fileBanner.style.display = "block";
+  }
+
+  restore();
+  setProviderDefaults();
+  syncChips();
+  setStatus(null,"待命中。選供應商、填 key、按生成就開寫。");
 })();
 </script>
 </body>
