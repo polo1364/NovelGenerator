@@ -330,7 +330,7 @@
         <div class="logo" aria-hidden="true"></div>
         <div>
           <h1>小說生成器（像生貼圖一樣直覺，但這次生的是文字）</h1>
-          <div class="subtitle">支援 OpenAI / Gemini / 自訂後端；可手動輸入 Key；右側即時輸出與錯誤診斷。</div>
+          <div class="subtitle">支援 Google AI Studio（Gemini）；可手動輸入 Key；右側即時輸出與錯誤診斷。</div>
         </div>
       </div>
       <div class="pill monos" id="envPill">protocol: …</div>
@@ -356,17 +356,18 @@
           <div class="row">
             <div>
               <label>供應商</label>
-              <select id="provider">
-                <option value="openai">OpenAI（Responses/Chat）</option>
-                <option value="gemini">Google Gemini（Generative Language API）</option>
-                <option value="custom">自訂後端（你自己的 /api/generate）</option>
+              <!-- 只提供 Google AI Studio （Gemini），選擇器隱藏並顯示固定文字 -->
+              <select id="provider" style="display:none">
+                <option value="gemini">Google Gemini（AI Studio）</option>
               </select>
+              <div style="margin-top:6px;font-size:14px;color:var(--muted)">Google AI Studio（Gemini）</div>
             </div>
-            <div>
-              <label>模式（OpenAI 用）</label>
+            <!-- 隱藏 OpenAI 模式選擇，因為只使用 Google AI Studio -->
+            <div style="display:none">
+              <label>模式</label>
               <select id="openaiMode">
-                <option value="responses">Responses API（/v1/responses）</option>
-                <option value="chat">Chat Completions（/v1/chat/completions）</option>
+                <option value="responses">Responses API</option>
+                <option value="chat">Chat</option>
               </select>
             </div>
           </div>
@@ -399,12 +400,12 @@
             <summary>模型與端點</summary>
             <div class="twocol">
               <div>
-                <label>Model（可自行改）</label>
-                <input id="model" placeholder="例如：gpt-4.1-mini / gpt-4o-mini / gemini-1.5-flash ..." />
+              <label>Model（可自行改）</label>
+              <input id="model" placeholder="例如：gemini-1.5-pro / gemini-1.5-flash / gemini-1.0-pro" />
               </div>
               <div>
-                <label>Base URL（自訂後端模式必填）</label>
-                <input id="baseUrl" placeholder="OpenAI/Gemini 會自動帶入；自訂後端例：http://localhost:3000/api/generate" />
+              <label>Base URL</label>
+              <input id="baseUrl" placeholder="例如：https://generativelanguage.googleapis.com/v1beta（預設會自動帶入）" />
               </div>
             </div>
             <div class="twocol">
@@ -471,7 +472,10 @@
 
           <div>
             <label>主題（一句話也可以）</label>
-            <input id="theme" placeholder="例如：加班到凌晨的工程師，意外收到一封來自未來的信…" />
+            <div class="inline" style="gap:8px">
+              <input id="theme" placeholder="例如：加班到凌晨的工程師，意外收到一封來自未來的信…" />
+              <button class="btn ghost" id="btnRandomTheme" title="隨機主題">🎲</button>
+            </div>
           </div>
 
           <div style="height:10px"></div>
@@ -479,11 +483,17 @@
           <div class="row">
             <div>
               <label>主要人設（角色設定）</label>
-              <textarea id="characters" placeholder="例：主角：… 年齡/性格/缺點/目標…；配角：…"></textarea>
+              <div class="inline" style="gap:8px">
+                <textarea id="characters" placeholder="例：主角：… 年齡/性格/缺點/目標…；配角：…"></textarea>
+                <button class="btn ghost" id="btnRandomCharacters" title="隨機人設">🎲</button>
+              </div>
             </div>
             <div>
               <label>世界觀 / 背景（可留空）</label>
-              <textarea id="world" placeholder="例：城市規則、科技等級、魔法系統、公司文化（咳）..."></textarea>
+              <div class="inline" style="gap:8px">
+                <textarea id="world" placeholder="例：城市規則、科技等級、魔法系統、公司文化（咳）..."></textarea>
+                <button class="btn ghost" id="btnRandomWorld" title="隨機背景">🎲</button>
+              </div>
             </div>
           </div>
 
@@ -573,6 +583,40 @@
     polish: true,
   };
 
+  // ----- 隨機生成資料 -----
+  // 主題候選清單
+  const randomThemes = [
+    "一場穿越時空的旅程改變了主角的一生",
+    "在末日廢墟中尋找人性的光芒",
+    "AI與人類共生的奇幻都市",
+    "失業工程師意外繼承一座古老書店",
+    "太空移民計畫背後的陰謀",
+    "平凡高中生突然獲得讀心能力",
+    "職場菜鳥與未來自己展開對話",
+    "網紅主播捲入超自然事件",
+    "研究員在夢中控制現實"
+  ];
+
+  // 人設候選清單，每筆包含多行文字
+  const randomCharacters = [
+    `主角：林宥穎，26 歲平凡工程師，內向細心，缺點是優柔寡斷，夢想寫出一本小說。\n配角：陳瑋庭，28 歲高中教師，熱情開朗，厭惡欺騙，目標是帶學生參加科展。\n反派：神秘 AI，外表冷酷，擁有強大計算能力，目標控制人類。`,
+    `主角：張小慈，18 歲剛畢業的高中生，古靈精怪，缺點是衝動易怒，目標是找到失蹤的哥哥。\n配角：吳伯，60 歲退休老兵，沉默寡言，擁有神秘過去，目標是守護家鄉。\n反派：黑幫老大，善於操縱人心，目標統一地下世界。`,
+    `主角：陳靜雯，30 歲科幻小說家，天馬行空，缺點是拖延症嚴重，夢想寫出暢銷作品。\n配角：羅修，24 歲自媒體剪輯師，搞笑樂觀，目標是增粉百萬。\n反派：資深編輯，挑剔苛刻，目標是逼主角按時交稿。`,
+    `主角：高子維，40 歲警探，冷靜理性，缺點是過度執著，目標是破解懸案。\n配角：趙語晨，35 歲心理醫師，善解人意，目標是治癒自己的創傷。\n反派：連環殺手，聰明狡猾，目標是挑戰警方底線。`,
+    `主角：周雅琪，22 歲大學生，無神論者，缺點是缺乏自信，夢想成為偵探小說家。\n配角：李俊，22 歲資優生，擅長駭客技術，目標是破解學校的黑暗秘密。\n反派：學院院長，表面慈祥，其實暗中進行非法研究。`
+  ];
+
+  // 世界觀候選清單
+  const randomWorlds = [
+    "近未來的台北，科技進步但貧富差距加劇，政府推行基因改造政策。",
+    "高雄某個被財團掌控的工業區，地下還隱藏著外星文明遺跡。",
+    "架空的奇幻王國，魔法能量以海潮為源，月圓時力量最強。",
+    "現代都市與平行宇宙交錯，透過特定門能穿梭。",
+    "荒蕪的火星殖民地，資源匱乏，唯一水源被企業控制。",
+    "二十一世紀末全球被巨型公司統治，人工島成為唯一避難所。",
+    "古老的東方王朝與機械文明交融，蒸汽飛船來回穿梭。"
+  ];
+
   const ui = {
     provider: $("provider"),
     openaiMode: $("openaiMode"),
@@ -608,6 +652,9 @@
     chipModel: $("chipModel"),
     envPill: $("envPill"),
     fileBanner: $("fileBanner"),
+    btnRandomTheme: $("btnRandomTheme"),
+    btnRandomCharacters: $("btnRandomCharacters"),
+    btnRandomWorld: $("btnRandomWorld"),
   };
 
   function setStatus(kind, text){
@@ -757,8 +804,8 @@
   }
 
   async function callGemini({ baseUrl, key, model, temperature, prompt }){
-    // Gemini uses key as query param commonly; some setups also allow header, but this is most compatible.
-    const url = `${baseUrl}/models/${encodeURIComponent(model)}:generateContent?key=${encodeURIComponent(key)}`;
+    // 使用 x-goog-api-key header 呼叫 Google AI Studio (Gemini) API
+    const url = `${baseUrl}/models/${encodeURIComponent(model)}:generateContent`;
     const body = {
       contents: [
         { role: "user", parts: [{ text: `${prompt.sys}\n\n${prompt.user}` }] }
@@ -768,7 +815,14 @@
       }
     };
     appendLog(`Gemini request -> ${url}`);
-    const res = await fetch(url, { method:"POST", headers: { "Content-Type":"application/json" }, body: JSON.stringify(body) });
+    const res = await fetch(url, {
+      method:"POST",
+      headers: {
+        "Content-Type":"application/json",
+        "x-goog-api-key": key
+      },
+      body: JSON.stringify(body)
+    });
     const rawText = await res.text();
     let data;
     try{ data = JSON.parse(rawText); }catch{ data = { _raw: rawText }; }
@@ -913,6 +967,29 @@
     appendLog("Dry run payload displayed.");
   });
 
+  // 隨機填入主題、人設與背景
+  if(ui.btnRandomTheme){
+    ui.btnRandomTheme.addEventListener("click", ()=>{
+      const r = randomThemes[Math.floor(Math.random() * randomThemes.length)];
+      ui.theme.value = r;
+      persist();
+    });
+  }
+  if(ui.btnRandomCharacters){
+    ui.btnRandomCharacters.addEventListener("click", ()=>{
+      const r = randomCharacters[Math.floor(Math.random() * randomCharacters.length)];
+      ui.characters.value = r;
+      persist();
+    });
+  }
+  if(ui.btnRandomWorld){
+    ui.btnRandomWorld.addEventListener("click", ()=>{
+      const r = randomWorlds[Math.floor(Math.random() * randomWorlds.length)];
+      ui.world.value = r;
+      persist();
+    });
+  }
+
   ui.btnReset.addEventListener("click", ()=>{
     // keep provider
     ui.apiKey.value = "";
@@ -1041,13 +1118,9 @@
       return;
     }
 
-    // quick sanity hints
-    if(provider === "openai" && key.startsWith("AIza")){
-      setStatus("bad","你選的是 OpenAI，但你填的像是 Google 的 AIza key；請換 OpenAI key（通常是 sk- 開頭）。");
-      return;
-    }
-    if(provider === "gemini" && key.startsWith("sk-")){
-      setStatus("bad","你選的是 Gemini，但你填的像是 OpenAI 的 sk- key；請換成 AIza...（或你的 Gemini key）。");
+    // quick sanity hint: 偵測錯誤的 API key 格式
+    if(key.startsWith("sk-")){
+      setStatus("bad","你輸入的是 OpenAI 的 sk- 開頭 key，請使用 Google AI Studio 的 key（通常為 AIza 或其他格式）。");
       return;
     }
 
