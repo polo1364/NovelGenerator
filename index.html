@@ -402,6 +402,8 @@
       <div class="buttons">
         <button id="randomBtn" type="button">隨機填充</button>
         <button id="generateBtn" type="button">開始生成</button>
+        <!-- 繼續生成按鈕在產出初始內容後顯示 -->
+        <button id="continueBtn" type="button" disabled>繼續生成</button>
         <button id="downloadBtn" type="button" disabled>下載小說</button>
       </div>
       <div id="status" class="status"></div>
@@ -421,6 +423,7 @@
       const randomBtn = document.getElementById('randomBtn');
       const generateBtn = document.getElementById('generateBtn');
       const downloadBtn = document.getElementById('downloadBtn');
+      const continueBtn = document.getElementById('continueBtn');
       const statusDiv = document.getElementById('status');
       const resultDiv = document.getElementById('result');
 
@@ -451,6 +454,7 @@
         latestStory = savedStory;
         resultDiv.textContent = savedStory;
         downloadBtn.disabled = false;
+        continueBtn.disabled = false;
       }
 
       // 切換 API 金鑰顯示/隱藏
@@ -747,6 +751,86 @@
         downloadFile(title + '.txt', latestStory);
       });
 
+      // 繼續生成：在已有故事基礎上請求後續內容
+      continueBtn.addEventListener('click', async () => {
+        statusDiv.textContent = '';
+        statusDiv.style.color = varSecondaryColor();
+        // 如果沒有已生成的故事則不處理
+        if (!latestStory) {
+          statusDiv.textContent = '尚未有故事可繼續，請先生成。';
+          statusDiv.style.color = '#e84d3d';
+          return;
+        }
+        const apiKey = apiKeyInput.value.trim();
+        const model = modelSelect.value;
+        if (!apiKey) {
+          statusDiv.textContent = '請輸入 API 金鑰。';
+          statusDiv.style.color = '#e84d3d';
+          return;
+        }
+        // 組成續篇提示語：將目前故事作為前文，請模型延續
+        const continuePrompt = latestStory + '\n\n請保持以上故事的主題、背景、人物與風格，繼續撰寫後續章節或故事內容，直到此章節結束或故事完結。';
+        statusDiv.textContent = '續篇生成中...';
+        statusDiv.style.color = varSecondaryColor();
+        // 禁用按鈕避免重複請求
+        continueBtn.disabled = true;
+        generateBtn.disabled = true;
+        try {
+          const endpoint =
+            'https://generativelanguage.googleapis.com/v1beta/models/' + encodeURIComponent(model) + ':generateContent';
+          const payload = {
+            contents: [
+              {
+                parts: [
+                  { text: continuePrompt },
+                ],
+              },
+            ],
+          };
+          const response = await fetch(endpoint, {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              'x-goog-api-key': apiKey,
+            },
+            body: JSON.stringify(payload),
+          });
+          const data = await response.json();
+          if (data.error) {
+            statusDiv.textContent = '錯誤：' + data.error.message;
+            statusDiv.style.color = '#e84d3d';
+            continueBtn.disabled = false;
+            generateBtn.disabled = false;
+            return;
+          }
+          if (data.candidates && data.candidates.length > 0) {
+            const parts = data.candidates[0].content.parts || [];
+            const continuation = parts.map((p) => p.text || '').join('').trim();
+            if (continuation) {
+              // 追加新內容
+              latestStory += '\n\n' + continuation;
+              resultDiv.textContent = latestStory;
+              localStorage.setItem('savedStory', latestStory);
+              statusDiv.textContent = '續篇完成！';
+              statusDiv.style.color = '#008a00';
+              downloadBtn.disabled = false;
+            } else {
+              statusDiv.textContent = '沒有獲得續篇內容，可能已完結。';
+              statusDiv.style.color = '#e84d3d';
+            }
+          } else {
+            statusDiv.textContent = '沒有獲得續篇內容，可能已完結。';
+            statusDiv.style.color = '#e84d3d';
+          }
+        } catch (err) {
+          statusDiv.textContent = '請求失敗：' + err.message;
+          statusDiv.style.color = '#e84d3d';
+        } finally {
+          continueBtn.disabled = false;
+          generateBtn.disabled = false;
+        }
+      });
+
 
       // 生成小說
       generateBtn.addEventListener('click', async () => {
@@ -757,6 +841,7 @@
         localStorage.removeItem('savedStory');
         latestStory = '';
         downloadBtn.disabled = true;
+        continueBtn.disabled = true;
 
         const apiKey = apiKeyInput.value.trim();
         const model = modelSelect.value;
@@ -847,6 +932,7 @@
             statusDiv.textContent = '生成完成！';
             statusDiv.style.color = '#008a00';
             downloadBtn.disabled = false;
+            continueBtn.disabled = false;
           } else {
             statusDiv.textContent = '沒有獲得內容，請調整設定。';
             statusDiv.style.color = '#e84d3d';
