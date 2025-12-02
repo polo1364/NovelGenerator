@@ -1,1189 +1,865 @@
-<!doctype html>
+<!DOCTYPE html>
 <html lang="zh-Hant">
-<head>
-  <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>小說生成器（直觀介面版）</title>
-  <style>
-    :root{
-      --bg:#0b1220;
-      --card:#101a33;
-      --card2:#0f1930;
-      --line:#223458;
-      --text:#e8eefc;
-      --muted:#a9b6d6;
-      --bad:#ff5a7a;
-      --ok:#37d67a;
-      --warn:#ffcc66;
-      --accent:#7aa7ff;
-      --accent2:#9b7aff;
-      --shadow: 0 16px 50px rgba(0,0,0,.45);
-      --radius:18px;
-      --radius2:22px;
-    }
-    *{box-sizing:border-box}
-    body{
-      margin:0;
-      font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, "Noto Sans TC", "PingFang TC", "Microsoft JhengHei", Arial, sans-serif;
-      color:var(--text);
-      background:
-        radial-gradient(1200px 700px at 20% 10%, rgba(122,167,255,.25), transparent 55%),
-        radial-gradient(1000px 700px at 85% 20%, rgba(155,122,255,.20), transparent 55%),
-        radial-gradient(900px 700px at 50% 90%, rgba(55,214,122,.10), transparent 60%),
-        var(--bg);
-      min-height:100vh;
-    }
-    .wrap{
-      max-width:1200px;
-      margin:0 auto;
-      padding:24px 16px 42px;
-    }
-    header{
-      display:flex;
-      gap:14px;
-      align-items:center;
-      justify-content:space-between;
-      margin-bottom:14px;
-    }
-    .brand{
-      display:flex;
-      align-items:center;
-      gap:12px;
-    }
-    .logo{
-      width:44px;height:44px;border-radius:14px;
-      background: linear-gradient(135deg, rgba(122,167,255,.95), rgba(155,122,255,.95));
-      box-shadow: 0 12px 30px rgba(122,167,255,.25);
-      position:relative;
-      overflow:hidden;
-    }
-    .logo:after{
-      content:"";
-      position:absolute; inset:-30%;
-      background: radial-gradient(circle at 30% 30%, rgba(255,255,255,.35), transparent 60%);
-      transform: rotate(18deg);
-    }
-    h1{
-      font-size:18px;
-      margin:0;
-      letter-spacing:.4px;
-    }
-    .subtitle{
-      margin:2px 0 0;
-      font-size:13px;
-      color:var(--muted);
-    }
-    .pill{
-      display:inline-flex;
-      gap:8px;
-      align-items:center;
-      padding:8px 12px;
-      border:1px solid var(--line);
-      border-radius:999px;
-      background: rgba(16,26,51,.55);
-      backdrop-filter: blur(8px);
-      color:var(--muted);
-      font-size:12px;
-      user-select:none;
-    }
-    .grid{
-      display:grid;
-      grid-template-columns: 1fr 1.15fr;
-      gap:16px;
-      margin-top:12px;
-    }
-    @media (max-width: 980px){
-      .grid{grid-template-columns:1fr}
-    }
-    .card{
-      background: rgba(16,26,51,.78);
-      border:1px solid rgba(34,52,88,.85);
-      border-radius: var(--radius2);
-      box-shadow: var(--shadow);
-      overflow:hidden;
-    }
-    .card .hd{
-      padding:14px 16px;
-      display:flex;
-      align-items:center;
-      justify-content:space-between;
-      border-bottom:1px solid rgba(34,52,88,.85);
-      background: rgba(15,25,48,.55);
-    }
-    .card .hd .title{
-      font-weight:700;
-      font-size:14px;
-      letter-spacing:.3px;
-      margin:0;
-    }
-    .card .hd .hint{
-      font-size:12px;
-      color:var(--muted);
-    }
-    .card .bd{padding:14px 16px}
-    .row{display:grid; grid-template-columns:1fr 1fr; gap:12px}
-    .row3{display:grid; grid-template-columns:1fr 1fr 1fr; gap:12px}
-    @media (max-width: 520px){
-      .row, .row3{grid-template-columns:1fr}
-    }
-    label{
-      display:block;
-      font-size:12px;
-      color:var(--muted);
-      margin:0 0 6px;
-    }
-    input, select, textarea{
-      width:100%;
-      padding:12px 12px;
-      border-radius:14px;
-      border:1px solid rgba(34,52,88,.9);
-      background: rgba(11,18,32,.55);
-      color:var(--text);
-      outline:none;
-      font-size:14px;
-    }
-    textarea{min-height:92px; resize:vertical}
-    input:focus, select:focus, textarea:focus{
-      border-color: rgba(122,167,255,.9);
-      box-shadow: 0 0 0 3px rgba(122,167,255,.18);
-    }
-    .inline{
-      display:flex; gap:10px; align-items:center;
-    }
-    .btn{
-      border:none;
-      border-radius:16px;
-      padding:12px 14px;
-      font-weight:700;
-      cursor:pointer;
-      user-select:none;
-      transition: transform .05s ease, filter .15s ease;
-      display:inline-flex;
-      gap:10px;
-      align-items:center;
-      justify-content:center;
-      white-space:nowrap;
-    }
-    .btn:active{transform: translateY(1px)}
-    .btn.primary{
-      background: linear-gradient(135deg, rgba(122,167,255,.95), rgba(155,122,255,.95));
-      color:#081026;
-    }
-    .btn.ghost{
-      background: rgba(11,18,32,.35);
-      border:1px solid rgba(34,52,88,.9);
-      color:var(--text);
-    }
-    .btn.warn{
-      background: rgba(255,204,102,.16);
-      border:1px solid rgba(255,204,102,.38);
-      color: var(--warn);
-    }
-    .btn:disabled{
-      opacity:.55; cursor:not-allowed;
-      filter: grayscale(.2);
-    }
-    .small{
-      font-size:12px;
-      color:var(--muted);
-      line-height:1.4;
-    }
-    .monos{
-      font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
-    }
-    .banner{
-      border:1px solid rgba(255,204,102,.45);
-      background: rgba(255,204,102,.12);
-      color: var(--warn);
-      padding:10px 12px;
-      border-radius:16px;
-      margin:12px 0 0;
-      display:none;
-    }
-    .banner strong{color:#ffe7b0}
-    .tabs{
-      display:flex; gap:8px;
-    }
-    .tab{
-      padding:8px 10px;
-      border-radius:999px;
-      border:1px solid rgba(34,52,88,.85);
-      background: rgba(11,18,32,.35);
-      color: var(--muted);
-      cursor:pointer;
-      font-size:12px;
-      user-select:none;
-    }
-    .tab.active{
-      background: rgba(122,167,255,.18);
-      color: var(--text);
-      border-color: rgba(122,167,255,.55);
-    }
-    .outbox{
-      padding:14px 16px;
-      display:flex;
-      flex-direction:column;
-      gap:10px;
-    }
-    .toolbar{
-      display:flex;
-      justify-content:space-between;
-      align-items:center;
-      gap:10px;
-      flex-wrap:wrap;
-    }
-    .status{
-      display:flex;
-      gap:10px;
-      align-items:center;
-      font-size:12px;
-      color:var(--muted);
-    }
-    .dot{
-      width:8px;height:8px;border-radius:99px;
-      background: rgba(169,182,214,.55);
-      box-shadow: 0 0 0 4px rgba(169,182,214,.10);
-    }
-    .dot.ok{background: var(--ok); box-shadow: 0 0 0 4px rgba(55,214,122,.12)}
-    .dot.bad{background: var(--bad); box-shadow: 0 0 0 4px rgba(255,90,122,.14)}
-    .pre{
-      border:1px solid rgba(34,52,88,.85);
-      background: rgba(11,18,32,.45);
-      border-radius: 18px;
-      padding:14px;
-      white-space:pre-wrap;
-      word-break:break-word;
-      line-height:1.55;
-      min-height: 360px;
-      overflow:auto;
-    }
-    .kpi{
-      display:flex; gap:10px; flex-wrap:wrap;
-      font-size:12px; color:var(--muted);
-    }
-    .chip{
-      border:1px solid rgba(34,52,88,.85);
-      background: rgba(11,18,32,.30);
-      border-radius:999px;
-      padding:7px 10px;
-    }
-    details{
-      border:1px dashed rgba(34,52,88,.75);
-      border-radius: 16px;
-      background: rgba(11,18,32,.18);
-      padding:10px 12px;
-      margin-top: 10px;
-    }
-    summary{
-      cursor:pointer;
-      font-weight:700;
-      color: var(--text);
-      list-style:none;
-    }
-    summary::-webkit-details-marker{display:none}
-    .twocol{
-      display:grid; grid-template-columns:1fr 1fr; gap:12px;
-      margin-top: 10px;
-    }
-    @media (max-width: 520px){ .twocol{grid-template-columns:1fr} }
-    .footerNote{
-      margin-top:12px;
-      color: var(--muted);
-      font-size:12px;
-      line-height:1.5;
-    }
-    .toggle{
-      display:flex; align-items:center; gap:10px;
-      user-select:none;
-      font-size:13px;
-      color: var(--text);
-    }
-    .switch{
-      width:44px; height:26px; border-radius:999px;
-      border:1px solid rgba(34,52,88,.95);
-      background: rgba(11,18,32,.45);
-      position:relative;
-      cursor:pointer;
-      flex:none;
-    }
-    .knob{
-      width:20px; height:20px; border-radius:99px;
-      background: rgba(169,182,214,.9);
-      position:absolute; top:2px; left:2px;
-      transition: left .15s ease, background .15s ease;
-    }
-    .switch.on{
-      border-color: rgba(55,214,122,.55);
-      background: rgba(55,214,122,.10);
-    }
-    .switch.on .knob{
-      left:22px;
-      background: rgba(55,214,122,.95);
-    }
-  </style>
-</head>
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>小說生成器</title>
+    <style>
+      :root {
+        --primary: #4e73df;
+        --primary-hover: #3c5ec5;
+        --secondary: #6c757d;
+        --secondary-hover: #5a6268;
+        --background: #f2f4f8;
+        --card-bg: #ffffff;
+        --section-bg: #f8f9fc;
+        --input-bg: #fdfdfd;
+      }
+      body {
+        margin: 0;
+        font-family: 'Segoe UI', Roboto, sans-serif;
+        background: var(--background);
+        color: #333;
+        display: flex;
+        justify-content: center;
+        align-items: flex-start;
+        min-height: 100vh;
+        padding: 40px 20px;
+      }
+      .card {
+        background: var(--card-bg);
+        border-radius: 10px;
+        box-shadow: 0 6px 16px rgba(0, 0, 0, 0.06);
+        max-width: 900px;
+        width: 100%;
+        padding: 32px;
+      }
+      h1 {
+        font-size: 2rem;
+        margin: 0;
+        color: var(--primary);
+      }
+      .subtitle {
+        margin-top: 6px;
+        margin-bottom: 26px;
+        color: var(--secondary);
+        font-size: 0.95rem;
+      }
+      .section {
+        background: var(--section-bg);
+        border-radius: 6px;
+        padding: 20px;
+        margin-bottom: 20px;
+      }
+      .section-title {
+        font-weight: 600;
+        font-size: 1.1rem;
+        color: var(--primary);
+        margin-top: 0;
+        margin-bottom: 14px;
+      }
+      .input-group {
+        margin-bottom: 14px;
+      }
+      .input-group label {
+        display: block;
+        margin-bottom: 4px;
+        font-weight: 600;
+        color: var(--primary);
+      }
+      .label-row {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 4px;
+      }
+      .label-row label {
+        font-weight: 600;
+        color: var(--primary);
+      }
+      .label-row button {
+        background: var(--secondary);
+        color: #fff;
+        padding: 6px 12px;
+        font-size: 0.85rem;
+        border: none;
+        border-radius: 4px;
+        cursor: pointer;
+        transition: background 0.2s ease;
+        margin-left: 8px;
+      }
+      .label-row button:hover {
+        background: var(--secondary-hover);
+      }
 
-<body>
-  <div class="wrap">
-    <header>
-      <div class="brand">
-        <div class="logo" aria-hidden="true"></div>
-        <div>
-          <h1>小說生成器（像生貼圖一樣直覺，但這次生的是文字）</h1>
-          <div class="subtitle">支援 Google AI Studio（Gemini）；可手動輸入 Key；右側即時輸出與錯誤診斷。</div>
+      /* API 金鑰輸入與顯示隱藏控制 */
+      .api-key-container {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+      }
+      .api-key-container button.api-toggle {
+        background: var(--secondary);
+        color: #fff;
+        padding: 6px 12px;
+        font-size: 0.85rem;
+        border: none;
+        border-radius: 4px;
+        cursor: pointer;
+        transition: background 0.2s ease;
+        white-space: nowrap;
+      }
+      .api-key-container button.api-toggle:hover {
+        background: var(--secondary-hover);
+      }
+
+      /* 主要人物動態行 */
+      .character-row {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 8px;
+        margin-bottom: 12px;
+        align-items: center;
+      }
+
+      /* 人物行首的編號標籤 */
+      .character-row .char-index {
+        flex: 0 0 64px;
+        font-weight: 600;
+        color: var(--primary);
+        display: flex;
+        align-items: center;
+      }
+
+      .character-row input {
+        flex: 1 1 140px;
+        min-width: 120px;
+      }
+
+      .character-row button {
+        background: var(--secondary);
+        color: #fff;
+        padding: 6px 12px;
+        font-size: 0.85rem;
+        border: none;
+        border-radius: 4px;
+        cursor: pointer;
+        transition: background 0.2s ease;
+        white-space: nowrap;
+      }
+
+      .character-row button:hover {
+        background: var(--secondary-hover);
+      }
+
+      /* 章節按鈕容器與按鈕樣式 */
+      .chapter-buttons {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 8px;
+        margin-top: 20px;
+      }
+      .chapter-buttons button {
+        background: var(--primary);
+        color: #fff;
+        padding: 6px 12px;
+        font-size: 0.9rem;
+        border: none;
+        border-radius: 4px;
+        cursor: pointer;
+        transition: background 0.2s ease;
+      }
+      .chapter-buttons button:hover {
+        background: var(--primary-hover);
+      }
+      .chapter-buttons button.active {
+        background: var(--secondary);
+      }
+      input[type="text"],
+      input[type="number"],
+      select,
+      textarea {
+        width: 100%;
+        padding: 10px 12px;
+        border: 1px solid #ced4da;
+        border-radius: 4px;
+        background: var(--input-bg);
+        font-size: 1rem;
+        box-sizing: border-box;
+        transition: border-color 0.2s, box-shadow 0.2s;
+      }
+      input:focus,
+      textarea:focus,
+      select:focus {
+        outline: none;
+        border-color: var(--primary);
+        box-shadow: 0 0 0 3px rgba(78, 115, 223, 0.2);
+      }
+      textarea {
+        min-height: 90px;
+        resize: vertical;
+      }
+      .buttons {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 12px;
+        margin-top: 8px;
+      }
+      button {
+        background: var(--primary);
+        color: #fff;
+        padding: 10px 24px;
+        font-size: 1rem;
+        border: none;
+        border-radius: 4px;
+        cursor: pointer;
+        transition: background 0.2s ease;
+      }
+      button:hover {
+        background: var(--primary-hover);
+      }
+      button:disabled {
+        background: #b8c4e3;
+        cursor: not-allowed;
+      }
+      .status {
+        margin-top: 10px;
+        font-size: 0.95rem;
+        color: var(--secondary);
+      }
+      .output {
+        margin-top: 20px;
+        padding: 24px;
+        border: 1px solid #e6e6e6;
+        border-radius: 4px;
+        background: #ffffff;
+        font-family: 'Noto Serif TC', serif;
+        font-size: 1.1rem;
+        line-height: 1.8;
+        white-space: pre-wrap;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="card">
+      <h1>小說生成器</h1>
+      <p class="subtitle">
+        組合主題、背景、人物與章節數，產出專屬於您的長篇故事。完成後可以直接閱讀或下載純文字檔。
+      </p>
+
+      <!-- 基本設定 -->
+      <div class="section">
+      <h2 class="section-title">基本設定</h2>
+      <div class="input-group">
+        <label for="apiKey">Gemini API 金鑰</label>
+        <div class="api-key-container">
+          <input
+            type="password"
+            id="apiKey"
+            placeholder="請輸入您的 API 金鑰"
+            autocomplete="off"
+          />
+          <button type="button" id="toggleApiKeyVisibility" class="api-toggle">顯示</button>
         </div>
       </div>
-      <div class="pill monos" id="envPill">protocol: …</div>
-    </header>
+      <div class="input-group">
+        <label for="model">選擇模型</label>
+        <select id="model">
+          <option value="gemini-2.5-flash">gemini‑2.5‑flash</option>
+          <option value="gemini-pro">gemini‑pro</option>
+        </select>
+      </div>
+      </div>
 
-    <div class="banner" id="fileBanner">
-      <strong>你是用 file:// 直接開檔</strong>，瀏覽器會把來源當成 <span class="monos">origin = null</span>，很多 fetch 會被 CORS 擋掉。<br/>
-      建議用 <span class="monos">http://localhost</span> 跑起來（例如 <span class="monos">python -m http.server 5500</span>）。
+      <!-- 故事元素 -->
+      <div class="section">
+        <h2 class="section-title">故事元素</h2>
+        <div class="input-group">
+          <label for="theme">主題</label>
+          <select id="theme">
+            <option value="">請選擇主題</option>
+            <option value="奇幻冒險">奇幻冒險</option>
+            <option value="未來科幻">未來科幻</option>
+            <option value="浪漫愛情">浪漫愛情</option>
+            <option value="懸疑推理">懸疑推理</option>
+            <option value="歷史傳奇">歷史傳奇</option>
+            <option value="青春成長">青春成長</option>
+            <option value="冒險史詩">冒險史詩</option>
+            <option value="玄幻修真">玄幻修真</option>
+            <option value="現代都市">現代都市</option>
+            <option value="魔法學院">魔法學院</option>
+            <option value="恐怖驚悚">恐怖驚悚</option>
+            <option value="喜劇逗趣">喜劇逗趣</option>
+            <option value="現實主義">現實主義</option>
+            <option value="懷舊故事">懷舊故事</option>
+            <option value="神秘奇案">神秘奇案</option>
+            <option value="動物寓言">動物寓言</option>
+            <option value="社會批判">社會批判</option>
+            <option value="魔幻現實">魔幻現實</option>
+            <option value="古裝武俠">古裝武俠</option>
+            <option value="時空穿越">時空穿越</option>
+          </select>
+        </div>
+        <div class="input-group">
+          <label for="setting">背景設定</label>
+          <select id="setting">
+            <option value="">請選擇背景</option>
+            <option value="虛構的中世紀王國">虛構的中世紀王國</option>
+            <option value="21世紀的臺灣都市">21世紀的臺灣都市</option>
+            <option value="遙遠的太空殖民地">遙遠的太空殖民地</option>
+            <option value="虛擬實境世界">虛擬實境世界</option>
+            <option value="古代皇宮">古代皇宮</option>
+            <option value="末日後的荒土">末日後的荒土</option>
+            <option value="近未來的高科技城市">近未來的高科技城市</option>
+            <option value="魔法學院">魔法學院</option>
+            <option value="蒸汽龐克城市">蒸汽龐克城市</option>
+            <option value="深海王國">深海王國</option>
+            <option value="繁華的銀河商場">繁華的銀河商場</option>
+            <option value="隱藏於雲端的城堡">隱藏於雲端的城堡</option>
+            <option value="古老的山林村落">古老的山林村落</option>
+            <option value="雪山上的修道院">雪山上的修道院</option>
+            <option value="熱帶雨林深處">熱帶雨林深處</option>
+            <option value="巨型迷宮都市">巨型迷宮都市</option>
+            <option value="殖民海盜船">殖民海盜船</option>
+            <option value="宇宙戰艦上">宇宙戰艦上</option>
+            <option value="明朝宮廷">明朝宮廷</option>
+            <option value="平行宇宙">平行宇宙</option>
+          </select>
+        </div>
+        <div class="input-group">
+          <div class="label-row">
+            <label>主要人物設定</label>
+            <div>
+              <button id="randomAllCharactersBtn" type="button">隨機人物</button>
+              <button id="addCharacterBtn" type="button">新增人物</button>
+            </div>
+          </div>
+          <div id="charactersContainer"></div>
+        </div>
+        <div class="input-group">
+          <label for="style">故事風格</label>
+          <select id="style">
+            <option value="">請選擇風格</option>
+            <option value="詩意">詩意</option>
+            <option value="幽默">幽默</option>
+            <option value="黑暗">黑暗</option>
+            <option value="勵志">勵志</option>
+            <option value="浪漫">浪漫</option>
+            <option value="刺激">刺激</option>
+            <option value="溫馨">溫馨</option>
+            <option value="懸疑">懸疑</option>
+            <option value="熱血">熱血</option>
+            <option value="魔幻">魔幻</option>
+            <option value="古典華麗">古典華麗</option>
+            <option value="荒誕">荒誕</option>
+            <option value="現實主義">現實主義</option>
+            <option value="輕鬆寫意">輕鬆寫意</option>
+            <option value="酷炫科技">酷炫科技</option>
+            <option value="優雅浪漫">優雅浪漫</option>
+            <option value="大河戲劇">大河戲劇</option>
+            <option value="黑色幽默">黑色幽默</option>
+            <option value="心理驚悚">心理驚悚</option>
+            <option value="流行網絡">流行網絡</option>
+          </select>
+        </div>
+        <div class="input-group">
+          <label for="chapters">章節數</label>
+          <input
+            type="number"
+            id="chapters"
+            placeholder="如：10"
+            min="1"
+            max="50"
+            step="1"
+          />
+        </div>
+        <div class="input-group">
+          <label for="length">預計總字數</label>
+          <input
+            type="number"
+            id="length"
+            placeholder="如：50000"
+            min="1000"
+            max="200000"
+            step="1000"
+          />
+        </div>
+      </div>
+
+      <!-- 其他說明 -->
+      <div class="section">
+        <h2 class="section-title">其他說明</h2>
+        <div class="input-group">
+          <label for="notes">補充說明（選填）</label>
+          <textarea
+            id="notes"
+            placeholder="如有額外情節或風格要求，可在此補充。"
+          ></textarea>
+        </div>
+      </div>
+
+      <!-- 控制按鈕 -->
+      <div class="buttons">
+        <button id="randomBtn" type="button">隨機填充</button>
+        <button id="generateBtn" type="button">開始生成</button>
+        <button id="downloadBtn" type="button" disabled>下載小說</button>
+      </div>
+      <div id="status" class="status"></div>
+      <div id="result" class="output"></div>
     </div>
 
-    <div class="grid">
-      <!-- LEFT: Controls -->
-      <section class="card">
-        <div class="hd">
-          <div>
-            <p class="title">設定</p>
-            <div class="hint">先把鑰匙插對洞，再開始寫作（不然 401 會很兇）</div>
-          </div>
-          <button class="btn ghost" id="btnReset" title="清空/重置">重置</button>
-        </div>
+    <script>
+      // 取得元素
+      const apiKeyInput = document.getElementById('apiKey');
+      const modelSelect = document.getElementById('model');
+      const themeSelect = document.getElementById('theme');
+      const settingSelect = document.getElementById('setting');
+      const styleSelect = document.getElementById('style');
+      const chaptersInput = document.getElementById('chapters');
+      const lengthInput = document.getElementById('length');
+      const notesInput = document.getElementById('notes');
+      const randomBtn = document.getElementById('randomBtn');
+      const generateBtn = document.getElementById('generateBtn');
+      const downloadBtn = document.getElementById('downloadBtn');
+      const statusDiv = document.getElementById('status');
+      const resultDiv = document.getElementById('result');
 
-        <div class="bd">
-          <div class="row">
-            <div>
-              <label>供應商</label>
-              <!-- 只提供 Google AI Studio （Gemini），選擇器隱藏並顯示固定文字 -->
-              <select id="provider" style="display:none">
-                <option value="gemini">Google Gemini（AI Studio）</option>
-              </select>
-              <div style="margin-top:6px;font-size:14px;color:var(--muted)">Google AI Studio（Gemini）</div>
-            </div>
-            <!-- 隱藏 OpenAI 模式選擇，因為只使用 Google AI Studio -->
-            <div style="display:none">
-              <label>模式</label>
-              <select id="openaiMode">
-                <option value="responses">Responses API</option>
-                <option value="chat">Chat</option>
-              </select>
-            </div>
-          </div>
+      // API 金鑰顯示/隱藏按鈕
+      const toggleApiKeyVisibility = document.getElementById('toggleApiKeyVisibility');
 
-          <div style="height:10px"></div>
+      // 新增角色相關元素
+      const charactersContainer = document.getElementById('charactersContainer');
+      const randomAllCharactersBtn = document.getElementById('randomAllCharactersBtn');
+      const addCharacterBtn = document.getElementById('addCharacterBtn');
 
-          <div>
-            <label>API Key（不會上傳到任何地方；除非你按生成才會送出）</label>
-            <div class="inline">
-              <input id="apiKey" type="password" placeholder="OpenAI: sk-... / Gemini: AIza...（看你選哪一個供應商）" autocomplete="off" />
-              <button class="btn ghost" id="btnToggleKey" title="顯示/隱藏">👁️</button>
-            </div>
-            <div style="height:8px"></div>
-            <div class="row">
-              <div class="toggle">
-                <div class="switch" id="swRemember" role="switch" aria-checked="false" tabindex="0"><div class="knob"></div></div>
-                記住 Key（存到本機 localStorage）
-              </div>
-              <div class="toggle">
-                <div class="switch on" id="swPolish" role="switch" aria-checked="true" tabindex="0"><div class="knob"></div></div>
-                降低重複用語（加強去重指令）
-              </div>
-            </div>
-            <div class="footerNote">
-              若你要部署到 GitHub Pages：<b>不要把 key 寫死在程式裡</b>。這頁是讓每個使用者自己輸入自己的 key。
-            </div>
-          </div>
+      // 目前產出的故事文字
+      let latestStory = '';
 
-          <details open>
-            <summary>模型與端點</summary>
-            <div class="twocol">
-              <div>
-              <label>Model（可自行改）</label>
-              <input id="model" placeholder="例如：gemini-1.5-pro / gemini-1.5-flash / gemini-1.0-pro" />
-              </div>
-              <div>
-              <label>Base URL</label>
-              <input id="baseUrl" placeholder="例如：https://generativelanguage.googleapis.com/v1beta（預設會自動帶入）" />
-              </div>
-            </div>
-            <div class="twocol">
-              <div>
-                <label>Temperature</label>
-                <input id="temp" type="number" min="0" max="2" step="0.1" value="0.8" />
-              </div>
-              <div>
-                <label>輸出長度（大概字數）</label>
-                <input id="targetLen" type="number" min="300" max="5000" step="100" value="1200" />
-              </div>
-            </div>
-            <div class="small">
-              小提醒：OpenAI 用錯 key（像 AIza...）就會 401；Gemini 用 sk-... 也一樣會尷尬到爆。
-            </div>
-          </details>
-
-          <div style="height:12px"></div>
-
-          <div class="row">
-            <div>
-              <label>小說類型（可選 or 自訂）</label>
-              <select id="genre">
-                <option value="現代日常">現代日常</option>
-                <option value="戀愛喜劇">戀愛喜劇</option>
-                <option value="懸疑推理">懸疑推理</option>
-                <option value="奇幻冒險">奇幻冒險</option>
-                <option value="科幻/賽博">科幻/賽博</option>
-                <option value="職場爆笑">職場爆笑</option>
-                <option value="恐怖驚悚">恐怖驚悚</option>
-                <option value="自訂">自訂…</option>
-              </select>
-            </div>
-            <div>
-              <label>自訂類型（當上面選「自訂」才會用）</label>
-              <input id="genreCustom" placeholder="例如：台式黑色幽默、硬派科幻、日系輕小說..." />
-            </div>
-          </div>
-
-          <div style="height:10px"></div>
-
-          <div class="row">
-            <div>
-              <label>視角</label>
-              <select id="pov">
-                <option value="第一人稱">第一人稱</option>
-                <option value="第三人稱">第三人稱</option>
-                <option value="多視角">多視角</option>
-              </select>
-            </div>
-            <div>
-              <label>語氣/文風</label>
-              <select id="tone">
-                <option value="自然口語、節奏明快">自然口語、節奏明快</option>
-                <option value="細膩描寫、有畫面感">細膩描寫、有畫面感</option>
-                <option value="冷面吐槽、黑色幽默">冷面吐槽、黑色幽默</option>
-                <option value="熱血中二、浮誇燃">熱血中二、浮誇燃</option>
-                <option value="簡潔俐落、少廢話">簡潔俐落、少廢話</option>
-              </select>
-            </div>
-          </div>
-
-          <div style="height:10px"></div>
-
-          <div>
-            <label>主題（一句話也可以）</label>
-            <div class="inline" style="gap:8px">
-              <input id="theme" placeholder="例如：加班到凌晨的工程師，意外收到一封來自未來的信…" />
-              <button class="btn ghost" id="btnRandomTheme" title="隨機主題">🎲</button>
-            </div>
-          </div>
-
-          <div style="height:10px"></div>
-
-          <div class="row">
-            <div>
-              <label>主要人設（角色設定）</label>
-              <div class="inline" style="gap:8px">
-                <textarea id="characters" placeholder="例：主角：… 年齡/性格/缺點/目標…；配角：…"></textarea>
-                <button class="btn ghost" id="btnRandomCharacters" title="隨機人設">🎲</button>
-              </div>
-            </div>
-            <div>
-              <label>世界觀 / 背景（可留空）</label>
-              <div class="inline" style="gap:8px">
-                <textarea id="world" placeholder="例：城市規則、科技等級、魔法系統、公司文化（咳）..."></textarea>
-                <button class="btn ghost" id="btnRandomWorld" title="隨機背景">🎲</button>
-              </div>
-            </div>
-          </div>
-
-          <div style="height:10px"></div>
-
-          <div class="row3">
-            <div>
-              <label>章節數</label>
-              <input id="chapters" type="number" min="1" max="20" step="1" value="5" />
-            </div>
-            <div>
-              <label>輸出格式</label>
-              <select id="format">
-                <option value="text">純文字（推薦）</option>
-                <option value="json">JSON（便於你後續做 UI/分頁）</option>
-              </select>
-            </div>
-            <div>
-              <label>語言</label>
-              <select id="lang">
-                <option value="繁體中文">繁體中文</option>
-                <option value="簡體中文">簡體中文</option>
-                <option value="英文">英文</option>
-                <option value="日文">日文</option>
-              </select>
-            </div>
-          </div>
-
-          <div style="height:14px"></div>
-
-          <div class="inline" style="justify-content:space-between; flex-wrap:wrap">
-            <button class="btn primary" id="btnGenerate">✨ 生成小說</button>
-            <button class="btn ghost" id="btnCopy">📋 複製輸出</button>
-            <button class="btn warn" id="btnDryRun" title="不呼叫 API、只顯示你要送出的 payload">🧪 顯示請求內容</button>
-          </div>
-
-          <div class="footerNote">
-            若你遇到 <span class="monos">429</span>：通常是<b>超出速率/配額</b>，跟 CORS 不一樣；請降低頻率或換 key/方案。 
-          </div>
-        </div>
-      </section>
-
-      <!-- RIGHT: Output -->
-      <section class="card" aria-live="polite">
-        <div class="hd">
-          <div>
-            <p class="title">輸出</p>
-            <div class="hint">右邊就是你的小說；左邊是你下的「咒語」（也就是提示詞）</div>
-          </div>
-          <div class="tabs">
-            <div class="tab active" data-tab="result">結果</div>
-            <div class="tab" data-tab="log">Log</div>
-            <div class="tab" data-tab="raw">Raw JSON</div>
-          </div>
-        </div>
-
-        <div class="outbox">
-          <div class="toolbar">
-            <div class="status">
-              <span class="dot" id="statusDot"></span>
-              <span id="statusText">待命中。請先選供應商、填 key，然後按「生成」。</span>
-            </div>
-            <div class="kpi">
-              <span class="chip" id="chipProvider">provider: -</span>
-              <span class="chip" id="chipEndpoint">endpoint: -</span>
-              <span class="chip" id="chipModel">model: -</span>
-            </div>
-          </div>
-
-          <div class="pre" id="outResult"></div>
-          <div class="pre" id="outLog" style="display:none; min-height: 360px;"></div>
-          <div class="pre monos" id="outRaw" style="display:none; min-height: 360px;"></div>
-        </div>
-      </section>
-    </div>
-  </div>
-
-<script>
-(function(){
-  const $ = (id)=>document.getElementById(id);
-  const state = {
-    lastText: "",
-    lastRaw: null,
-    lastLog: "",
-    showKey: false,
-    rememberKey: false,
-    polish: true,
-  };
-
-  // ----- 隨機生成資料 -----
-  // 主題候選清單
-  const randomThemes = [
-    "一場穿越時空的旅程改變了主角的一生",
-    "在末日廢墟中尋找人性的光芒",
-    "AI與人類共生的奇幻都市",
-    "失業工程師意外繼承一座古老書店",
-    "太空移民計畫背後的陰謀",
-    "平凡高中生突然獲得讀心能力",
-    "職場菜鳥與未來自己展開對話",
-    "網紅主播捲入超自然事件",
-    "研究員在夢中控制現實"
-  ];
-
-  // 人設候選清單，每筆包含多行文字
-  const randomCharacters = [
-    `主角：林宥穎，26 歲平凡工程師，內向細心，缺點是優柔寡斷，夢想寫出一本小說。\n配角：陳瑋庭，28 歲高中教師，熱情開朗，厭惡欺騙，目標是帶學生參加科展。\n反派：神秘 AI，外表冷酷，擁有強大計算能力，目標控制人類。`,
-    `主角：張小慈，18 歲剛畢業的高中生，古靈精怪，缺點是衝動易怒，目標是找到失蹤的哥哥。\n配角：吳伯，60 歲退休老兵，沉默寡言，擁有神秘過去，目標是守護家鄉。\n反派：黑幫老大，善於操縱人心，目標統一地下世界。`,
-    `主角：陳靜雯，30 歲科幻小說家，天馬行空，缺點是拖延症嚴重，夢想寫出暢銷作品。\n配角：羅修，24 歲自媒體剪輯師，搞笑樂觀，目標是增粉百萬。\n反派：資深編輯，挑剔苛刻，目標是逼主角按時交稿。`,
-    `主角：高子維，40 歲警探，冷靜理性，缺點是過度執著，目標是破解懸案。\n配角：趙語晨，35 歲心理醫師，善解人意，目標是治癒自己的創傷。\n反派：連環殺手，聰明狡猾，目標是挑戰警方底線。`,
-    `主角：周雅琪，22 歲大學生，無神論者，缺點是缺乏自信，夢想成為偵探小說家。\n配角：李俊，22 歲資優生，擅長駭客技術，目標是破解學校的黑暗秘密。\n反派：學院院長，表面慈祥，其實暗中進行非法研究。`
-  ];
-
-  // 世界觀候選清單
-  const randomWorlds = [
-    "近未來的台北，科技進步但貧富差距加劇，政府推行基因改造政策。",
-    "高雄某個被財團掌控的工業區，地下還隱藏著外星文明遺跡。",
-    "架空的奇幻王國，魔法能量以海潮為源，月圓時力量最強。",
-    "現代都市與平行宇宙交錯，透過特定門能穿梭。",
-    "荒蕪的火星殖民地，資源匱乏，唯一水源被企業控制。",
-    "二十一世紀末全球被巨型公司統治，人工島成為唯一避難所。",
-    "古老的東方王朝與機械文明交融，蒸汽飛船來回穿梭。"
-  ];
-
-  const ui = {
-    provider: $("provider"),
-    openaiMode: $("openaiMode"),
-    apiKey: $("apiKey"),
-    model: $("model"),
-    baseUrl: $("baseUrl"),
-    temp: $("temp"),
-    targetLen: $("targetLen"),
-    genre: $("genre"),
-    genreCustom: $("genreCustom"),
-    pov: $("pov"),
-    tone: $("tone"),
-    theme: $("theme"),
-    characters: $("characters"),
-    world: $("world"),
-    chapters: $("chapters"),
-    format: $("format"),
-    lang: $("lang"),
-    btnGenerate: $("btnGenerate"),
-    btnCopy: $("btnCopy"),
-    btnDryRun: $("btnDryRun"),
-    btnReset: $("btnReset"),
-    btnToggleKey: $("btnToggleKey"),
-    swRemember: $("swRemember"),
-    swPolish: $("swPolish"),
-    statusDot: $("statusDot"),
-    statusText: $("statusText"),
-    outResult: $("outResult"),
-    outLog: $("outLog"),
-    outRaw: $("outRaw"),
-    chipProvider: $("chipProvider"),
-    chipEndpoint: $("chipEndpoint"),
-    chipModel: $("chipModel"),
-    envPill: $("envPill"),
-    fileBanner: $("fileBanner"),
-    btnRandomTheme: $("btnRandomTheme"),
-    btnRandomCharacters: $("btnRandomCharacters"),
-    btnRandomWorld: $("btnRandomWorld"),
-  };
-
-  function setStatus(kind, text){
-    ui.statusText.textContent = text;
-    ui.statusDot.classList.remove("ok","bad");
-    if(kind==="ok") ui.statusDot.classList.add("ok");
-    else if(kind==="bad") ui.statusDot.classList.add("bad");
-  }
-  function appendLog(line){
-    const ts = new Date().toLocaleTimeString();
-    state.lastLog += `[${ts}] ${line}\n`;
-    ui.outLog.textContent = state.lastLog;
-  }
-
-  function getGenre(){
-    const g = ui.genre.value;
-    return (g === "自訂") ? (ui.genreCustom.value || "自訂類型") : g;
-  }
-
-  function isFileProtocol(){
-    return location.protocol === "file:";
-  }
-
-  function setProviderDefaults(){
-    const p = ui.provider.value;
-    const mode = ui.openaiMode.value;
-    if(p === "openai"){
-      ui.openaiMode.disabled = false;
-      ui.model.placeholder = "例如：gpt-4.1-mini / gpt-4o-mini ...";
-      if(!ui.model.value) ui.model.value = "gpt-4.1-mini";
-      if(!ui.baseUrl.value || ui.baseUrl.dataset.auto === "1"){
-        ui.baseUrl.value = (mode === "responses")
-          ? "https://api.openai.com/v1/responses"
-          : "https://api.openai.com/v1/chat/completions";
-        ui.baseUrl.dataset.auto = "1";
+      // 儲存與讀取 API 金鑰
+      const storedKey = localStorage.getItem('geminiApiKey');
+      if (storedKey) {
+        apiKeyInput.value = storedKey;
       }
-    }else if(p === "gemini"){
-      ui.openaiMode.disabled = true;
-      ui.model.placeholder = "例如：gemini-1.5-flash / gemini-1.5-pro ...";
-      if(!ui.model.value) ui.model.value = "gemini-1.5-flash";
-      if(!ui.baseUrl.value || ui.baseUrl.dataset.auto === "1"){
-        ui.baseUrl.value = "https://generativelanguage.googleapis.com/v1beta";
-        ui.baseUrl.dataset.auto = "1";
+      apiKeyInput.addEventListener('change', () => {
+        const val = apiKeyInput.value.trim();
+        if (val) localStorage.setItem('geminiApiKey', val);
+      });
+
+      // 載入先前生成並儲存的故事（如果有）
+      const savedStory = localStorage.getItem('savedStory');
+      if (savedStory) {
+        latestStory = savedStory;
+        resultDiv.textContent = savedStory;
+        downloadBtn.disabled = false;
       }
-    }else{
-      ui.openaiMode.disabled = true;
-      ui.model.placeholder = "自訂後端可忽略或當作參數";
-      if(!ui.model.value) ui.model.value = "";
-      if(!ui.baseUrl.value || ui.baseUrl.dataset.auto === "1"){
-        ui.baseUrl.value = "http://localhost:3000/api/generate";
-        ui.baseUrl.dataset.auto = "1";
-      }
-    }
-    syncChips();
-  }
 
-  function syncChips(){
-    const p = ui.provider.value;
-    ui.chipProvider.textContent = `provider: ${p}`;
-    ui.chipModel.textContent = `model: ${ui.model.value || "-"}`;
-
-    let ep = ui.baseUrl.value || "-";
-    if(p==="gemini" && ui.model.value){
-      ep = `${ui.baseUrl.value}/models/${ui.model.value}:generateContent`;
-    }
-    ui.chipEndpoint.textContent = `endpoint: ${shorten(ep, 40)}`;
-  }
-
-  function shorten(s, n){
-    if(!s) return s;
-    return s.length > n ? s.slice(0, n-1) + "…" : s;
-  }
-
-  function buildPrompt(){
-    const genre = getGenre();
-    const lang = ui.lang.value;
-    const polish = state.polish;
-
-    const sys = [
-      `你是一位專業小說寫作助手。請用「${lang}」輸出。`,
-      `目標：產出可讀性高、情節推進清楚、段落分明的小說。`,
-      `風格：${ui.tone.value}。類型：${genre}。視角：${ui.pov.value}。`,
-      `要求：不要自我揭露、不提及你是 AI、不描述「我正在生成」等過程。`,
-      polish ? `去重指令：避免句型與措辭重複；每段盡量有不同的節奏與轉折；不要連續使用相同開頭。` : ``,
-    ].filter(Boolean).join("\n");
-
-    const target = Number(ui.targetLen.value || 1200);
-    const ch = Math.max(1, Math.min(20, Number(ui.chapters.value || 5)));
-
-    const user = [
-      `【主題】${ui.theme.value || "（未填）"}`,
-      `【主要人設】\n${ui.characters.value || "（未填）"}`,
-      `【世界觀/背景】\n${ui.world.value || "（可自由補全）"}`,
-      ``,
-      `【輸出結構】`,
-      `1) 書名（1 個） + 一句話賣點（1 句）`,
-      `2) 故事大綱（8~12 點，條列）`,
-      `3) 正文：分成 ${ch} 章，每章有章名；總長度約 ${target} 字上下（允許合理浮動）`,
-      ``,
-      ui.format.value === "json"
-        ? `【格式】請輸出「嚴格 JSON」，不要使用反引號，不要附加註解。建議結構：` +
-          `{"title":"","hook":"","outline":[...], "chapters":[{"no":1,"title":"","content":""}, ...]}`
-        : `【格式】純文字即可，段落清楚、對話用全形引號更好。`,
-    ].join("\n");
-
-    return { sys, user };
-  }
-
-  // ---- API Callers ----
-  async function callOpenAI({ baseUrl, mode, key, model, temperature, prompt }){
-    const headers = {
-      "Content-Type": "application/json",
-      "Authorization": `Bearer ${key}`,
-    };
-
-    let body;
-    if(mode === "chat"){
-      body = {
-        model,
-        messages: [
-          { role: "system", content: prompt.sys },
-          { role: "user", content: prompt.user },
-        ],
-        temperature,
-      };
-    }else{
-      // Responses API (best-effort compatible)
-      body = {
-        model,
-        input: [
-          { role: "system", content: prompt.sys },
-          { role: "user", content: prompt.user },
-        ],
-        temperature,
-      };
-    }
-
-    appendLog(`OpenAI request -> ${baseUrl}`);
-    const res = await fetch(baseUrl, { method:"POST", headers, body: JSON.stringify(body) });
-    const rawText = await res.text();
-    let data;
-    try{ data = JSON.parse(rawText); }catch{ data = { _raw: rawText }; }
-    if(!res.ok) throw { status: res.status, data, rawText };
-
-    const text = extractTextFromAny(data);
-    return { data, text };
-  }
-
-  async function callGemini({ baseUrl, key, model, temperature, prompt }){
-    // 使用 x-goog-api-key header 呼叫 Google AI Studio (Gemini) API
-    const url = `${baseUrl}/models/${encodeURIComponent(model)}:generateContent`;
-    const body = {
-      contents: [
-        { role: "user", parts: [{ text: `${prompt.sys}\n\n${prompt.user}` }] }
-      ],
-      generationConfig: {
-        temperature,
-      }
-    };
-    appendLog(`Gemini request -> ${url}`);
-    const res = await fetch(url, {
-      method:"POST",
-      headers: {
-        "Content-Type":"application/json",
-        "x-goog-api-key": key
-      },
-      body: JSON.stringify(body)
-    });
-    const rawText = await res.text();
-    let data;
-    try{ data = JSON.parse(rawText); }catch{ data = { _raw: rawText }; }
-    if(!res.ok) throw { status: res.status, data, rawText };
-
-    const text = extractTextFromAny(data);
-    return { data, text };
-  }
-
-  async function callCustom({ baseUrl, key, model, temperature, prompt }){
-    // You control your backend. We'll send a friendly payload.
-    const body = {
-      apiKey: key || null,
-      model: model || null,
-      temperature,
-      system: prompt.sys,
-      input: prompt.user,
-      meta: { format: ui.format.value, lang: ui.lang.value }
-    };
-    appendLog(`Custom request -> ${baseUrl}`);
-    const res = await fetch(baseUrl, { method:"POST", headers: { "Content-Type":"application/json" }, body: JSON.stringify(body) });
-    const rawText = await res.text();
-    let data;
-    try{ data = JSON.parse(rawText); }catch{ data = { _raw: rawText }; }
-    if(!res.ok) throw { status: res.status, data, rawText };
-
-    const text = (data && (data.text || data.output || data.content)) ? (data.text || data.output || data.content) : extractTextFromAny(data);
-    return { data, text };
-  }
-
-  function extractTextFromAny(data){
-    // OpenAI chat.completions
-    if(data?.choices?.[0]?.message?.content) return data.choices[0].message.content;
-
-    // OpenAI responses
-    if(typeof data?.output_text === "string") return data.output_text;
-
-    // Try typical responses shapes
-    if(Array.isArray(data?.output)){
-      for(const item of data.output){
-        if(Array.isArray(item?.content)){
-          for(const c of item.content){
-            if(typeof c?.text === "string") return c.text;
-            if(typeof c?.content === "string") return c.content;
+      // 切換 API 金鑰顯示/隱藏
+      if (toggleApiKeyVisibility) {
+        toggleApiKeyVisibility.addEventListener('click', () => {
+          const currentType = apiKeyInput.getAttribute('type');
+          if (currentType === 'password') {
+            apiKeyInput.setAttribute('type', 'text');
+            toggleApiKeyVisibility.textContent = '隱藏';
+          } else {
+            apiKeyInput.setAttribute('type', 'password');
+            toggleApiKeyVisibility.textContent = '顯示';
           }
+        });
+      }
+
+      // 隨機資料庫
+      const themes = [
+        '奇幻冒險',
+        '未來科幻',
+        '浪漫愛情',
+        '懸疑推理',
+        '歷史傳奇',
+        '青春成長',
+        '冒險史詩',
+        '玄幻修真',
+        '現代都市',
+        '魔法學院',
+        '恐怖驚悚',
+        '喜劇逗趣',
+        '現實主義',
+        '懷舊故事',
+        '神秘奇案',
+        '動物寓言',
+        '社會批判',
+        '魔幻現實',
+        '古裝武俠',
+        '時空穿越',
+      ];
+      const settings = [
+        '虛構的中世紀王國',
+        '21世紀的臺灣都市',
+        '遙遠的太空殖民地',
+        '虛擬實境世界',
+        '古代皇宮',
+        '末日後的荒土',
+        '近未來的高科技城市',
+        '魔法學院',
+        '蒸汽龐克城市',
+        '深海王國',
+      ];
+      const charactersSamples = [
+        '一位勇敢的少年與他的神秘導師',
+        '一個叛逆的黑客與一名懷有秘密的特工',
+        '一位失憶的戰士與一個外星科學家',
+        '一名平凡少女與她的魔法朋友',
+        '一個失去家園的旅人與一隻會說話的動物',
+        '一位年輕的巫師與他的忠實貓咪夥伴',
+        '一名落魄騎士與他的騙子朋友',
+        '一個熱血少年和沉默寡言的劍士',
+        '一位外星公主與地球少年',
+        '一名機器人與它的創造者',
+      ];
+      const stylesArr = [
+        '詩意',
+        '幽默',
+        '黑暗',
+        '勵志',
+        '浪漫',
+        '刺激',
+        '溫馨',
+        '懸疑',
+        '熱血',
+        '魔幻',
+      ];
+
+      // 擴充選項：額外主題、背景與風格
+      // 為了保持向下相容，我們將新的類別透過 push 方式加入原本陣列
+      // 主題清單已在上方擴充，不再重複加入
+      settings.push(
+        '繁華的銀河商場',
+        '隱藏於雲端的城堡',
+        '古老的山林村落',
+        '雪山上的修道院',
+        '熱帶雨林深處',
+        '巨型迷宮都市',
+        '殖民海盜船',
+        '宇宙戰艦上',
+        '明朝宮廷',
+        '平行宇宙'
+      );
+      stylesArr.push(
+        '古典華麗',
+        '荒誕',
+        '現實主義',
+        '輕鬆寫意',
+        '酷炫科技',
+        '優雅浪漫',
+        '大河戲劇',
+        '黑色幽默',
+        '心理驚悚',
+        '流行網絡'
+      );
+      const chapterOpts = [5, 8, 10, 12, 15];
+      const lengthOpts = [30000, 50000, 70000, 90000];
+
+  // 角色元素資料庫
+  const nameOptions = [
+    '艾琳','洛恩','凱亞','米爾','席恩','薇拉','祈安','杜林','希爾維','萊雅',
+    '伊凡','法蘭','格蘭','梅芙','安娜','雷格','索菲','艾略特','亞歷克','莫妮卡',
+    '路西','伊芙','加百列','亞當','瑪雅','艾德','薩拉','杰登','琪拉','德瑞克',
+    '凱瑟琳','馬丁','羅絲','奧利維','昆汀','哈莉','伯納德','海倫','丹尼爾','雷切爾',
+    '山姆','艾薇','諾亞','艾米莉','布萊恩','艾蜜莉亞','達米安','露西亞','米蘭達','亞歷山大',
+    '波琳娜','亨利','蘇菲亞','費南多','克萊兒','埃德加','歐文','莉亞','查爾斯','哈娜',
+    '杰克','瑪蒂爾達','托尼','娜塔莉','達瑞斯','克里斯','艾瑪','羅伯特','凱特','格蕾絲',
+    '莫里斯','普拉多','勞拉','維克多','凱莉','菲利普','瑞秋','史蒂夫','羅伊','哈德森',
+    '妮可','克麗絲汀','萊昂','梅根','杜蘭','馬雅','蘭斯洛特','卡羅爾','伊麗莎白','伊薩貝拉',
+    '考特尼','蔣琴','唐娜','塞德里克','布蘭妮','雷蒙','凱薩琳','阿萊克斯','加布里埃拉','西蒙'
+  ];
+  const personalityOptions = [
+    '外冷內熱','自卑但嘴硬','樂觀又衝動','冷靜但偏執','溫柔卻不輕信任何人','堅韌而沉默',
+    '幽默開朗','善良又單純','多疑且謹慎','自信而傲慢','懶散卻超凡聰明','義氣而固執',
+    '急躁但心地善良','謙虛而機智','天真又好奇','冷酷無情','善於交際','孤僻沉默',
+    '勇敢衝動','理性克制',
+    '愛幻想','孤單','嫉妒心強','勇於挑戰','樂於助人','多愁善感','懶散','好動','機智靈活','心直口快',
+    '優柔寡斷','善於隱忍','頑強','懷疑一切','思維嚴謹','黑暗內心','衝動火爆','陰晴不定','客觀理性','自律自省',
+    '貪心','粗枝大葉','孤高自傲','悲天憫人','求知欲強','保守傳統','冒險精神','浪漫情懷','鐵面無私','情感豐沛',
+    '不拘小節','嬉皮笑臉','深謀遠慮','勇敢無畏','友善熱情','純真孩氣','冷漠疏離','心思纖細','謙遜低調','剛愎自用',
+    '風趣幽默','充滿正義感','善於操控','常常懷疑自己','樂觀開朗','感性細膩','玩世不恭','奮發向上','無厘頭','固執己見',
+    '反覆無常','忍耐力強','憨厚老實','孤僻怪異','古怪多變','嫉惡如仇','天真浪漫','豪放不羈','富有創意','隨遇而安',
+    '心狠手辣','重視禮節','熱愛自由','貪玩','節儉','心地善良','喜歡冒險','專注執著','真誠坦率','小心翼翼'
+    ,'倔強固執','天馬行空','善解人意','易燃易爆炸','過度樂觀','莫名自信','唯我獨尊','嫉惡如仇','悲觀厭世','凡事求真'
+  ];
+  const goalOptions = [
+    '找回失落的家族徽章','破解禁書的封印','救回被詛咒的朋友','查出學院裡的內鬼','證明自己不是怪物',
+    '尋找失蹤的師父','復仇雪恥','拯救世界免於毀滅','逃離自身的命運','尋求內心的自由',
+    '揭開古老遺跡的秘密','完成父母未竟的夢想','打倒暴政的君王','尋找傳說中的寶藏','守護故鄉免於侵略',
+    '破解血統之謎','治癒自己的病痛','成為最強者','阻止末日降臨','改變未來的預言',
+    '統治整個國度','找到通往平行世界的門','破解古老魔法的謎語','阻止邪惡教團復活','拯救族人免於滅絕',
+    '與心愛之人重逢','找出真正的身世','讓世界和平','消滅所有黑暗力量','完成最後一任務',
+    '揭露巨大陰謀','修復破碎的王國','找到失蹤的寶藏','治癒世界的疾病','摧毀邪惡組織',
+    '報復前世的仇敵','探索未知星系','保護自然環境','發現永恆之泉','統一各族勢力',
+    '尋找失傳的魔法卷軸','解放奴役的人民','阻止黑暗儀式','完成祖先的遺願','建立和平的世界',
+    '揭開身世之謎','戰勝心魔','擺脫家族詛咒','實現冒險夢想','奪回失去的王位',
+    '找到傳說中的武器','復活已逝的愛人','破除命運束縛','從奴役中解放族人','尋求真正的友誼',
+    '建立強大的團隊','開創新秩序','揭開古墓的秘密','穿越時空拯救世界','追求藝術極致',
+    '完成一場史詩之旅','阻止時空崩壞','推翻腐敗政權','尋找永恆的愛情','保護弱小',
+    '拯救被遺忘的種族','阻止瘟疫蔓延','尋找新的家園','實現科學突破','救贖自己',
+    '治療親人的疾病','打破命運輪迴','組織反抗軍','守護神秘寶石','阻止世界融合',
+    '找回失去的能力','尋求力量的來源','證明自己的價值','成為傳說中的英雄','阻止末日機器',
+    '重建家園','找到記憶碎片','守護生命之樹','維持世界平衡','拯救被囚禁的靈魂',
+    '探索海底世界','阻止洪水','追尋真理','成為最偉大的巫師','開創新世界',
+    '繼承神的力量','阻止瘋狂科學家','完成最後的冒險','找到宇宙的起源','救助孤兒院',
+    '解開歷史謎團','平息戰爭','召喚神龍'
+    ,'尋找失散多年的親人','突破自我極限','統一四海八荒','實現和平共處','追求神秘力量'
+  ];
+  const weaknessOptions = [
+    '害怕黑暗','遇到壓力就說謊','太容易相信別人','強迫症嚴重','一旦承諾就不肯回頭',
+    '畏懼深海','恐高症','容易發怒','過於固執','患有失眠','對魔法過敏','不擅長謊言',
+    '心軟','容易焦慮','懼怕孤獨','怕血','記憶衰退','常自我懷疑','體力差','情緒起伏大',
+    '恐水','三分鐘熱度','貪吃','愛睡覺','沒自信','容易嫉妒','怕蛇','無法拒絕他人','懼怕孤獨','受到金錢誘惑',
+    '懦弱','怕寂寞','怕失敗','眼神不好','迷失自我','容易暈血','過度同情心','情緒不穩','飲食失調','缺乏耐心',
+    '怕被拒絕','易感寂寞','時間管理差','容易分心','優柔寡斷','怕寵物','對聲音過敏','會暈車','不會游泳','怕蜘蛛',
+    '對金錢著迷','過於誠實','不能保守秘密','健忘','反射神經差','害怕蛙','愛出風頭','情緒化','傲慢自大','懷疑一切',
+    '受不起批評','追求完美','過度開朗','得失心重','過於善良','常常遲到','自控力差','容易煩惱','懷舊','過於現實',
+    '怕痛','不擅交際','愛拖延','不善理財','怕換環境','低血糖','怕雷','愛哭','怕醫院','無安全感',
+    '太在意他人眼光','怕火','怕蟑螂','怕雨','怕被孤立','怕未知','怕黑夜','恐懼高壓','怕失去朋友','過於衝動',
+    '易怒','有強迫症','潔癖','過於挑剔','缺乏信心','害怕說謊','金錢迷惑'
+    ,'過度自責','怕黑怕鬼','無法長時間專注','過於敏感','喜歡攀比'
+  ];
+  const secretOptions = [
+    '其實能聽見魔杖的聲音','曾經施放過禁咒','血統有爭議','與反派有血緣關係','記憶被人動過手腳',
+    '身上藏有古老符文','是預言中的孩子','隱藏著第二人格','真正的身份是王族','手握未來的預言',
+    '擁有毀滅世界的力量','殺過無辜的人','靈魂被分裂','與神靈簽下契約','體內寄宿龍族血脈',
+    '被人控制思想','持有禁書','曾是敵軍間諜','擁有可以逆天改命的能力','已經死亡又復活過',
+    '身份是天界使者','出生於敵對國度','持有能控制時間的裝置','曾經是反派手下','其真正目的是復仇',
+    '身體中封印著魔神','曾殺死親人','擁有不可告人的戀情','曾在另一時空活過','靈魂被惡靈附身',
+    '曾經是王族成員','擁有預知能力','體內封印著神獸','曾與外星人接觸','是雙重間諜',
+    '從未出生在這個世界','是失蹤王子/公主','其父母是名偉大的英雄','曾暗中幫助過敵人','體內流著龍的血',
+    '曾與惡魔做交易','其實是穿越者','前世是大魔法師','失去了靈魂的一部分','曾經毀掉一個村莊',
+    '覺醒了禁忌力量','曾經統治世界','與神秘組織有勾結','擁有死亡回溯的能力','隱藏著第三人格',
+    '擁有永生','身體其實是複製品','曾經愛上敵人','是預言之子','其實是另一性別',
+    '一部分記憶被封印','曾偷竊神器','內心住著惡魔','曾經犧牲一個城鎮','真實身份是魔王之子',
+    '與宿敵是兄弟姐妹','被標記為叛徒','曾在夢中毀滅世界','是天使與人類的混血','曾經是神的使者',
+    '背負血海深仇','體內有一把劍','擁有召喚亡靈的能力','是失落文明的繼承者','其實是一個幻影',
+    '曾經殺過至親','是反派的父親/母親','隱藏著巨額財富','與龍簽訂契約','曾是名殺手',
+    '擁有穿梭夢境的能力','身體裡有另一個靈魂','曾經背叛整個國家','是對手的愛人','其實早已死去',
+    '持有通往另一世界的門','被預言將帶來毀滅','曾是敵軍的領袖','曾經拯救世界卻沒人知道','是未來自己',
+    '被改造過','曾經是機器人','隱藏著一個孩子','曾在時間漩渦迷失','其實是邪神的孩子',
+    '曾與妖精簽約','過去是強大巫師','靈魂被詛咒','與祖先對話','某部分身體不是自己的',
+    '其實是克隆人','有未來的記憶','預知自己死亡','曾經被神選中','體內封印著魔王',
+    '過去是天宮守衛','曾經是星際海盜'
+  ];
+  const relationOptions = [
+    '與父親關係疏離','與舊情人有未了結','與另一位角色有誓約','曾背叛過最好的朋友','欠了黑幫巨債',
+    '對導師又敬又恨','視敵為兄弟','秘密愛慕夥伴','被家族逐出','與宿敵互相尊重',
+    '欠下不可還清的救命恩情','與同伴競爭','誓死保護弟弟','曾救過反派','暗中合作又互相利用',
+    '關係複雜的親戚','與政府存在牽連','被流放後結識旅伴','與古老神祇有契約','隱瞞了前世的牽絆',
+    '與前任情人再度重逢','與宿敵曾是兄弟','暗戀同性朋友','被家族視為異類','與某位神祇簽訂契約',
+    '是另一人物的失散親人','對敵人充滿惻隱','與某生物有共生關係','與歷史人物有血緣','為了家族而犧牲個人幸福',
+    '曾是情敵','相愛相殺','是相互扶持的旅行夥伴','是一見鐘情','幼時玩伴',
+    '前世夫妻','互為師徒','因恩怨結緣','宿敵卻互相理解','上司與下屬',
+    '患難之交','情同手足','生死之交','重生後的敵人','生命互相依存',
+    '命運的牽絆','養父與養子','雙胞胎','一方是另外一方的影子','靈魂鏈接',
+    '契約關係','曾經救過對方一命','互為對方的拯救','衝突不斷的夥伴','青梅竹馬',
+    '不打不相識','互相欣賞','半路兄妹','義氣相挺','因誤會而敵對',
+    '雇主與傭兵','雙方有婚約','原先同門，後分道揚鑣','神與信徒','投機合作',
+    '彼此利用','朋友兼競爭對手','暗中守護','因權力爭鬥相識','破鏡重圓',
+    '雙方是遠房親戚','相互傾慕','前世死敵','互為鏡像','輪迴中的羈絆',
+    '遺志的繼承者與傳承者','徒弟與師兄','生死敵對','代替對方完成使命','被迫成為同伴',
+    '一方欠另一方人情','彼此心有愧疚','共同的敵人','最好的朋友','走失後相遇',
+    '祖孫跨越時空相遇','同為研究伙伴','競爭愛慕對象','無血緣卻像家人','常常吵架卻默契十足',
+    '未婚夫妻','互相牽制','相互承諾一起冒險','親子關係','被預言會互相殘殺',
+    '同時愛上第三者','曾互救生命','星際旅伴','同為失落族人','異族戀人',
+    '並肩作戰','結拜兄弟','重逢於旅途','天作之合','自由與責任的牽絆'
+  ];
+
+  // 初始化兩個人物行（預設隨機）
+  document.addEventListener('DOMContentLoaded', () => {
+    addCharacterRow(true);
+    addCharacterRow(true);
+  });
+
+      function pickRandom(arr) {
+        return arr[Math.floor(Math.random() * arr.length)];
+      }
+
+  // 建立單個人物行
+  function addCharacterRow(randomize = false) {
+    const row = document.createElement('div');
+    row.className = 'character-row';
+    // 計算當前索引以顯示人物編號
+    const index = charactersContainer.children.length + 1;
+    row.innerHTML = `
+      <div class="char-index">人物${index}</div>
+      <input type="text" class="char-name" placeholder="姓名 / 角色" />
+      <input type="text" class="char-personality" placeholder="個性 (如 外冷內熱)" />
+      <input type="text" class="char-goal" placeholder="目標 (如 拯救世界)" />
+      <input type="text" class="char-weakness" placeholder="弱點 (如 害怕黑暗)" />
+      <input type="text" class="char-secret" placeholder="秘密 (如 身世謎樣)" />
+      <input type="text" class="char-relation" placeholder="人際 (如 與人有誓約)" />
+      <button type="button" class="char-random-btn">隨機</button>
+    `;
+    // 隨機按鈕事件
+    const randBtn = row.querySelector('.char-random-btn');
+    randBtn.addEventListener('click', () => randomizeRow(row));
+    charactersContainer.appendChild(row);
+    if (randomize) randomizeRow(row);
+  }
+
+  // 隨機化單個人物行
+  function randomizeRow(row) {
+    row.querySelector('.char-name').value = pickRandom(nameOptions);
+    row.querySelector('.char-personality').value = pickRandom(personalityOptions);
+    row.querySelector('.char-goal').value = pickRandom(goalOptions);
+    row.querySelector('.char-weakness').value = pickRandom(weaknessOptions);
+    row.querySelector('.char-secret').value = pickRandom(secretOptions);
+    row.querySelector('.char-relation').value = pickRandom(relationOptions);
+  }
+
+      // 隨機填充按鈕：填入所有欄位
+      randomBtn.addEventListener('click', () => {
+        themeSelect.value = pickRandom(themes);
+        settingSelect.value = pickRandom(settings);
+        styleSelect.value = pickRandom(stylesArr);
+        chaptersInput.value = pickRandom(chapterOpts);
+        lengthInput.value = pickRandom(lengthOpts);
+    // 隨機化所有人物行
+    Array.from(charactersContainer.children).forEach((row) => randomizeRow(row));
+      });
+
+  // 隨機化所有人物按鈕
+  randomAllCharactersBtn.addEventListener('click', () => {
+    Array.from(charactersContainer.children).forEach((row) => randomizeRow(row));
+  });
+
+  // 新增人物按鈕
+  addCharacterBtn.addEventListener('click', () => {
+    addCharacterRow(true);
+  });
+
+      // 下載功能
+      function downloadFile(filename, text) {
+        const link = document.createElement('a');
+        link.setAttribute('href', 'data:text/plain;charset=utf-8,' + encodeURIComponent(text));
+        link.setAttribute('download', filename);
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+      }
+      downloadBtn.addEventListener('click', () => {
+        if (!latestStory) return;
+        const title = themeSelect.value || '生成小說';
+        downloadFile(title + '.txt', latestStory);
+      });
+
+
+      // 生成小說
+      generateBtn.addEventListener('click', async () => {
+        statusDiv.textContent = '';
+        statusDiv.style.color = varSecondaryColor();
+        resultDiv.textContent = '';
+        // 清除先前儲存的故事，使舊故事在點擊生成後消失
+        localStorage.removeItem('savedStory');
+        latestStory = '';
+        downloadBtn.disabled = true;
+
+        const apiKey = apiKeyInput.value.trim();
+        const model = modelSelect.value;
+        const theme = themeSelect.value.trim();
+        const setting = settingSelect.value.trim();
+        // 組合人物資訊
+        const characterRows = Array.from(charactersContainer.querySelectorAll('.character-row'));
+        let charactersInfo = '';
+        characterRows.forEach((row, idx) => {
+          const name = row.querySelector('.char-name').value.trim();
+          const personality = row.querySelector('.char-personality').value.trim();
+          const goal = row.querySelector('.char-goal').value.trim();
+          const weakness = row.querySelector('.char-weakness').value.trim();
+          const secret = row.querySelector('.char-secret').value.trim();
+          const relation = row.querySelector('.char-relation').value.trim();
+          const fields = [];
+          if (name) fields.push(name);
+          if (personality) fields.push(`個性：${personality}`);
+          if (goal) fields.push(`目標：${goal}`);
+          if (weakness) fields.push(`弱點：${weakness}`);
+          if (secret) fields.push(`秘密：${secret}`);
+          if (relation) fields.push(`人際：${relation}`);
+          if (fields.length > 0) {
+            charactersInfo += `人物${idx + 1}：${fields.join('，')}。\n`;
+          }
+        });
+        const style = styleSelect.value.trim();
+        const chapters = chaptersInput.value.trim();
+        const length = lengthInput.value.trim();
+        const notes = notesInput.value.trim();
+
+        if (!apiKey) {
+          statusDiv.textContent = '請輸入 API 金鑰。';
+          statusDiv.style.color = '#e84d3d';
+          return;
         }
+        // 構建提示語
+        let prompt = '';
+        if (theme) prompt += `主題：${theme}。`;
+        if (setting) prompt += `背景設定：${setting}。`;
+        if (charactersInfo) prompt += `${charactersInfo}`;
+        if (style) prompt += `故事風格：${style}。`;
+        if (chapters) prompt += `故事分為 ${chapters} 章節。`;
+        if (length) prompt += `總篇幅約 ${length} 字。`;
+        if (notes) prompt += `其他說明：${notes}。`;
+        if (!theme && !setting && !charactersInfo && !style && !chapters && !length && !notes) {
+          statusDiv.textContent = '請至少填寫一項設定或使用隨機填充。';
+          statusDiv.style.color = '#e84d3d';
+          return;
+        }
+        prompt += '請以繁體中文撰寫長篇小說，結構完整，有起承轉合；若有指定章節，請標明章節標題。';
+
+        statusDiv.textContent = '生成中...';
+        statusDiv.style.color = varSecondaryColor();
+        try {
+          const endpoint =
+            'https://generativelanguage.googleapis.com/v1beta/models/' + encodeURIComponent(model) + ':generateContent';
+          const payload = {
+            contents: [
+              {
+                parts: [
+                  { text: prompt },
+                ],
+              },
+            ],
+          };
+          const response = await fetch(endpoint, {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              'x-goog-api-key': apiKey,
+            },
+            body: JSON.stringify(payload),
+          });
+          const data = await response.json();
+          if (data.error) {
+            statusDiv.textContent = '錯誤：' + data.error.message;
+            statusDiv.style.color = '#e84d3d';
+            return;
+          }
+          if (data.candidates && data.candidates.length > 0) {
+            const parts = data.candidates[0].content.parts || [];
+            const story = parts.map((p) => p.text || '').join('');
+            latestStory = story.trim();
+            // 顯示全文並儲存到 localStorage
+            resultDiv.textContent = latestStory;
+            localStorage.setItem('savedStory', latestStory);
+            statusDiv.textContent = '生成完成！';
+            statusDiv.style.color = '#008a00';
+            downloadBtn.disabled = false;
+          } else {
+            statusDiv.textContent = '沒有獲得內容，請調整設定。';
+            statusDiv.style.color = '#e84d3d';
+          }
+        } catch (err) {
+          statusDiv.textContent = '請求失敗：' + err.message;
+          statusDiv.style.color = '#e84d3d';
+        }
+      });
+
+      function varSecondaryColor() {
+        return getComputedStyle(document.documentElement).getPropertyValue('--secondary') || '#6c757d';
       }
-    }
-
-    // Gemini
-    if(data?.candidates?.[0]?.content?.parts?.[0]?.text) return data.candidates[0].content.parts[0].text;
-
-    // Fallback: stringify
-    try{ return JSON.stringify(data, null, 2); }catch{ return String(data); }
-  }
-
-  function classifyError(err){
-    // err: {status, data, rawText}
-    const status = err?.status;
-    const msg = err?.data?.error?.message || err?.data?.message || err?.data?.error || err?.rawText || "未知錯誤";
-    return { status, msg: String(msg) };
-  }
-
-  // ---- UI actions ----
-  function setTab(name){
-    document.querySelectorAll(".tab").forEach(t=>{
-      const active = t.dataset.tab === name;
-      t.classList.toggle("active", active);
-    });
-    ui.outResult.style.display = (name==="result") ? "block" : "none";
-    ui.outLog.style.display    = (name==="log") ? "block" : "none";
-    ui.outRaw.style.display    = (name==="raw") ? "block" : "none";
-  }
-
-  document.querySelectorAll(".tab").forEach(t=>{
-    t.addEventListener("click", ()=> setTab(t.dataset.tab));
-  });
-
-  function toggleSwitch(swEl, keyName){
-    const on = !swEl.classList.contains("on");
-    swEl.classList.toggle("on", on);
-    swEl.setAttribute("aria-checked", on ? "true" : "false");
-    if(keyName === "remember"){ state.rememberKey = on; persist(); }
-    if(keyName === "polish"){ state.polish = on; }
-  }
-
-  ui.swRemember.addEventListener("click", ()=> toggleSwitch(ui.swRemember, "remember"));
-  ui.swPolish.addEventListener("click", ()=> toggleSwitch(ui.swPolish, "polish"));
-  ui.swRemember.addEventListener("keydown", (e)=>{ if(e.key==="Enter"||e.key===" "){ e.preventDefault(); toggleSwitch(ui.swRemember,"remember"); }});
-  ui.swPolish.addEventListener("keydown", (e)=>{ if(e.key==="Enter"||e.key===" "){ e.preventDefault(); toggleSwitch(ui.swPolish,"polish"); }});
-
-  ui.btnToggleKey.addEventListener("click", ()=>{
-    state.showKey = !state.showKey;
-    ui.apiKey.type = state.showKey ? "text" : "password";
-    ui.btnToggleKey.textContent = state.showKey ? "🙈" : "👁️";
-  });
-
-  ui.provider.addEventListener("change", ()=>{
-    ui.baseUrl.dataset.auto = "1";
-    setProviderDefaults();
-  });
-  ui.openaiMode.addEventListener("change", ()=>{
-    ui.baseUrl.dataset.auto = "1";
-    setProviderDefaults();
-  });
-
-  ["model","baseUrl","temp","targetLen","genre","genreCustom","pov","tone"].forEach(id=>{
-    $(id).addEventListener("input", syncChips);
-  });
-
-  ui.btnCopy.addEventListener("click", async ()=>{
-    const text = state.lastText || ui.outResult.textContent || "";
-    try{
-      await navigator.clipboard.writeText(text);
-      setStatus("ok", "已複製到剪貼簿。去吧，拿去餵你的排版器。");
-      appendLog("Copied output to clipboard.");
-    }catch{
-      setStatus("bad", "複製失敗（瀏覽器可能不給剪貼簿權限）。");
-      appendLog("Clipboard copy failed.");
-    }
-  });
-
-  ui.btnDryRun.addEventListener("click", ()=>{
-    const p = ui.provider.value;
-    const mode = ui.openaiMode.value;
-    const prompt = buildPrompt();
-    const temperature = Number(ui.temp.value || 0.8);
-    const baseUrl = ui.baseUrl.value.trim();
-    const model = ui.model.value.trim();
-    const payload = (p==="openai")
-      ? (mode==="chat"
-          ? { baseUrl, headers: {Authorization:"Bearer …"}, body: { model, messages:[{role:"system",content:prompt.sys},{role:"user",content:prompt.user}], temperature } }
-          : { baseUrl, headers: {Authorization:"Bearer …"}, body: { model, input:[{role:"system",content:prompt.sys},{role:"user",content:prompt.user}], temperature } })
-      : (p==="gemini"
-          ? { url: `${baseUrl}/models/${model}:generateContent?key=…`, body: { contents:[{role:"user",parts:[{text:prompt.sys+"\\n\\n"+prompt.user}]}], generationConfig:{temperature} } }
-          : { baseUrl, body: { apiKey:"…(optional)", model, temperature, system: prompt.sys, input: prompt.user } });
-
-    state.lastRaw = payload;
-    ui.outRaw.textContent = JSON.stringify(payload, null, 2);
-    setTab("raw");
-    setStatus("ok","已顯示你即將送出的請求內容（Dry Run）。");
-    appendLog("Dry run payload displayed.");
-  });
-
-  // 隨機填入主題、人設與背景
-  if(ui.btnRandomTheme){
-    ui.btnRandomTheme.addEventListener("click", ()=>{
-      const r = randomThemes[Math.floor(Math.random() * randomThemes.length)];
-      ui.theme.value = r;
-      persist();
-    });
-  }
-  if(ui.btnRandomCharacters){
-    ui.btnRandomCharacters.addEventListener("click", ()=>{
-      const r = randomCharacters[Math.floor(Math.random() * randomCharacters.length)];
-      ui.characters.value = r;
-      persist();
-    });
-  }
-  if(ui.btnRandomWorld){
-    ui.btnRandomWorld.addEventListener("click", ()=>{
-      const r = randomWorlds[Math.floor(Math.random() * randomWorlds.length)];
-      ui.world.value = r;
-      persist();
-    });
-  }
-
-  ui.btnReset.addEventListener("click", ()=>{
-    // keep provider
-    ui.apiKey.value = "";
-    ui.theme.value = "";
-    ui.characters.value = "";
-    ui.world.value = "";
-    ui.genre.value = "現代日常";
-    ui.genreCustom.value = "";
-    ui.pov.value = "第一人稱";
-    ui.tone.value = "自然口語、節奏明快";
-    ui.chapters.value = 5;
-    ui.format.value = "text";
-    ui.lang.value = "繁體中文";
-    ui.temp.value = 0.8;
-    ui.targetLen.value = 1200;
-    ui.baseUrl.dataset.auto = "1";
-    ui.model.value = "";
-    state.lastText = "";
-    state.lastRaw = null;
-    state.lastLog = "";
-    ui.outResult.textContent = "";
-    ui.outRaw.textContent = "";
-    ui.outLog.textContent = "";
-    setStatus(null, "已重置（供應商保留）。");
-    appendLog("Reset.");
-    setProviderDefaults();
-    persist();
-  });
-
-  function persist(){
-    const save = {
-      provider: ui.provider.value,
-      openaiMode: ui.openaiMode.value,
-      model: ui.model.value,
-      baseUrl: ui.baseUrl.value,
-      temp: ui.temp.value,
-      targetLen: ui.targetLen.value,
-      genre: ui.genre.value,
-      genreCustom: ui.genreCustom.value,
-      pov: ui.pov.value,
-      tone: ui.tone.value,
-      chapters: ui.chapters.value,
-      format: ui.format.value,
-      lang: ui.lang.value,
-      rememberKey: state.rememberKey,
-      polish: state.polish,
-    };
-    localStorage.setItem("novel_ui_cfg", JSON.stringify(save));
-    if(state.rememberKey){
-      localStorage.setItem("novel_ui_key", ui.apiKey.value || "");
-    }else{
-      localStorage.removeItem("novel_ui_key");
-    }
-  }
-
-  function restore(){
-    try{
-      const cfg = JSON.parse(localStorage.getItem("novel_ui_cfg") || "{}");
-      if(cfg.provider) ui.provider.value = cfg.provider;
-      if(cfg.openaiMode) ui.openaiMode.value = cfg.openaiMode;
-
-      state.rememberKey = !!cfg.rememberKey;
-      state.polish = (cfg.polish !== undefined) ? !!cfg.polish : true;
-
-      ui.swRemember.classList.toggle("on", state.rememberKey);
-      ui.swRemember.setAttribute("aria-checked", state.rememberKey ? "true" : "false");
-
-      ui.swPolish.classList.toggle("on", state.polish);
-      ui.swPolish.setAttribute("aria-checked", state.polish ? "true" : "false");
-
-      if(cfg.model) ui.model.value = cfg.model;
-      if(cfg.baseUrl) { ui.baseUrl.value = cfg.baseUrl; ui.baseUrl.dataset.auto = "0"; }
-      if(cfg.temp) ui.temp.value = cfg.temp;
-      if(cfg.targetLen) ui.targetLen.value = cfg.targetLen;
-      if(cfg.genre) ui.genre.value = cfg.genre;
-      if(cfg.genreCustom) ui.genreCustom.value = cfg.genreCustom;
-      if(cfg.pov) ui.pov.value = cfg.pov;
-      if(cfg.tone) ui.tone.value = cfg.tone;
-      if(cfg.chapters) ui.chapters.value = cfg.chapters;
-      if(cfg.format) ui.format.value = cfg.format;
-      if(cfg.lang) ui.lang.value = cfg.lang;
-
-      if(state.rememberKey){
-        ui.apiKey.value = localStorage.getItem("novel_ui_key") || "";
-      }
-    }catch(e){
-      // ignore
-    }
-  }
-
-  ["input","change"].forEach(ev=>{
-    ["provider","openaiMode","model","baseUrl","temp","targetLen","genre","genreCustom","pov","tone","chapters","format","lang","apiKey"].forEach(id=>{
-      $(id).addEventListener(ev, persist);
-    });
-  });
-
-  ui.btnGenerate.addEventListener("click", async ()=>{
-    const provider = ui.provider.value;
-    const key = (ui.apiKey.value || "").trim();
-    const model = (ui.model.value || "").trim();
-    const baseUrl = (ui.baseUrl.value || "").trim();
-    const mode = ui.openaiMode.value;
-    const temperature = Number(ui.temp.value || 0.8);
-
-    setProviderDefaults();
-    syncChips();
-
-    if(isFileProtocol()){
-      setStatus("bad", "你現在是 file:// 開啟，建議用 http://localhost 跑起來，不然 CORS 會一直搗蛋。");
-      appendLog("Blocked: running on file:// (origin null).");
-      return;
-    }
-
-    if(!baseUrl){
-      setStatus("bad", "Base URL 不能空。");
-      return;
-    }
-
-    if(provider !== "custom" && !key){
-      setStatus("bad","你還沒填 API Key。");
-      return;
-    }
-
-    if(provider !== "custom" && !model){
-      setStatus("bad","你還沒填 model。");
-      return;
-    }
-
-    // quick sanity hint: 偵測錯誤的 API key 格式
-    if(key.startsWith("sk-")){
-      setStatus("bad","你輸入的是 OpenAI 的 sk- 開頭 key，請使用 Google AI Studio 的 key（通常為 AIza 或其他格式）。");
-      return;
-    }
-
-    ui.btnGenerate.disabled = true;
-    setStatus(null, "生成中…（如果卡住，通常不是你的人設太複雜，是你端點或 key 太倔強）");
-    appendLog("Generate clicked.");
-
-    const prompt = buildPrompt();
-
-    try{
-      let result;
-      if(provider === "openai"){
-        result = await callOpenAI({ baseUrl, mode, key, model, temperature, prompt });
-      }else if(provider === "gemini"){
-        result = await callGemini({ baseUrl, key, model, temperature, prompt });
-      }else{
-        result = await callCustom({ baseUrl, key, model, temperature, prompt });
-      }
-
-      state.lastRaw = result.data;
-      state.lastText = result.text || "";
-      ui.outResult.textContent = state.lastText || "(空白輸出)";
-
-      ui.outRaw.textContent = JSON.stringify(result.data, null, 2);
-      setTab("result");
-      setStatus("ok", "完成！右邊是小說；如果你覺得太好看，請記得是你提示詞下得好（我只是打字員）。");
-      appendLog("Success.");
-    }catch(err){
-      const {status, msg} = classifyError(err);
-      state.lastRaw = err?.data || err;
-      ui.outRaw.textContent = JSON.stringify(state.lastRaw, null, 2);
-
-      // Friendly diagnosis for common cases
-      let hint = "";
-      if(status === 401){
-        hint = "（401：未授權/Key 錯誤。最常見是供應商選錯、key 格式不對，或打錯 endpoint。）";
-      }else if(status === 429){
-        hint = "（429：速率/配額超限。降低請求頻率、換 key 或檢查方案/額度。）";
-      }else if(status === 0 || !status){
-        hint = "（可能是 CORS、網路、或 Base URL 根本沒跑起來。）";
-      }
-
-      ui.outResult.textContent = `請求失敗：${status || "?"}\n${msg}\n${hint}`;
-      setTab("result");
-      setStatus("bad", `失敗：${status || "?"} ${hint}`);
-      appendLog(`Error: ${status || "?"} ${msg}`);
-    }finally{
-      ui.btnGenerate.disabled = false;
-      syncChips();
-    }
-  });
-
-  // boot
-  ui.envPill.textContent = `protocol: ${location.protocol}`;
-  if(isFileProtocol()){
-    ui.fileBanner.style.display = "block";
-  }
-
-  restore();
-  setProviderDefaults();
-  syncChips();
-  setStatus(null,"待命中。選供應商、填 key、按生成就開寫。");
-})();
-</script>
-</body>
+    </script>
+  </body>
 </html>
