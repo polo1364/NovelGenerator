@@ -1,0 +1,1125 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover" />
+  <title>小說生成器</title>
+  <style>
+    :root{
+      --bg:#0b1020;
+      --panel:#0f1630;
+      --panel2:#111b3a;
+      --text:#e8ecff;
+      --muted:#aab3da;
+      --line:rgba(255,255,255,.09);
+      --accent:#6ee7ff;
+      --accent2:#a78bfa;
+      --danger:#ff6b6b;
+      --ok:#67e8a5;
+      --shadow: 0 18px 50px rgba(0,0,0,.45);
+      --radius: 18px;
+      --radius2: 14px;
+      --focus: 0 0 0 3px rgba(110,231,255,.18);
+      --mono: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+      --sans: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, "Noto Sans TC", "PingFang TC","Microsoft JhengHei", sans-serif;
+    }
+    *{box-sizing:border-box}
+    html,body{height:100%}
+    body{
+      margin:0;
+      font-family:var(--sans);
+      background:
+        radial-gradient(1200px 800px at 20% 0%, rgba(167,139,250,.20), transparent 55%),
+        radial-gradient(900px 650px at 90% 10%, rgba(110,231,255,.18), transparent 50%),
+        radial-gradient(900px 900px at 40% 120%, rgba(110,231,255,.09), transparent 55%),
+        var(--bg);
+      color:var(--text);
+    }
+    a{color:inherit}
+    .app{
+      max-width:1180px;
+      padding:22px 18px 26px;
+      margin:0 auto;
+    }
+    .topbar{
+      display:flex;
+      gap:14px;
+      align-items:flex-start;
+      justify-content:space-between;
+      margin-bottom:14px;
+    }
+    .brand{
+      display:flex; gap:12px; align-items:center;
+    }
+    .logo{
+      width:44px;height:44px;border-radius:14px;
+      background:
+        radial-gradient(18px 18px at 30% 30%, rgba(255,255,255,.45), transparent 60%),
+        linear-gradient(135deg, rgba(110,231,255,.95), rgba(167,139,250,.95));
+      box-shadow: 0 12px 30px rgba(110,231,255,.12);
+      position:relative;
+      overflow:hidden;
+    }
+    .logo:after{
+      content:"";
+      position:absolute; inset:-40%;
+      background:linear-gradient(45deg, rgba(255,255,255,.35), transparent 50%, rgba(255,255,255,.12));
+      transform:rotate(20deg);
+    }
+    .title h1{
+      margin:0; font-size:18px; letter-spacing:.4px;
+    }
+    .title p{
+      margin:4px 0 0;
+      color:var(--muted);
+      font-size:13px;
+      line-height:1.35;
+    }
+    .pillrow{
+      display:flex; flex-wrap:wrap; gap:8px; justify-content:flex-end;
+      margin-top:4px;
+    }
+    .pill{
+      display:inline-flex; align-items:center; gap:8px;
+      padding:8px 10px;
+      border:1px solid var(--line);
+      background: rgba(255,255,255,.03);
+      border-radius:999px;
+      color:var(--muted);
+      font-size:12px;
+      user-select:none;
+    }
+    .dot{
+      width:8px;height:8px;border-radius:99px;background:rgba(255,255,255,.10);
+      box-shadow: 0 0 0 2px rgba(255,255,255,.04) inset;
+    }
+    .dot.ok{background:rgba(103,232,165,.95)}
+    .dot.bad{background:rgba(255,107,107,.95)}
+    .grid{
+      display:grid;
+      grid-template-columns: 420px 1fr;
+      gap:14px;
+      align-items:stretch;
+    }
+    @media (max-width: 980px){
+      .grid{grid-template-columns: 1fr; }
+      .pillrow{justify-content:flex-start}
+      .topbar{flex-direction:column; align-items:stretch;}
+    }
+
+    .card{
+      background: linear-gradient(180deg, rgba(255,255,255,.05), rgba(255,255,255,.02));
+      border:1px solid var(--line);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow);
+      overflow:hidden;
+    }
+    .cardHeader{
+      padding:14px 14px 10px;
+      display:flex; align-items:center; justify-content:space-between; gap:10px;
+      border-bottom:1px solid var(--line);
+      background:
+        radial-gradient(600px 200px at 20% 0%, rgba(110,231,255,.08), transparent 70%),
+        radial-gradient(480px 240px at 90% 0%, rgba(167,139,250,.08), transparent 70%),
+        rgba(0,0,0,.02);
+    }
+    .cardHeader h2{
+      margin:0; font-size:14px; letter-spacing:.35px;
+    }
+    .cardHeader small{color:var(--muted)}
+    .cardBody{padding:14px}
+    .section{
+      padding:12px;
+      border:1px solid var(--line);
+      border-radius: var(--radius2);
+      background: rgba(0,0,0,.10);
+      margin-bottom:12px;
+    }
+    .section:last-child{margin-bottom:0}
+    .sectionTitle{
+      display:flex; justify-content:space-between; align-items:center; gap:10px;
+      margin-bottom:10px;
+    }
+    .sectionTitle b{font-size:13px}
+    .sectionTitle span{color:var(--muted); font-size:12px}
+    .row{
+      display:grid;
+      grid-template-columns: 1fr 1fr;
+      gap:10px;
+    }
+    @media (max-width: 980px){
+      .row{grid-template-columns: 1fr;}
+    }
+    label{
+      display:block;
+      font-size:12px;
+      color:var(--muted);
+      margin:0 0 6px;
+      letter-spacing:.2px;
+    }
+    .field{
+      width:100%;
+      background: rgba(255,255,255,.04);
+      border:1px solid rgba(255,255,255,.10);
+      border-radius: 12px;
+      color: var(--text);
+      padding:10px 10px;
+      outline:none;
+      transition: .15s ease;
+      font-size:14px;
+    }
+    .field:focus{box-shadow:var(--focus); border-color: rgba(110,231,255,.5)}
+    textarea.field{min-height:92px; resize:vertical; line-height:1.45}
+    select.field{appearance:none}
+    .hint{
+      margin-top:6px;
+      font-size:12px;
+      color: rgba(170,179,218,.85);
+      line-height:1.35;
+    }
+    .inline{
+      display:flex; gap:8px; align-items:center;
+    }
+    .btns{
+      display:flex; flex-wrap:wrap; gap:10px; margin-top:10px;
+    }
+    .btn{
+      border:1px solid rgba(255,255,255,.12);
+      background: rgba(255,255,255,.05);
+      color: var(--text);
+      padding:10px 12px;
+      border-radius: 14px;
+      cursor:pointer;
+      transition: .15s ease;
+      font-weight:650;
+      letter-spacing:.15px;
+      user-select:none;
+    }
+    .btn:hover{transform: translateY(-1px); border-color: rgba(255,255,255,.18)}
+    .btn:active{transform: translateY(0px)}
+    .btnPrimary{
+      background: linear-gradient(135deg, rgba(110,231,255,.95), rgba(167,139,250,.95));
+      border-color: rgba(255,255,255,.22);
+      color: #0b1020;
+    }
+    .btnDanger{
+      background: rgba(255,107,107,.12);
+      border-color: rgba(255,107,107,.35);
+      color: #ffd4d4;
+    }
+    .btnGhost{
+      background: transparent;
+    }
+    .btnSmall{
+      padding:8px 10px;
+      font-size:12px;
+      border-radius: 12px;
+    }
+    .badge{
+      padding:6px 10px;
+      border-radius:999px;
+      border:1px solid var(--line);
+      background: rgba(255,255,255,.03);
+      color: var(--muted);
+      font-size:11px;
+      white-space:nowrap;
+    }
+    .divider{
+      height:1px; background:var(--line); margin:12px 0;
+    }
+    .chips{
+      display:flex; flex-wrap:wrap; gap:8px;
+      padding:8px;
+      border:1px dashed rgba(255,255,255,.16);
+      border-radius: 14px;
+      background: rgba(0,0,0,.08);
+    }
+    .chip{
+      display:inline-flex; gap:8px; align-items:center;
+      padding:7px 10px;
+      border-radius: 999px;
+      border:1px solid rgba(255,255,255,.12);
+      background: rgba(255,255,255,.04);
+      font-size:12px;
+      color:var(--text);
+    }
+    .chip button{
+      border:none;
+      background: transparent;
+      color: rgba(232,236,255,.75);
+      cursor:pointer;
+      font-size:14px;
+      line-height:1;
+      padding:0 2px;
+    }
+
+    .outputWrap{
+      display:flex; flex-direction:column;
+      min-height: 560px;
+    }
+    .outTop{
+      display:flex; align-items:center; justify-content:space-between; gap:10px;
+      padding:12px 14px;
+      border-bottom:1px solid var(--line);
+      background: rgba(0,0,0,.06);
+    }
+    .statusLine{
+      display:flex; flex-wrap:wrap; gap:8px; align-items:center;
+      color:var(--muted);
+      font-size:12px;
+    }
+    .statusLine strong{color:var(--text)}
+    .outBody{
+      padding:14px;
+      flex:1;
+      overflow:auto;
+    }
+    .out{
+      white-space:pre-wrap;
+      word-break:break-word;
+      line-height:1.6;
+      font-size:14px;
+    }
+    .out code, .out pre{
+      font-family:var(--mono);
+      font-size:12.5px;
+      background: rgba(255,255,255,.05);
+      padding:2px 6px;
+      border-radius:10px;
+    }
+    .log{
+      margin-top:12px;
+      border:1px solid var(--line);
+      border-radius: 14px;
+      background: rgba(0,0,0,.14);
+      padding:10px;
+      font-family:var(--mono);
+      font-size:12px;
+      color: rgba(232,236,255,.78);
+      overflow:auto;
+      max-height: 220px;
+      display:none;
+      white-space:pre-wrap;
+    }
+    .log.show{display:block}
+    .warn{
+      padding:10px 12px;
+      border-radius: 14px;
+      border:1px solid rgba(255,107,107,.30);
+      background: rgba(255,107,107,.10);
+      color: #ffd4d4;
+      font-size:12px;
+      line-height:1.4;
+      margin-bottom:12px;
+      display:none;
+    }
+    .warn.show{display:block}
+    .okTip{
+      padding:10px 12px;
+      border-radius: 14px;
+      border:1px solid rgba(103,232,165,.20);
+      background: rgba(103,232,165,.08);
+      color: rgba(232,255,244,.92);
+      font-size:12px;
+      line-height:1.4;
+      margin-bottom:12px;
+      display:none;
+    }
+    .okTip.show{display:block}
+    .kbd{
+      font-family:var(--mono);
+      font-size:11px;
+      padding:2px 6px;
+      border:1px solid var(--line);
+      border-bottom-color: rgba(255,255,255,.18);
+      border-radius: 8px;
+      background: rgba(0,0,0,.20);
+      color: rgba(232,236,255,.85);
+    }
+  </style>
+</head>
+
+<body>
+  <div class="app">
+    <div class="topbar">
+      <div class="brand">
+        <div class="logo" aria-hidden="true"></div>
+        <div class="title">
+          <h1>小說生成器（直觀版）</h1>
+          <p>像「生貼圖」那樣一鍵出稿：主題、人設可選可自訂，生成後可複製/下載。<br>提示：用 <span class="kbd">http://localhost</span> 開啟才不會被 <span class="kbd">file://</span> 的 CORS 搞事。</p>
+        </div>
+      </div>
+
+      <div class="pillrow">
+        <div class="pill"><span class="dot" id="dotOrigin"></span><span id="originText">Origin：檢查中</span></div>
+        <div class="pill"><span class="dot" id="dotReady"></span><span id="readyText">API：未設定</span></div>
+        <div class="pill"><span class="badge" id="modeBadge">模式：—</span></div>
+      </div>
+    </div>
+
+    <div class="grid">
+      <!-- LEFT: Controls -->
+      <div class="card">
+        <div class="cardHeader">
+          <h2>設定面板</h2>
+          <small>可保存到瀏覽器（localStorage）</small>
+        </div>
+        <div class="cardBody">
+          <div class="warn" id="fileWarn">
+            你目前是用 <b>file://</b> 開啟，所以 <b>相對路徑</b> 的 fetch 會炸成 <b>origin = null</b>（CORS 直接擋）。<br>
+            建議：用 VS Code Live Server 或 <span class="kbd">python -m http.server 5500</span> 再開 <span class="kbd">http://127.0.0.1:5500</span>。
+          </div>
+
+          <div class="section">
+            <div class="sectionTitle">
+              <b>API 設定</b>
+              <span>Key 不會上傳到任何地方（除非你把它寫死進檔案）</span>
+            </div>
+
+            <div class="row">
+              <div>
+                <label>API Base URL（OpenAI 相容）</label>
+                <input class="field" id="baseUrl" placeholder="https://api.openai.com/v1" />
+                <div class="hint">例：OpenAI / 你自己的代理 / 任何 OpenAI compatible 服務。建議結尾不要加斜線。</div>
+              </div>
+
+              <div>
+                <label>請求模式</label>
+                <select class="field" id="apiMode">
+                  <option value="responses">/responses（較新格式）</option>
+                  <option value="chat">/chat/completions（傳統格式）</option>
+                </select>
+                <div class="hint">如果你後端只支援其中一種，切換到可用的就行。</div>
+              </div>
+            </div>
+
+            <div class="row" style="margin-top:10px">
+              <div>
+                <label>Model</label>
+                <input class="field" id="model" list="modelHints" placeholder="例如：gpt-4o-mini / gpt-4.1-mini / 你後端的模型名" />
+                <datalist id="modelHints">
+                  <option value="gpt-4o-mini"></option>
+                  <option value="gpt-4.1-mini"></option>
+                  <option value="gpt-4.1"></option>
+                  <option value="gpt-4o"></option>
+                </datalist>
+              </div>
+
+              <div>
+                <label>API Key</label>
+                <div class="inline">
+                  <input class="field" id="apiKey" type="password" placeholder="貼上你的 key（不會自動送出，按生成才用）" style="flex:1" />
+                  <button class="btn btnSmall btnGhost" id="toggleKey" type="button">顯示</button>
+                </div>
+                <div class="hint">⚠️ 不要把 key 直接寫進檔案後再丟 GitHub Pages。</div>
+              </div>
+            </div>
+
+            <div class="row" style="margin-top:10px">
+              <div>
+                <label>保存設定到本機</label>
+                <div class="inline">
+                  <input id="saveLocal" type="checkbox" />
+                  <span class="hint" style="margin:0">勾選後會把 Base URL / 模式 / model / key 保存到 localStorage（同一台裝置才有效）。</span>
+                </div>
+              </div>
+              <div>
+                <label>Debug</label>
+                <div class="inline" style="gap:10px; flex-wrap:wrap">
+                  <button class="btn btnSmall" id="togglePrompt" type="button">顯示 Prompt</button>
+                  <button class="btn btnSmall" id="toggleRaw" type="button">顯示 Raw JSON</button>
+                  <button class="btn btnSmall btnDanger" id="clearLocal" type="button">清除本機保存</button>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div class="section">
+            <div class="sectionTitle">
+              <b>小說輸入</b>
+              <span>可選可自訂，越具體越穩</span>
+            </div>
+
+            <div class="row">
+              <div>
+                <label>主題 / 一句話梗概（必填）</label>
+                <textarea class="field" id="topic" placeholder="例：一個社畜工程師意外收到未來自己寄來的 Git commit，提示他今晚別加班……"></textarea>
+              </div>
+              <div>
+                <label>人設 / 主角設定（可選或自訂）</label>
+                <select class="field" id="personaPreset"></select>
+                <div class="hint">選一個快速套用，或在下方自訂。</div>
+              </div>
+            </div>
+
+            <div class="row" style="margin-top:10px">
+              <div>
+                <label>自訂人設（會覆蓋預設）</label>
+                <textarea class="field" id="personaCustom" placeholder="例：主角 29 歲，資深軟體工程師，外冷內熱，討厭無效會議但很在意同事…"></textarea>
+              </div>
+              <div>
+                <label>世界觀 / 場景（可選）</label>
+                <textarea class="field" id="setting" placeholder="例：近未來台北，AI 助理普及，公司導入『自動績效評分』系統…"></textarea>
+              </div>
+            </div>
+
+            <div class="row" style="margin-top:10px">
+              <div>
+                <label>類型（Genre）</label>
+                <select class="field" id="genre"></select>
+              </div>
+              <div>
+                <label>文風（Style / Tone）</label>
+                <select class="field" id="tone"></select>
+              </div>
+            </div>
+
+            <div class="row" style="margin-top:10px">
+              <div>
+                <label>視角</label>
+                <select class="field" id="pov">
+                  <option value="第一人稱">第一人稱</option>
+                  <option value="第三人稱（貼近主角）" selected>第三人稱（貼近主角）</option>
+                  <option value="第三人稱（全知）">第三人稱（全知）</option>
+                </select>
+              </div>
+              <div>
+                <label>長度目標</label>
+                <select class="field" id="length">
+                  <option value="極短篇（600～900字）">極短篇（600～900字）</option>
+                  <option value="短篇（1200～2000字）" selected>短篇（1200～2000字）</option>
+                  <option value="中短篇（2500～3500字）">中短篇（2500～3500字）</option>
+                  <option value="分章（3章，每章800～1200字）">分章（3章，每章800～1200字）</option>
+                </select>
+              </div>
+            </div>
+
+            <div class="row" style="margin-top:10px">
+              <div>
+                <label>語言</label>
+                <select class="field" id="lang">
+                  <option value="繁體中文" selected>繁體中文</option>
+                  <option value="簡體中文">簡體中文</option>
+                  <option value="English">English</option>
+                  <option value="日本語">日本語</option>
+                </select>
+              </div>
+              <div>
+                <label>分級 / 尺度</label>
+                <select class="field" id="rating">
+                  <option value="普遍級（不血腥、不露骨）" selected>普遍級（不血腥、不露骨）</option>
+                  <option value="輔導級（可緊張、可微暴力）">輔導級（可緊張、可微暴力）</option>
+                  <option value="成熟向（避免露骨描寫）">成熟向（避免露骨描寫）</option>
+                </select>
+              </div>
+            </div>
+
+            <div style="margin-top:10px">
+              <label>情節重點 / 轉折（可選）</label>
+              <textarea class="field" id="beats" placeholder="例：開頭收到未來 commit → 中段發現同事被系統陷害 → 反轉：未來自己其實是…"></textarea>
+            </div>
+
+            <div class="divider"></div>
+
+            <label>必須包含（Tag）</label>
+            <div class="inline" style="gap:10px; flex-wrap:wrap">
+              <input class="field" id="mustInput" placeholder="輸入後按 Enter（例：雨夜 / 便利商店 / 反轉）" style="flex:1" />
+              <button class="btn btnSmall" id="addMust" type="button">加入</button>
+            </div>
+            <div class="chips" id="mustChips" aria-label="must include chips"></div>
+
+            <div style="height:10px"></div>
+
+            <label>避免出現（Tag）</label>
+            <div class="inline" style="gap:10px; flex-wrap:wrap">
+              <input class="field" id="avoidInput" placeholder="輸入後按 Enter（例：爛俗失憶梗 / 過度旁白）" style="flex:1" />
+              <button class="btn btnSmall" id="addAvoid" type="button">加入</button>
+            </div>
+            <div class="chips" id="avoidChips" aria-label="avoid chips"></div>
+          </div>
+
+          <div class="section">
+            <div class="sectionTitle">
+              <b>生成參數（可不改）</b>
+              <span>越高越發散，越低越穩</span>
+            </div>
+
+            <div class="row">
+              <div>
+                <label>Temperature</label>
+                <input class="field" id="temp" type="number" min="0" max="2" step="0.05" value="0.9" />
+              </div>
+              <div>
+                <label>Max output tokens</label>
+                <input class="field" id="maxTokens" type="number" min="128" max="8192" step="64" value="1200" />
+              </div>
+            </div>
+
+            <div class="btns">
+              <button class="btn btnPrimary" id="btnGen" type="button">🚀 生成小說</button>
+              <button class="btn btnDanger" id="btnStop" type="button" disabled>⛔ 中止</button>
+              <button class="btn" id="btnClearOut" type="button">🧹 清空輸出</button>
+              <button class="btn" id="btnCopy" type="button">📋 複製</button>
+              <button class="btn" id="btnDownload" type="button">⬇️ 下載 TXT</button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- RIGHT: Output -->
+      <div class="card outputWrap">
+        <div class="outTop">
+          <div class="statusLine">
+            <span class="badge" id="runBadge">狀態：待命</span>
+            <span>模型：<strong id="modelEcho">—</strong></span>
+            <span>輸出：<strong id="charCount">0</strong> 字元</span>
+          </div>
+          <div class="inline" style="gap:8px; flex-wrap:wrap;">
+            <span class="badge" id="endpointEcho">Endpoint：—</span>
+          </div>
+        </div>
+
+        <div class="outBody">
+          <div class="okTip" id="okTip"></div>
+          <div class="warn" id="errBox"></div>
+          <div id="output" class="out">在左邊填好「主題 / 梗概」後按「生成小說」。</div>
+
+          <div class="log" id="promptBox"></div>
+          <div class="log" id="rawBox"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+<script>
+(()=> {
+  const $ = (id)=>document.getElementById(id);
+
+  // --- state ---
+  let mustTags = [];
+  let avoidTags = [];
+  let aborter = null;
+  let showKey = false;
+  let showPrompt = false;
+  let showRaw = false;
+
+  const personaPresets = [
+    { name: "（不指定／讓 AI 自由發揮）", text: "" },
+    { name: "社畜工程師（嘴硬心軟）", text: "主角是資深工程師，外冷內熱、吐槽功力強，擅長解決複雜問題，但其實很在意同伴；說話乾脆、帶一點黑色幽默。" },
+    { name: "冷面刑警（直覺派）", text: "主角是冷面刑警，沉默寡言、洞察力強，直覺敏銳；對正義有自己固執的標準。" },
+    { name: "溫柔系老師（治癒）", text: "主角是溫柔的老師，擅長觀察人心；遇事先安撫再引導，語氣溫暖但不矯情。" },
+    { name: "冒險型獵人（硬派）", text: "主角是硬派冒險者／獵人，行動果斷、重視契約；在危機中保持冷靜，偏寫實風格。" },
+    { name: "天才但社交苦手（輕喜劇）", text: "主角智商很高但社交苦手，常用過度理性解釋生活；在尷尬場面不自覺製造笑點。" },
+  ];
+
+  const genreOptions = [
+    "現代都市","職場","奇幻","科幻","懸疑推理","驚悚","愛情","冒險","療癒日常","黑色幽默","青春校園","末日","自訂…"
+  ];
+
+  const toneOptions = [
+    "輕鬆幽默","溫暖治癒","緊張刺激","黑暗寫實","浪漫甜","苦中帶甜","冷冽克制","熱血燃","自訂…"
+  ];
+
+  // --- init UI ---
+  function initSelects(){
+    // persona
+    const sel = $("personaPreset");
+    sel.innerHTML = personaPresets.map((p,i)=>`<option value="${i}">${p.name}</option>`).join("");
+    sel.value = "1";
+
+    // genre
+    const g = $("genre");
+    g.innerHTML = genreOptions.map(x=>`<option value="${x}">${x}</option>`).join("");
+    g.value = "職場";
+
+    // tone
+    const t = $("tone");
+    t.innerHTML = toneOptions.map(x=>`<option value="${x}">${x}</option>`).join("");
+    t.value = "輕鬆幽默";
+  }
+
+  // --- local storage ---
+  const LSKEY = "novelGen.v1";
+  function loadLocal(){
+    try{
+      const raw = localStorage.getItem(LSKEY);
+      if(!raw) return;
+      const s = JSON.parse(raw);
+      if(s.baseUrl) $("baseUrl").value = s.baseUrl;
+      if(s.apiMode) $("apiMode").value = s.apiMode;
+      if(s.model) $("model").value = s.model;
+      if(s.apiKey) $("apiKey").value = s.apiKey;
+      if(Array.isArray(s.mustTags)) mustTags = s.mustTags;
+      if(Array.isArray(s.avoidTags)) avoidTags = s.avoidTags;
+      $("saveLocal").checked = !!s.saveLocal;
+      renderChips();
+    }catch(e){}
+  }
+  function saveLocal(){
+    if(!$("saveLocal").checked) return;
+    const s = {
+      baseUrl: $("baseUrl").value.trim(),
+      apiMode: $("apiMode").value,
+      model: $("model").value.trim(),
+      apiKey: $("apiKey").value,
+      mustTags, avoidTags,
+      saveLocal: $("saveLocal").checked
+    };
+    try{ localStorage.setItem(LSKEY, JSON.stringify(s)); }catch(e){}
+  }
+  function clearLocal(){
+    localStorage.removeItem(LSKEY);
+  }
+
+  // --- chip helpers ---
+  function addTag(kind, v){
+    v = (v||"").trim();
+    if(!v) return;
+    const list = kind==="must" ? mustTags : avoidTags;
+    if(list.includes(v)) return;
+    list.push(v);
+    renderChips();
+    saveLocal();
+  }
+  function removeTag(kind, v){
+    const list = kind==="must" ? mustTags : avoidTags;
+    const idx = list.indexOf(v);
+    if(idx>=0) list.splice(idx,1);
+    renderChips();
+    saveLocal();
+  }
+  function renderChips(){
+    const mustBox = $("mustChips");
+    const avoidBox = $("avoidChips");
+    mustBox.innerHTML = mustTags.length
+      ? mustTags.map(x=>`<span class="chip">${escapeHtml(x)} <button data-kind="must" data-tag="${escapeHtmlAttr(x)}" title="移除">×</button></span>`).join("")
+      : `<span class="hint">（尚無）</span>`;
+    avoidBox.innerHTML = avoidTags.length
+      ? avoidTags.map(x=>`<span class="chip">${escapeHtml(x)} <button data-kind="avoid" data-tag="${escapeHtmlAttr(x)}" title="移除">×</button></span>`).join("")
+      : `<span class="hint">（尚無）</span>`;
+  }
+
+  // --- origin / readiness ---
+  function updateOrigin(){
+    const isFile = location.protocol === "file:";
+    const dot = $("dotOrigin");
+    const txt = $("originText");
+    if(isFile){
+      dot.classList.add("bad");
+      txt.textContent = "Origin：file://（容易 CORS）";
+      $("fileWarn").classList.add("show");
+    }else{
+      dot.classList.add("ok");
+      txt.textContent = "Origin：" + location.origin;
+      $("fileWarn").classList.remove("show");
+    }
+  }
+  function updateReady(){
+    const baseUrl = $("baseUrl").value.trim();
+    const key = $("apiKey").value.trim();
+    const model = $("model").value.trim();
+    const mode = $("apiMode").value;
+
+    $("modeBadge").textContent = "模式：" + (mode==="responses" ? "responses" : "chat");
+    $("modelEcho").textContent = model || "—";
+
+    const dot = $("dotReady");
+    const txt = $("readyText");
+    dot.classList.remove("ok","bad");
+    if(baseUrl && key && model){
+      dot.classList.add("ok");
+      txt.textContent = "API：已設定";
+    }else{
+      dot.classList.add("bad");
+      txt.textContent = "API：未設定完整";
+    }
+
+    const endpoint = (mode==="responses") ? (baseUrl.replace(/\/$/,"") + "/responses") : (baseUrl.replace(/\/$/,"") + "/chat/completions");
+    $("endpointEcho").textContent = "Endpoint：" + (baseUrl ? endpoint : "—");
+  }
+
+  // --- prompt builder ---
+  function buildPrompt(){
+    const topic = $("topic").value.trim();
+    const personaCustom = $("personaCustom").value.trim();
+    const personaText = personaCustom || personaPresets[Number($("personaPreset").value||0)]?.text || "";
+    const setting = $("setting").value.trim();
+    const genre = $("genre").value;
+    const tone = $("tone").value;
+    const pov = $("pov").value;
+    const length = $("length").value;
+    const lang = $("lang").value;
+    const rating = $("rating").value;
+    const beats = $("beats").value.trim();
+
+    const finalGenre = (genre==="自訂…" ? "（未指定 / 自由發揮）" : genre);
+    const finalTone = (tone==="自訂…" ? "（未指定 / 自由發揮）" : tone);
+
+    const must = mustTags.length ? mustTags.join("、") : "（無）";
+    const avoid = avoidTags.length ? avoidTags.join("、") : "（無）";
+
+    const system = [
+      "你是一位擅長敘事節奏、畫面感、人物對白的小說作家。",
+      "請避免重複句型與重複資訊；每個段落要推進情節或深化角色。",
+      "以具體動作、場景細節、對白呈現，不要長篇概念性說教。",
+      "文筆自然、有層次，並保持讀者可讀性（不要過度華麗堆砌）。",
+      "遵守使用者指定的分級/尺度限制。"
+    ].join("\n");
+
+    const user = [
+      `【輸出語言】${lang}`,
+      `【類型】${finalGenre}`,
+      `【文風】${finalTone}`,
+      `【敘事視角】${pov}`,
+      `【長度】${length}`,
+      `【分級/尺度】${rating}`,
+      "",
+      `【主題/梗概】\n${topic}`,
+      "",
+      personaText ? `【人設】\n${personaText}\n` : "",
+      setting ? `【世界觀/場景】\n${setting}\n` : "",
+      beats ? `【情節重點/轉折】\n${beats}\n` : "",
+      `【必須包含】${must}`,
+      `【避免出現】${avoid}`,
+      "",
+      "【格式要求】",
+      "1) 直接輸出小說正文（不要列出分析步驟）。",
+      "2) 請用自然分段；若為分章，標示第 1 章 / 第 2 章 / 第 3 章。",
+      "3) 讓結尾有餘韻或小反轉（若題材適合）。"
+    ].filter(Boolean).join("\n");
+
+    return { system, user };
+  }
+
+  // --- request builders (openai-compatible) ---
+  function makeRequestBody(mode, model, temp, maxTokens, prompt){
+    if(mode === "responses"){
+      // Try OpenAI Responses-like schema (best-effort compatible)
+      return {
+        model,
+        input: [
+          { role: "system", content: [{ type: "text", text: prompt.system }] },
+          { role: "user", content: [{ type: "text", text: prompt.user }] }
+        ],
+        temperature: temp,
+        max_output_tokens: maxTokens
+      };
+    }
+    // chat/completions
+    return {
+      model,
+      messages: [
+        { role: "system", content: prompt.system },
+        { role: "user", content: prompt.user }
+      ],
+      temperature: temp,
+      max_tokens: maxTokens
+    };
+  }
+
+  function extractText(mode, data){
+    // Robust extraction for different compatible backends
+    try{
+      // responses style
+      if(typeof data.output_text === "string" && data.output_text.trim()) return data.output_text;
+      if(Array.isArray(data.output)){
+        let acc = "";
+        for(const item of data.output){
+          const c = item?.content;
+          if(Array.isArray(c)){
+            for(const part of c){
+              if(part?.type === "output_text" && typeof part.text === "string") acc += part.text;
+              if(part?.type === "text" && typeof part.text === "string") acc += part.text;
+            }
+          }
+        }
+        if(acc.trim()) return acc;
+      }
+      // chat style
+      const c0 = data?.choices?.[0]?.message?.content;
+      if(typeof c0 === "string" && c0.trim()) return c0;
+      // some providers: choices[0].text
+      const t0 = data?.choices?.[0]?.text;
+      if(typeof t0 === "string" && t0.trim()) return t0;
+    }catch(e){}
+    return "";
+  }
+
+  // --- output helpers ---
+  function setStatus(kind, msg){
+    const badge = $("runBadge");
+    badge.textContent = "狀態：" + msg;
+    if(kind==="run"){
+      badge.style.borderColor = "rgba(110,231,255,.35)";
+      badge.style.background = "rgba(110,231,255,.08)";
+      badge.style.color = "rgba(232,255,255,.92)";
+    }else if(kind==="ok"){
+      badge.style.borderColor = "rgba(103,232,165,.28)";
+      badge.style.background = "rgba(103,232,165,.08)";
+      badge.style.color = "rgba(232,255,244,.92)";
+    }else if(kind==="err"){
+      badge.style.borderColor = "rgba(255,107,107,.30)";
+      badge.style.background = "rgba(255,107,107,.10)";
+      badge.style.color = "#ffd4d4";
+    }else{
+      badge.style.borderColor = "var(--line)";
+      badge.style.background = "rgba(255,255,255,.03)";
+      badge.style.color = "var(--muted)";
+    }
+  }
+  function showError(text){
+    $("errBox").textContent = text;
+    $("errBox").classList.add("show");
+  }
+  function clearError(){
+    $("errBox").textContent = "";
+    $("errBox").classList.remove("show");
+  }
+  function tipOk(text){
+    $("okTip").textContent = text;
+    $("okTip").classList.add("show");
+  }
+  function clearTip(){
+    $("okTip").textContent = "";
+    $("okTip").classList.remove("show");
+  }
+
+  // --- main generate ---
+  async function generate(){
+    clearError();
+    clearTip();
+
+    const baseUrl = $("baseUrl").value.trim().replace(/\/$/,"");
+    const mode = $("apiMode").value;
+    const endpoint = mode==="responses" ? (baseUrl + "/responses") : (baseUrl + "/chat/completions");
+    const model = $("model").value.trim();
+    const apiKey = $("apiKey").value;
+    const temp = Number($("temp").value || 0.9);
+    const maxTokens = Number($("maxTokens").value || 1200);
+
+    if(!$("topic").value.trim()){
+      showError("請先填：主題 / 一句話梗概（必填）。");
+      return;
+    }
+    if(!baseUrl || !model || !apiKey){
+      showError("API 未設定完整：請填 Base URL、Model、API Key。");
+      return;
+    }
+    if(location.protocol==="file:" && endpoint.startsWith("file:")){
+      showError("你目前用 file:// 開啟，endpoint 會變成 file://... 這種一定失敗。請改用 http://localhost 方式開啟。");
+      return;
+    }
+
+    // prepare request
+    const prompt = buildPrompt();
+    const body = makeRequestBody(mode, model, temp, maxTokens, prompt);
+
+    if(showPrompt){
+      $("promptBox").textContent = "=== SYSTEM ===\n" + prompt.system + "\n\n=== USER ===\n" + prompt.user;
+      $("promptBox").classList.add("show");
+    }
+    if(showRaw){
+      $("rawBox").textContent = "=== REQUEST JSON ===\n" + JSON.stringify({ endpoint, body }, null, 2);
+      $("rawBox").classList.add("show");
+    }
+
+    saveLocal();
+    updateReady();
+
+    // run
+    $("btnGen").disabled = true;
+    $("btnStop").disabled = false;
+    setStatus("run", "生成中…");
+    $("output").textContent = "生成中…（如果卡住，多半是 CORS 或 endpoint 模式不對，試著切換 responses/chat）";
+    $("charCount").textContent = "0";
+
+    aborter = new AbortController();
+    const startedAt = Date.now();
+
+    try{
+      const res = await fetch(endpoint, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "Authorization": "Bearer " + apiKey
+        },
+        body: JSON.stringify(body),
+        signal: aborter.signal
+      });
+
+      const text = await res.text();
+      let data = null;
+      try{ data = JSON.parse(text); }catch(e){}
+
+      if(!res.ok){
+        const maybeMsg = data?.error?.message || data?.message || text || ("HTTP " + res.status);
+        throw new Error("請求失敗：" + res.status + "\n" + maybeMsg);
+      }
+
+      const outText = extractText(mode, data);
+      if(!outText.trim()){
+        // if response schema differs, still show raw
+        $("output").textContent = "有拿到回應，但抓不到文字欄位（可能後端回傳格式不同）。\n\n已在 Raw JSON 顯示 response，請把它貼給我我幫你對齊欄位。";
+        setStatus("err", "格式不符");
+        if(!showRaw){
+          showRaw = true;
+          $("rawBox").classList.add("show");
+        }
+        $("rawBox").textContent = "=== RESPONSE RAW ===\n" + (data ? JSON.stringify(data, null, 2) : text);
+        return;
+      }
+
+      $("output").textContent = outText.trim();
+      $("charCount").textContent = String(outText.length);
+
+      const ms = Date.now() - startedAt;
+      setStatus("ok", "完成");
+      tipOk("完成 ✅ 用時 " + Math.round(ms/100)/10 + " 秒。想要更像某種風格：把「文風」改成自訂並寫得更具體。");
+
+      if(showRaw){
+        $("rawBox").textContent = "=== RESPONSE JSON ===\n" + JSON.stringify(data, null, 2);
+      }
+    }catch(err){
+      if(err?.name === "AbortError"){
+        setStatus("err", "已中止");
+        showError("已中止請求。");
+      }else{
+        setStatus("err", "失敗");
+        const msg = String(err?.message || err || "Unknown error");
+        showError(msg + "\n\n常見原因：\n- CORS：前端與 API 網域不同但後端沒開 Access-Control-Allow-Origin\n- Endpoint/模式不對：切換 responses ↔ chat\n- Base URL 多打一層 /v1 或少了 /v1\n- Model 名稱與你後端不一致");
+      }
+    }finally{
+      $("btnGen").disabled = false;
+      $("btnStop").disabled = true;
+      aborter = null;
+    }
+  }
+
+  // --- utilities ---
+  function escapeHtml(s){
+    return s.replace(/[&<>"']/g, (c)=>({ "&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#039;" }[c]));
+  }
+  function escapeHtmlAttr(s){
+    return escapeHtml(s).replace(/"/g, "&quot;");
+  }
+
+  // --- events ---
+  $("toggleKey").addEventListener("click", ()=>{
+    showKey = !showKey;
+    $("apiKey").type = showKey ? "text" : "password";
+    $("toggleKey").textContent = showKey ? "隱藏" : "顯示";
+  });
+
+  $("togglePrompt").addEventListener("click", ()=>{
+    showPrompt = !showPrompt;
+    $("promptBox").classList.toggle("show", showPrompt);
+    $("togglePrompt").textContent = showPrompt ? "隱藏 Prompt" : "顯示 Prompt";
+    if(showPrompt){
+      const p = buildPrompt();
+      $("promptBox").textContent = "=== SYSTEM ===\n" + p.system + "\n\n=== USER ===\n" + p.user;
+    }
+  });
+
+  $("toggleRaw").addEventListener("click", ()=>{
+    showRaw = !showRaw;
+    $("rawBox").classList.toggle("show", showRaw);
+    $("toggleRaw").textContent = showRaw ? "隱藏 Raw JSON" : "顯示 Raw JSON";
+    if(showRaw){
+      $("rawBox").textContent = "（將在送出後顯示 request/response）";
+    }
+  });
+
+  $("clearLocal").addEventListener("click", ()=>{
+    clearLocal();
+    tipOk("已清除本機保存。");
+  });
+
+  $("saveLocal").addEventListener("change", ()=>{
+    if(!$("saveLocal").checked){
+      tipOk("已取消保存（但現有 localStorage 不會自動刪除，可按『清除本機保存』）。");
+      return;
+    }
+    saveLocal();
+    tipOk("已啟用保存到本機。");
+  });
+
+  ["baseUrl","apiMode","model","apiKey"].forEach(id=>{
+    $(id).addEventListener("input", ()=>{ updateReady(); if($("saveLocal").checked) saveLocal(); });
+    $(id).addEventListener("change", ()=>{ updateReady(); if($("saveLocal").checked) saveLocal(); });
+  });
+
+  $("personaPreset").addEventListener("change", ()=>{
+    // just a UX tip: do not force overwrite custom
+    if($("personaCustom").value.trim()){
+      tipOk("你已填自訂人設：生成時會以「自訂」為主（不受預設影響）。");
+    }
+  });
+
+  $("addMust").addEventListener("click", ()=>{ addTag("must", $("mustInput").value); $("mustInput").value=""; $("mustInput").focus(); });
+  $("addAvoid").addEventListener("click", ()=>{ addTag("avoid", $("avoidInput").value); $("avoidInput").value=""; $("avoidInput").focus(); });
+
+  $("mustInput").addEventListener("keydown", (e)=>{ if(e.key==="Enter"){ e.preventDefault(); $("addMust").click(); }});
+  $("avoidInput").addEventListener("keydown", (e)=>{ if(e.key==="Enter"){ e.preventDefault(); $("addAvoid").click(); }});
+
+  document.addEventListener("click", (e)=>{
+    const btn = e.target?.closest?.("button[data-kind][data-tag]");
+    if(!btn) return;
+    removeTag(btn.dataset.kind, btn.dataset.tag);
+  });
+
+  $("btnGen").addEventListener("click", generate);
+  $("btnStop").addEventListener("click", ()=>{ if(aborter) aborter.abort(); });
+
+  $("btnClearOut").addEventListener("click", ()=>{
+    $("output").textContent = "已清空。";
+    $("charCount").textContent = "0";
+    clearError(); clearTip();
+  });
+
+  $("btnCopy").addEventListener("click", async ()=>{
+    try{
+      const text = $("output").textContent || "";
+      await navigator.clipboard.writeText(text);
+      tipOk("已複製到剪貼簿 ✅");
+    }catch(e){
+      showError("複製失敗（可能瀏覽器不允許）。你可以手動全選複製。");
+    }
+  });
+
+  $("btnDownload").addEventListener("click", ()=>{
+    const text = $("output").textContent || "";
+    const blob = new Blob([text], {type:"text/plain;charset=utf-8"});
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = "novel.txt";
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    URL.revokeObjectURL(url);
+    tipOk("已下載 TXT ✅");
+  });
+
+  // --- start ---
+  initSelects();
+  loadLocal();
+
+  // defaults if empty
+  if(!$("baseUrl").value.trim()) $("baseUrl").value = "https://api.openai.com/v1";
+  if(!$("model").value.trim()) $("model").value = "gpt-4o-mini";
+  if(typeof $("saveLocal").checked !== "boolean") $("saveLocal").checked = true;
+  if($("saveLocal").checked === false){
+    // keep as user choice
+  }else{
+    $("saveLocal").checked = true;
+  }
+
+  // fill persona preset select label
+  // injecting options already done; no need.
+  renderChips();
+  updateOrigin();
+  updateReady();
+})();
+</script>
+</body>
+</html>
