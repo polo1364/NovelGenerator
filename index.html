@@ -1438,32 +1438,70 @@
       }
 
       function parseAndShowChapters(text) {
-        const chapterRegex = /第[一二三四五六七八九十百零\d]+章[：:][^\n]*/g;
-        const rawMatches = [];
+        // 策略：找正文中的章節標題，而非目錄
+        // 正文章節通常以 ### 開頭，或者章節標題後面緊跟著正文內容
+        
+        chapterMatches = [];
+        
+        // 方法1：匹配 markdown 格式的章節標題 (### 第X章)
+        const markdownChapterRegex = /###\s*(第[一二三四五六七八九十百零\d]+章[：:].{0,30})/g;
         let match;
         
-        while ((match = chapterRegex.exec(text)) !== null) {
-          rawMatches.push({
-            title: match[0],
+        while ((match = markdownChapterRegex.exec(text)) !== null) {
+          chapterMatches.push({
+            title: match[1].trim(),
             index: match.index
           });
         }
-
-        // 去除重複的章節（根據章節名稱去重，只保留第一次出現的位置）
-        const seenTitles = new Set();
-        chapterMatches = [];
         
-        for (const m of rawMatches) {
-          // 提取章節編號作為唯一識別（如「第一章」「第二章」）
-          const chapterNumMatch = m.title.match(/第[一二三四五六七八九十百零\d]+章/);
-          if (chapterNumMatch) {
-            const chapterNum = chapterNumMatch[0];
-            if (!seenTitles.has(chapterNum)) {
-              seenTitles.add(chapterNum);
-              chapterMatches.push(m);
-            }
+        // 如果沒找到 markdown 格式，嘗試方法2：找段落開頭的章節標題
+        if (chapterMatches.length === 0) {
+          // 匹配換行後緊跟的章節標題（跳過目錄中的編號列表格式）
+          const paragraphChapterRegex = /\n\n+(第[一二三四五六七八九十百零\d]+章[：:][^\n]{0,30})/g;
+          
+          while ((match = paragraphChapterRegex.exec(text)) !== null) {
+            chapterMatches.push({
+              title: match[1].trim(),
+              index: match.index + match[0].indexOf(match[1])
+            });
           }
         }
+        
+        // 如果還是沒找到，用原本的方式但去重（取每個章節最後出現的位置，通常是正文）
+        if (chapterMatches.length === 0) {
+          const basicRegex = /第[一二三四五六七八九十百零\d]+章[：:]*[^\n]*/g;
+          const allMatches = [];
+          
+          while ((match = basicRegex.exec(text)) !== null) {
+            allMatches.push({
+              title: match[0].trim(),
+              index: match.index
+            });
+          }
+          
+          // 根據章節編號去重，保留最後一次出現（正文位置）
+          const chapterMap = new Map();
+          for (const m of allMatches) {
+            const numMatch = m.title.match(/第[一二三四五六七八九十百零\d]+章/);
+            if (numMatch) {
+              chapterMap.set(numMatch[0], m);
+            }
+          }
+          
+          // 按出現順序排列
+          chapterMatches = Array.from(chapterMap.values()).sort((a, b) => a.index - b.index);
+        }
+        
+        // 去除重複
+        const seenNums = new Set();
+        chapterMatches = chapterMatches.filter(m => {
+          const numMatch = m.title.match(/第[一二三四五六七八九十百零\d]+章/);
+          if (numMatch && !seenNums.has(numMatch[0])) {
+            seenNums.add(numMatch[0]);
+            return true;
+          }
+          return false;
+        });
 
         if (chapterMatches.length > 1) {
           // 顯示浮動導航
