@@ -725,34 +725,177 @@
         margin-top: 24px;
       }
 
-      /* 章節導航 */
-      .chapter-nav {
-        display: flex;
-        flex-wrap: wrap;
-        gap: 8px;
-        margin-top: 20px;
-        padding-top: 20px;
-        border-top: 1px solid var(--border);
+      /* 章節導航 - 智能浮動式 */
+      .chapter-nav-container {
+        position: fixed;
+        top: 80px;
+        right: 20px;
+        z-index: 999;
+        display: none;
       }
 
-      .chapter-nav button {
-        padding: 8px 16px;
+      .chapter-nav-container.show {
+        display: block;
+      }
+
+      .chapter-nav-toggle {
+        width: 50px;
+        height: 50px;
+        border-radius: 50%;
+        background: linear-gradient(135deg, var(--accent) 0%, #ff6b6b 100%);
+        color: #fff;
+        border: none;
+        box-shadow: 0 4px 15px rgba(233, 69, 96, 0.4);
+        cursor: pointer;
+        font-size: 1.2rem;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        transition: all 0.3s ease;
+      }
+
+      .chapter-nav-toggle:hover {
+        transform: scale(1.1);
+        box-shadow: 0 6px 20px rgba(233, 69, 96, 0.5);
+      }
+
+      .chapter-nav-toggle .badge {
+        position: absolute;
+        top: -5px;
+        right: -5px;
+        background: var(--primary);
+        color: #fff;
+        font-size: 0.7rem;
+        padding: 2px 6px;
+        border-radius: 10px;
+        font-weight: 600;
+      }
+
+      .chapter-nav-panel {
+        position: absolute;
+        top: 0;
+        right: 60px;
+        background: var(--card-bg);
+        border-radius: 16px;
+        box-shadow: 0 10px 40px rgba(0, 0, 0, 0.15);
+        padding: 16px;
+        min-width: 250px;
+        max-width: 350px;
+        max-height: 70vh;
+        overflow-y: auto;
+        opacity: 0;
+        visibility: hidden;
+        transform: translateX(20px);
+        transition: all 0.3s ease;
+      }
+
+      .chapter-nav-panel.open {
+        opacity: 1;
+        visibility: visible;
+        transform: translateX(0);
+      }
+
+      .chapter-nav-panel::-webkit-scrollbar {
+        width: 4px;
+      }
+
+      .chapter-nav-panel::-webkit-scrollbar-thumb {
+        background: var(--border);
+        border-radius: 2px;
+      }
+
+      .chapter-nav-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 12px;
+        padding-bottom: 12px;
+        border-bottom: 1px solid var(--border);
+      }
+
+      .chapter-nav-title {
+        font-weight: 600;
+        color: var(--primary);
+        font-size: 0.95rem;
+      }
+
+      .chapter-nav-close {
+        background: none;
+        border: none;
+        color: var(--text-light);
+        cursor: pointer;
+        padding: 4px;
+        font-size: 1.2rem;
+        line-height: 1;
+      }
+
+      .chapter-nav-list {
+        display: flex;
+        flex-direction: column;
+        gap: 6px;
+      }
+
+      .chapter-nav-list button {
+        padding: 10px 14px;
         font-size: 0.85rem;
         background: #f8f9fa;
         color: var(--text);
         border: 1px solid var(--border);
+        border-radius: 8px;
+        text-align: left;
+        transition: all 0.2s ease;
       }
 
-      .chapter-nav button:hover {
+      .chapter-nav-list button:hover {
         background: var(--accent);
         color: #fff;
         border-color: var(--accent);
+        transform: translateX(4px);
       }
 
-      .chapter-nav button.active {
+      .chapter-nav-list button.active {
         background: var(--primary);
         color: #fff;
         border-color: var(--primary);
+      }
+
+      .chapter-nav-list button .chapter-num {
+        display: inline-block;
+        background: rgba(0,0,0,0.1);
+        padding: 2px 8px;
+        border-radius: 4px;
+        font-size: 0.75rem;
+        margin-right: 8px;
+      }
+
+      .chapter-nav-list button.active .chapter-num {
+        background: rgba(255,255,255,0.2);
+      }
+
+      /* 閱讀進度指示器 */
+      .reading-progress {
+        position: fixed;
+        top: 4px;
+        left: 0;
+        height: 4px;
+        background: linear-gradient(90deg, var(--accent), var(--gold));
+        z-index: 1001;
+        transition: width 0.1s ease;
+      }
+
+      @media (max-width: 768px) {
+        .chapter-nav-container {
+          top: auto;
+          bottom: 20px;
+          right: 16px;
+        }
+
+        .chapter-nav-panel {
+          right: 0;
+          top: auto;
+          bottom: 60px;
+          max-width: calc(100vw - 32px);
+        }
       }
 
       /* 動畫 */
@@ -977,8 +1120,25 @@
           <span class="output-title">📜 生成結果</span>
         </div>
         <div id="result" class="output"></div>
-        <div id="chapterNav" class="chapter-nav" style="display: none;"></div>
       </div>
+
+      <!-- 浮動章節導航 -->
+      <div id="chapterNavContainer" class="chapter-nav-container">
+        <button id="chapterNavToggle" class="chapter-nav-toggle" title="章節導航">
+          📑
+          <span id="chapterBadge" class="badge">0</span>
+        </button>
+        <div id="chapterNavPanel" class="chapter-nav-panel">
+          <div class="chapter-nav-header">
+            <span class="chapter-nav-title">📖 章節目錄</span>
+            <button id="chapterNavClose" class="chapter-nav-close">✕</button>
+          </div>
+          <div id="chapterNavList" class="chapter-nav-list"></div>
+        </div>
+      </div>
+
+      <!-- 閱讀進度條 -->
+      <div id="readingProgress" class="reading-progress" style="width: 0%;"></div>
 
       <!-- 書籤區 - 全新設計 -->
       <div class="bookmark-card">
@@ -1052,11 +1212,19 @@
       const continueBtn = document.getElementById('continueBtn');
       const statusDiv = document.getElementById('status');
       const resultDiv = document.getElementById('result');
-      const chapterNav = document.getElementById('chapterNav');
       const toggleApiKeyVisibility = document.getElementById('toggleApiKeyVisibility');
       const charactersContainer = document.getElementById('charactersContainer');
       const randomAllCharactersBtn = document.getElementById('randomAllCharactersBtn');
       const addCharacterBtn = document.getElementById('addCharacterBtn');
+
+      // 浮動章節導航元素
+      const chapterNavContainer = document.getElementById('chapterNavContainer');
+      const chapterNavToggle = document.getElementById('chapterNavToggle');
+      const chapterNavPanel = document.getElementById('chapterNavPanel');
+      const chapterNavClose = document.getElementById('chapterNavClose');
+      const chapterNavList = document.getElementById('chapterNavList');
+      const chapterBadge = document.getElementById('chapterBadge');
+      const readingProgress = document.getElementById('readingProgress');
 
       // 書籤元素
       const addBookmarkBtn = document.getElementById('addBookmarkBtn');
@@ -1078,6 +1246,8 @@
 
       let latestStory = '';
       let editingBookmarkId = null;
+      let chapterMatches = [];
+      let isPanelOpen = false;
 
       // ==================== 狀態顯示 ====================
       function showStatus(type, message) {
@@ -1195,30 +1365,163 @@
         Array.from(charactersContainer.children).forEach(row => randomizeRow(row));
       });
 
-      // ==================== 章節導航 ====================
+      // ==================== 智能浮動章節導航 ====================
+
+      // 切換面板顯示
+      chapterNavToggle.addEventListener('click', () => {
+        isPanelOpen = !isPanelOpen;
+        chapterNavPanel.classList.toggle('open', isPanelOpen);
+      });
+
+      chapterNavClose.addEventListener('click', () => {
+        isPanelOpen = false;
+        chapterNavPanel.classList.remove('open');
+      });
+
+      // 點擊面板外部關閉
+      document.addEventListener('click', (e) => {
+        if (isPanelOpen && 
+            !chapterNavPanel.contains(e.target) && 
+            !chapterNavToggle.contains(e.target)) {
+          isPanelOpen = false;
+          chapterNavPanel.classList.remove('open');
+        }
+      });
+
+      // 閱讀進度追蹤
+      window.addEventListener('scroll', () => {
+        if (!resultDiv.textContent) return;
+        
+        const rect = resultDiv.getBoundingClientRect();
+        const windowHeight = window.innerHeight;
+        const docHeight = resultDiv.offsetHeight;
+        
+        // 計算閱讀進度
+        if (rect.top < windowHeight && rect.bottom > 0) {
+          const visibleTop = Math.max(0, -rect.top);
+          const progress = Math.min(100, (visibleTop / (docHeight - windowHeight)) * 100);
+          readingProgress.style.width = Math.max(0, Math.min(100, progress)) + '%';
+        }
+        
+        // 自動更新當前章節高亮
+        updateCurrentChapter();
+      });
+
+      function updateCurrentChapter() {
+        if (chapterMatches.length === 0) return;
+        
+        const scrollY = window.scrollY;
+        const resultRect = resultDiv.getBoundingClientRect();
+        const resultTop = resultRect.top + window.scrollY;
+        
+        let currentChapterIdx = 0;
+        
+        for (let i = 0; i < chapterMatches.length; i++) {
+          const chapterTitle = chapterMatches[i].title;
+          const textContent = resultDiv.textContent;
+          const chapterIndex = textContent.indexOf(chapterTitle);
+          
+          // 估算章節在頁面中的位置
+          const ratio = chapterIndex / textContent.length;
+          const estimatedPos = resultTop + (resultDiv.offsetHeight * ratio);
+          
+          if (scrollY >= estimatedPos - 100) {
+            currentChapterIdx = i;
+          }
+        }
+        
+        // 更新按鈕狀態
+        const buttons = chapterNavList.querySelectorAll('button');
+        buttons.forEach((btn, idx) => {
+          btn.classList.toggle('active', idx === currentChapterIdx);
+        });
+      }
+
       function parseAndShowChapters(text) {
         const chapterRegex = /第[一二三四五六七八九十百零\d]+章[^\n]*/g;
-        const matches = text.match(chapterRegex);
-        if (matches && matches.length > 1) {
-          chapterNav.style.display = 'flex';
-          chapterNav.innerHTML = matches.map((title, i) => 
-            `<button type="button" data-chapter="${i}">${title.substring(0, 15)}${title.length > 15 ? '...' : ''}</button>`
+        chapterMatches = [];
+        let match;
+        
+        while ((match = chapterRegex.exec(text)) !== null) {
+          chapterMatches.push({
+            title: match[0],
+            index: match.index
+          });
+        }
+
+        if (chapterMatches.length > 1) {
+          // 顯示浮動導航
+          chapterNavContainer.classList.add('show');
+          chapterBadge.textContent = chapterMatches.length;
+          
+          // 生成章節列表
+          chapterNavList.innerHTML = chapterMatches.map((m, i) => 
+            `<button type="button" data-chapter="${i}">
+              <span class="chapter-num">${i + 1}</span>
+              ${m.title.substring(0, 20)}${m.title.length > 20 ? '...' : ''}
+            </button>`
           ).join('');
-          chapterNav.querySelectorAll('button').forEach(btn => {
+          
+          // 綁定點擊事件
+          chapterNavList.querySelectorAll('button').forEach((btn, idx) => {
             btn.addEventListener('click', () => {
-              const idx = parseInt(btn.dataset.chapter);
-              const chapterStart = text.indexOf(matches[idx]);
-              // 計算大約位置並滾動
-              const ratio = chapterStart / text.length;
-              const scrollTarget = resultDiv.scrollHeight * ratio;
-              resultDiv.scrollTop = scrollTarget;
-              chapterNav.querySelectorAll('button').forEach(b => b.classList.remove('active'));
+              const chapterTitle = chapterMatches[idx].title;
+              const textContent = resultDiv.textContent;
+              const chapterIndex = textContent.indexOf(chapterTitle);
+              
+              if (chapterIndex !== -1) {
+                const fullText = resultDiv.textContent;
+                const beforeChapter = fullText.substring(0, chapterIndex);
+                const chapterText = fullText.substring(chapterIndex, chapterIndex + chapterTitle.length);
+                const afterChapter = fullText.substring(chapterIndex + chapterTitle.length);
+                
+                resultDiv.innerHTML = 
+                  escapeHtml(beforeChapter) + 
+                  '<span id="chapter-target" style="scroll-margin-top: 20px;">' + escapeHtml(chapterText) + '</span>' + 
+                  escapeHtml(afterChapter);
+                
+                const target = document.getElementById('chapter-target');
+                if (target) {
+                  target.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                  
+                  // 高亮效果
+                  target.style.background = 'linear-gradient(90deg, rgba(233, 69, 96, 0.3), rgba(244, 162, 97, 0.1))';
+                  target.style.borderRadius = '4px';
+                  target.style.padding = '4px 8px';
+                  target.style.marginLeft = '-8px';
+                  
+                  setTimeout(() => {
+                    target.style.transition = 'background 1.5s ease';
+                    target.style.background = 'transparent';
+                  }, 2000);
+                }
+              }
+              
+              // 更新按鈕狀態
+              chapterNavList.querySelectorAll('button').forEach(b => b.classList.remove('active'));
               btn.classList.add('active');
+              
+              // 行動裝置上自動關閉面板
+              if (window.innerWidth <= 768) {
+                isPanelOpen = false;
+                chapterNavPanel.classList.remove('open');
+              }
             });
           });
         } else {
-          chapterNav.style.display = 'none';
+          chapterNavContainer.classList.remove('show');
+          chapterMatches = [];
         }
+      }
+
+      // HTML 轉義函數
+      function escapeHtml(text) {
+        return text
+          .replace(/&/g, '&amp;')
+          .replace(/</g, '&lt;')
+          .replace(/>/g, '&gt;')
+          .replace(/"/g, '&quot;')
+          .replace(/'/g, '&#039;');
       }
 
       // ==================== 生成故事 ====================
