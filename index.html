@@ -1791,10 +1791,56 @@
         document.body.removeChild(link);
       }
 
+      function generateFilename() {
+        // 取得主題
+        const theme = themeSelect.value || '';
+        
+        // 取得所有人物名字
+        const characterRows = Array.from(charactersContainer.querySelectorAll('.character-row'));
+        const names = characterRows
+          .map(row => row.querySelector('.char-name').value.trim())
+          .filter(name => name !== '');
+        
+        // 嘗試從故事內容中提取標題（通常在開頭有 ## 標題 格式）
+        let storyTitle = '';
+        if (latestStory) {
+          const titleMatch = latestStory.match(/##\s*([^\n#]+)/);
+          if (titleMatch) {
+            storyTitle = titleMatch[1].trim();
+          }
+        }
+        
+        // 組合檔名
+        let filename = '';
+        
+        // 優先使用故事標題
+        if (storyTitle) {
+          filename = storyTitle;
+        } else if (theme) {
+          filename = theme;
+        } else {
+          filename = '生成小說';
+        }
+        
+        // 加入人物名字（最多3個）
+        if (names.length > 0) {
+          const displayNames = names.slice(0, 3).join('、');
+          filename += `_${displayNames}`;
+          if (names.length > 3) {
+            filename += '等';
+          }
+        }
+        
+        // 移除不適合檔名的字元
+        filename = filename.replace(/[\\/:*?"<>|]/g, '_');
+        
+        return filename + '.txt';
+      }
+
       downloadBtn.addEventListener('click', () => {
         if (!latestStory) return;
-        const title = themeSelect.value || '生成小說';
-        downloadFile(title + '.txt', latestStory);
+        const filename = generateFilename();
+        downloadFile(filename, latestStory);
       });
 
       // ==================== 書籤功能 (大幅優化) ====================
