@@ -1440,41 +1440,61 @@
       function parseAndShowChapters(text) {
         chapterMatches = [];
         
-        // 策略：跳過目錄區域
-        // 目錄通常在 "---" 分隔線之前，或在 "章節列表" 區塊中
-        let contentStartIndex = 0;
+        // 策略：只匹配正文中的章節標題
+        // 正文章節特徵：以 ### 開頭（markdown格式）
+        // 目錄章節特徵：以數字編號開頭，如 "1." "2." 或有 ** 粗體標記
         
-        // 找 "---" 分隔線的位置，從那之後開始算正文
-        const separatorIndex = text.indexOf('\n---\n');
-        if (separatorIndex !== -1) {
-          contentStartIndex = separatorIndex + 5;
-        } else {
-          // 備用：找 "第一章" 第二次出現的位置（第一次通常在目錄）
-          const firstChapterRegex = /第一章/g;
-          let firstMatch = firstChapterRegex.exec(text);
-          let secondMatch = firstChapterRegex.exec(text);
-          if (secondMatch) {
-            contentStartIndex = secondMatch.index;
+        const lines = text.split('\n');
+        
+        for (let i = 0; i < lines.length; i++) {
+          const line = lines[i];
+          
+          // 只匹配以 ### 開頭的章節標題（這是正文章節）
+          const match = line.match(/^###\s*(第[一二三四五六七八九十百零\d]+章[：:].*)$/);
+          
+          if (match) {
+            // 計算這一行在原文中的位置
+            let index = 0;
+            for (let j = 0; j < i; j++) {
+              index += lines[j].length + 1; // +1 for \n
+            }
+            
+            chapterMatches.push({
+              title: match[1].trim(),
+              fullLine: line,
+              index: index
+            });
           }
         }
         
-        // 只在正文區域搜尋章節
-        const contentText = text.substring(contentStartIndex);
-        const contentOffset = contentStartIndex;
-        
-        // 匹配章節標題
-        const chapterRegex = /第[一二三四五六七八九十百零\d]+章[：:]*[^\n]*/g;
-        let match;
-        
-        while ((match = chapterRegex.exec(contentText)) !== null) {
-          chapterMatches.push({
-            title: match[0].replace(/^#+\s*/, '').trim(), // 移除 markdown # 符號
-            index: contentOffset + match.index,
-            displayTitle: match[0].replace(/^#+\s*/, '').trim()
-          });
+        // 如果沒有找到 ### 格式，嘗試找獨立行的章節標題（不是列表項）
+        if (chapterMatches.length === 0) {
+          for (let i = 0; i < lines.length; i++) {
+            const line = lines[i];
+            const prevLine = i > 0 ? lines[i - 1] : '';
+            
+            // 排除目錄項：不以數字開頭、不含 ** 粗體、前一行是空行
+            const isListItem = /^\d+\.\s/.test(line) || /\*\*/.test(line);
+            const isAfterBlankLine = prevLine.trim() === '' || prevLine.trim() === '---';
+            
+            if (!isListItem && isAfterBlankLine) {
+              const match = line.match(/^(第[一二三四五六七八九十百零\d]+章[：:].*)$/);
+              if (match) {
+                let index = 0;
+                for (let j = 0; j < i; j++) {
+                  index += lines[j].length + 1;
+                }
+                chapterMatches.push({
+                  title: match[1].trim(),
+                  fullLine: line,
+                  index: index
+                });
+              }
+            }
+          }
         }
         
-        // 根據章節編號去重（保留第一次出現）
+        // 去除重複（以章節編號為準）
         const seenNums = new Set();
         chapterMatches = chapterMatches.filter(m => {
           const numMatch = m.title.match(/第[一二三四五六七八九十百零\d]+章/);
@@ -1504,48 +1524,56 @@
               const chapter = chapterMatches[idx];
               const fullText = resultDiv.textContent;
               
-              // 使用儲存的 index 位置，而非重新搜尋（避免找到目錄）
-              const chapterIndex = chapter.index;
-              const chapterTitle = chapter.title;
+              // 搜尋完整的章節行（包含 ### 或不含）
+              // 因為 textContent 不會保留 ### 符號，需要搜尋標題本身
+              const searchTitle = chapter.title;
               
-              // 確保 index 在有效範圍內
-              if (chapterIndex >= 0 && chapterIndex < fullText.length) {
-                // 找到該位置實際的章節標題（可能因為 markdown 符號有些微差異）
-                const searchStart = Math.max(0, chapterIndex - 10);
-                const searchEnd = Math.min(fullText.length, chapterIndex + chapterTitle.length + 10);
-                const searchArea = fullText.substring(searchStart, searchEnd);
+              // 從儲存的 index 附近搜尋（避免找到目錄）
+              // 找所有出現位置，選擇最接近儲存 index 的那個
+              let bestIndex = -1;
+              let searchStart = 0;
+              
+              while (true) {
+                const foundIndex = fullText.indexOf(searchTitle, searchStart);
+                if (foundIndex === -1) break;
                 
-                // 在該區域找章節標題
-                const titleMatch = searchArea.match(/第[一二三四五六七八九十百零\d]+章[：:]*[^\n]*/);
-                
-                if (titleMatch) {
-                  const actualStart = searchStart + searchArea.indexOf(titleMatch[0]);
-                  const actualTitle = titleMatch[0];
+                // 檢查這個位置是否更接近目標
+                if (bestIndex === -1 || Math.abs(foundIndex - chapter.index) < Math.abs(bestIndex - chapter.index)) {
+                  // 額外檢查：這個位置前面不應該是數字編號（排除目錄）
+                  const beforeText = fullText.substring(Math.max(0, foundIndex - 10), foundIndex);
+                  const isInTOC = /\d+\.\s*$/.test(beforeText) || /\*\*\s*$/.test(beforeText);
                   
-                  const beforeChapter = fullText.substring(0, actualStart);
-                  const chapterText = actualTitle;
-                  const afterChapter = fullText.substring(actualStart + actualTitle.length);
-                  
-                  resultDiv.innerHTML = 
-                    escapeHtml(beforeChapter) + 
-                    '<span id="chapter-target" style="scroll-margin-top: 20px;">' + escapeHtml(chapterText) + '</span>' + 
-                    escapeHtml(afterChapter);
-                  
-                  const target = document.getElementById('chapter-target');
-                  if (target) {
-                    target.scrollIntoView({ behavior: 'smooth', block: 'start' });
-                    
-                    // 高亮效果
-                    target.style.background = 'linear-gradient(90deg, rgba(233, 69, 96, 0.3), rgba(244, 162, 97, 0.1))';
-                    target.style.borderRadius = '4px';
-                    target.style.padding = '4px 8px';
-                    target.style.marginLeft = '-8px';
-                    
-                    setTimeout(() => {
-                      target.style.transition = 'background 1.5s ease';
-                      target.style.background = 'transparent';
-                    }, 2000);
+                  if (!isInTOC) {
+                    bestIndex = foundIndex;
                   }
+                }
+                searchStart = foundIndex + 1;
+              }
+              
+              if (bestIndex !== -1) {
+                const beforeChapter = fullText.substring(0, bestIndex);
+                const chapterText = searchTitle;
+                const afterChapter = fullText.substring(bestIndex + searchTitle.length);
+                
+                resultDiv.innerHTML = 
+                  escapeHtml(beforeChapter) + 
+                  '<span id="chapter-target" style="scroll-margin-top: 20px;">' + escapeHtml(chapterText) + '</span>' + 
+                  escapeHtml(afterChapter);
+                
+                const target = document.getElementById('chapter-target');
+                if (target) {
+                  target.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                  
+                  // 高亮效果
+                  target.style.background = 'linear-gradient(90deg, rgba(233, 69, 96, 0.3), rgba(244, 162, 97, 0.1))';
+                  target.style.borderRadius = '4px';
+                  target.style.padding = '4px 8px';
+                  target.style.marginLeft = '-8px';
+                  
+                  setTimeout(() => {
+                    target.style.transition = 'background 1.5s ease';
+                    target.style.background = 'transparent';
+                  }, 2000);
                 }
               }
               
