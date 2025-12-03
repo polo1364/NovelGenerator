@@ -331,7 +331,7 @@
       /* 人物設定區 */
       .character-row {
         display: grid;
-        grid-template-columns: 70px repeat(6, 1fr) auto;
+        grid-template-columns: 70px 75px repeat(6, 1fr) auto;
         gap: 10px;
         margin-bottom: 14px;
         align-items: center;
@@ -353,9 +353,14 @@
         font-size: 0.9rem;
       }
 
-      .character-row input {
+      .character-row input,
+      .character-row select {
         padding: 10px 12px;
         font-size: 0.9rem;
+      }
+
+      .character-row .char-gender {
+        padding: 10px 8px;
       }
 
       .character-row button {
@@ -363,12 +368,26 @@
         white-space: nowrap;
       }
 
-      @media (max-width: 900px) {
+      @media (max-width: 1100px) {
+        .character-row {
+          grid-template-columns: 70px 75px 1fr 1fr 1fr;
+        }
+        .character-row .char-weakness,
+        .character-row .char-secret,
+        .character-row .char-relation {
+          grid-column: span 1;
+        }
+      }
+
+      @media (max-width: 768px) {
         .character-row {
           grid-template-columns: 1fr 1fr;
         }
         .char-index {
           grid-column: 1 / -1;
+        }
+        .character-row .char-gender {
+          width: 100%;
         }
       }
 
@@ -1304,6 +1323,12 @@
       const lengthOpts = [30000, 50000, 70000, 90000];
 
       const nameOptions = ['艾琳','洛恩','凱亞','米爾','席恩','薇拉','祈安','杜林','希爾維','萊雅','伊凡','法蘭','格蘭','梅芙','安娜','雷格','索菲','艾略特','亞歷克','莫妮卡','路西','伊芙','加百列','亞當','瑪雅','艾德','薩拉','杰登','琪拉','德瑞克','凱瑟琳','馬丁','羅絲','奧利維','昆汀','哈莉','伯納德','海倫','丹尼爾','雷切爾','山姆','艾薇','諾亞','艾米莉','布萊恩','艾蜜莉亞','達米安','露西亞','米蘭達','亞歷山大','波琳娜','亨利','蘇菲亞','費南多','克萊兒','埃德加','歐文','莉亞','查爾斯','哈娜','杰克','瑪蒂爾達','托尼','娜塔莉','達瑞斯','克里斯','艾瑪','羅伯特','凱特','格蕾絲','莫里斯','普拉多','勞拉','維克多','凱莉','菲利普','瑞秋','史蒂夫','羅伊','哈德森','妮可','克麗絲汀','萊昂','梅根','杜蘭','馬雅','蘭斯洛特','卡羅爾','伊麗莎白','伊薩貝拉','考特尼','蔣琴','唐娜','塞德里克','布蘭妮','雷蒙','凱薩琳','阿萊克斯','加布里埃拉','西蒙'];
+      
+      // 男性名字
+      const maleNames = ['洛恩','米爾','席恩','祈安','杜林','伊凡','法蘭','格蘭','雷格','艾略特','亞歷克','加百列','亞當','艾德','杰登','德瑞克','馬丁','奧利維','昆汀','伯納德','丹尼爾','山姆','諾亞','布萊恩','達米安','亞歷山大','亨利','費南多','埃德加','歐文','查爾斯','杰克','托尼','達瑞斯','克里斯','羅伯特','莫里斯','普拉多','維克多','菲利普','史蒂夫','羅伊','哈德森','萊昂','杜蘭','蘭斯洛特','塞德里克','雷蒙','阿萊克斯','西蒙','威廉','詹姆斯','麥克','大衛','約瑟夫','理查','湯瑪斯','安德魯','乔治','艾倫','凱文','乔納森','乔舒亞','萊恩','尼古拉斯','贾斯汀','布兰登','泰勒','亚伦','杰瑞米','肖恩','德里克','马修','保罗','卡尔','文森特'];
+      
+      // 女性名字
+      const femaleNames = ['艾琳','凱亞','薇拉','希爾維','萊雅','梅芙','安娜','索菲','莫妮卡','路西','伊芙','瑪雅','薩拉','琪拉','凱瑟琳','羅絲','哈莉','海倫','雷切爾','艾薇','艾米莉','艾蜜莉亞','露西亞','米蘭達','波琳娜','蘇菲亞','克萊兒','莉亞','哈娜','瑪蒂爾達','娜塔莉','艾瑪','凱特','格蕾絲','勞拉','凱莉','瑞秋','妮可','克麗絲汀','梅根','馬雅','卡羅爾','伊麗莎白','伊薩貝拉','考特尼','蔣琴','唐娜','布蘭妮','凱薩琳','加布里埃拉','艾莉絲','維多利亞','奧莉維亞','夏洛特','阿曼達','潔西卡','珍妮佛','蜜雪兒','妮娜','克蘿伊','莎曼珊','黛安娜','凱蒂','艾莉森','布麗姬特','莫妮克','安琪拉','史黛西','坦雅','蘿拉','潘乃拉'];
       const personalityOptions = ['外冷內熱','自卑但嘴硬','樂觀又衝動','冷靜但偏執','溫柔卻不輕信任何人','堅韌而沉默','幽默開朗','善良又單純','多疑且謹慎','自信而傲慢','懶散卻超凡聰明','義氣而固執','急躁但心地善良','謙虛而機智','天真又好奇','冷酷無情','善於交際','孤僻沉默','勇敢衝動','理性克制','愛幻想','孤單','嫉妒心強','勇於挑戰','樂於助人','多愁善感','懶散','好動','機智靈活','心直口快','優柔寡斷','善於隱忍','頑強','懷疑一切','思維嚴謹','黑暗內心','衝動火爆','陰晴不定','客觀理性','自律自省','貪心','粗枝大葉','孤高自傲','悲天憫人','求知欲強','保守傳統','冒險精神','浪漫情懷','鐵面無私','情感豐沛','不拘小節','嬉皮笑臉','深謀遠慮','勇敢無畏','友善熱情','純真孩氣','冷漠疏離','心思纖細','謙遜低調','剛愎自用','風趣幽默','充滿正義感','善於操控','常常懷疑自己','樂觀開朗','感性細膩','玩世不恭','奮發向上','無厘頭','固執己見','反覆無常','忍耐力強','憨厚老實','孤僻怪異','古怪多變','嫉惡如仇','天真浪漫','豪放不羈','富有創意','隨遇而安','心狠手辣','重視禮節','熱愛自由','貪玩','節儉','心地善良','喜歡冒險','專注執著','真誠坦率','小心翼翼','倔強固執','天馬行空','善解人意','易燃易爆炸','過度樂觀','莫名自信','唯我獨尊','悲觀厭世','凡事求真'];
       const goalOptions = ['找回失落的家族徽章','破解禁書的封印','救回被詛咒的朋友','查出學院裡的內鬼','證明自己不是怪物','尋找失蹤的師父','復仇雪恥','拯救世界免於毀滅','逃離自身的命運','尋求內心的自由','揭開古老遺跡的秘密','完成父母未竟的夢想','打倒暴政的君王','尋找傳說中的寶藏','守護故鄉免於侵略','破解血統之謎','治癒自己的病痛','成為最強者','阻止末日降臨','改變未來的預言','統治整個國度','找到通往平行世界的門','破解古老魔法的謎語','阻止邪惡教團復活','拯救族人免於滅絕','與心愛之人重逢','找出真正的身世','讓世界和平','消滅所有黑暗力量','完成最後一任務','揭露巨大陰謀','修復破碎的王國','找到失蹤的寶藏','治癒世界的疾病','摧毀邪惡組織','報復前世的仇敵','探索未知星系','保護自然環境','發現永恆之泉','統一各族勢力','尋找失傳的魔法卷軸','解放奴役的人民','阻止黑暗儀式','完成祖先的遺願','建立和平的世界','揭開身世之謎','戰勝心魔','擺脫家族詛咒','實現冒險夢想','奪回失去的王位','找到傳說中的武器','復活已逝的愛人','破除命運束縛','從奴役中解放族人','尋求真正的友誼','建立強大的團隊','開創新秩序','揭開古墓的秘密','穿越時空拯救世界','追求藝術極致','完成一場史詩之旅','阻止時空崩壞','推翻腐敗政權','尋找永恆的愛情','保護弱小','拯救被遺忘的種族','阻止瘟疫蔓延','尋找新的家園','實現科學突破','救贖自己','治療親人的疾病','打破命運輪迴','組織反抗軍','守護神秘寶石','阻止世界融合','找回失去的能力','尋求力量的來源','證明自己的價值','成為傳說中的英雄','阻止末日機器','重建家園','找到記憶碎片','守護生命之樹','維持世界平衡','拯救被囚禁的靈魂','探索海底世界','阻止洪水','追尋真理','成為最偉大的巫師','開創新世界','繼承神的力量','阻止瘋狂科學家','完成最後的冒險','找到宇宙的起源','救助孤兒院','解開歷史謎團','平息戰爭','召喚神龍','尋找失散多年的親人','突破自我極限','統一四海八荒','實現和平共處','追求神秘力量'];
       const weaknessOptions = ['害怕黑暗','遇到壓力就說謊','太容易相信別人','強迫症嚴重','一旦承諾就不肯回頭','畏懼深海','恐高症','容易發怒','過於固執','患有失眠','對魔法過敏','不擅長謊言','心軟','容易焦慮','懼怕孤獨','怕血','記憶衰退','常自我懷疑','體力差','情緒起伏大','恐水','三分鐘熱度','貪吃','愛睡覺','沒自信','容易嫉妒','怕蛇','無法拒絕他人','受到金錢誘惑','懦弱','怕寂寞','怕失敗','眼神不好','迷失自我','容易暈血','過度同情心','情緒不穩','飲食失調','缺乏耐心','怕被拒絕','易感寂寞','時間管理差','容易分心','優柔寡斷','怕寵物','對聲音過敏','會暈車','不會游泳','怕蜘蛛','對金錢著迷','過於誠實','不能保守秘密','健忘','反射神經差','害怕蛙','愛出風頭','情緒化','傲慢自大','懷疑一切','受不起批評','追求完美','過度開朗','得失心重','過於善良','常常遲到','自控力差','容易煩惱','懷舊','過於現實','怕痛','不擅交際','愛拖延','不善理財','怕換環境','低血糖','怕雷','愛哭','怕醫院','無安全感','太在意他人眼光','怕火','怕蟑螂','怕雨','怕被孤立','怕未知','怕黑夜','恐懼高壓','怕失去朋友','過於衝動','易怒','有強迫症','潔癖','過於挑剔','缺乏信心','害怕說謊','金錢迷惑','過度自責','怕黑怕鬼','無法長時間專注','過於敏感','喜歡攀比'];
@@ -1321,6 +1346,11 @@
         const index = charactersContainer.children.length + 1;
         row.innerHTML = `
           <div class="char-index">人物 ${index}</div>
+          <select class="char-gender" style="flex: 0 0 70px; min-width: 70px;">
+            <option value="男">男</option>
+            <option value="女">女</option>
+            <option value="不明">不明</option>
+          </select>
           <input type="text" class="char-name" placeholder="姓名" />
           <input type="text" class="char-personality" placeholder="個性" />
           <input type="text" class="char-goal" placeholder="目標" />
@@ -1403,14 +1433,36 @@
           });
         }
         
+        // 先隨機性別
+        const genderSelect = row.querySelector('.char-gender');
+        const genders = ['男', '女'];
+        genderSelect.value = genders[Math.floor(Math.random() * genders.length)];
+        
+        // 根據性別選擇名字庫
+        const gender = genderSelect.value;
+        let namePool;
+        if (gender === '男') {
+          namePool = maleNames;
+        } else if (gender === '女') {
+          namePool = femaleNames;
+        } else {
+          namePool = nameOptions; // 不明性別用全部名字
+        }
+        
         // 人名：絕對不重複
-        const newName = pickRandomUnique(nameOptions, usedNames, false);
+        const newName = pickRandomUnique(namePool, usedNames, false);
         if (newName) {
           row.querySelector('.char-name').value = newName;
         } else {
-          // 如果所有名字都用完了，生成一個帶編號的名字
-          const baseName = nameOptions[Math.floor(Math.random() * nameOptions.length)];
-          row.querySelector('.char-name').value = baseName + (Math.floor(Math.random() * 100));
+          // 如果該性別名字都用完了，從全部名字中選
+          const fallbackName = pickRandomUnique(nameOptions, usedNames, false);
+          if (fallbackName) {
+            row.querySelector('.char-name').value = fallbackName;
+          } else {
+            // 真的都用完了，加編號
+            const baseName = namePool[Math.floor(Math.random() * namePool.length)];
+            row.querySelector('.char-name').value = baseName + (Math.floor(Math.random() * 100));
+          }
         }
         
         // 其他屬性：盡量不重複，但允許在選項用完時重複
@@ -1534,18 +1586,21 @@
         chapterMatches = [];
         
         // 策略：只匹配正文中的章節標題
-        // 正文章節特徵：以 ### 開頭（markdown格式）
+        // 正文章節特徵：以 ## 或 ### 開頭（markdown格式）
         // 目錄章節特徵：以數字編號開頭，如 "1." "2." 或有 ** 粗體標記
+        
+        // 章節模式：第X章、序章、楔子、尾聲、終章、番外等
+        const chapterPattern = /(?:第[一二三四五六七八九十百零\d]+章|序章|楔子|引子|前言|尾聲|終章|番外|後記|epilogue|prologue)[：:]*[^\n]*/i;
         
         const lines = text.split('\n');
         
         for (let i = 0; i < lines.length; i++) {
           const line = lines[i];
           
-          // 只匹配以 ### 開頭的章節標題（這是正文章節）
-          const match = line.match(/^###\s*(第[一二三四五六七八九十百零\d]+章[：:].*)$/);
+          // 匹配以 ## 或 ### 開頭的章節標題（這是正文章節）
+          const markdownMatch = line.match(/^##[#]?\s*((?:第[一二三四五六七八九十百零\d]+章|序章|楔子|引子|前言|尾聲|終章|番外|後記)[：:].*)$/i);
           
-          if (match) {
+          if (markdownMatch) {
             // 計算這一行在原文中的位置
             let index = 0;
             for (let j = 0; j < i; j++) {
@@ -1553,7 +1608,7 @@
             }
             
             chapterMatches.push({
-              title: match[1].trim(),
+              title: markdownMatch[1].trim(),
               fullLine: line,
               index: index
             });
@@ -1571,7 +1626,7 @@
             const isAfterBlankLine = prevLine.trim() === '' || prevLine.trim() === '---';
             
             if (!isListItem && isAfterBlankLine) {
-              const match = line.match(/^(第[一二三四五六七八九十百零\d]+章[：:].*)$/);
+              const match = line.match(/^((?:第[一二三四五六七八九十百零\d]+章|序章|楔子|引子|前言|尾聲|終章|番外|後記)[：:].*)$/i);
               if (match) {
                 let index = 0;
                 for (let j = 0; j < i; j++) {
@@ -1587,18 +1642,23 @@
           }
         }
         
-        // 去除重複（以章節編號為準）
-        const seenNums = new Set();
+        // 去除重複（以章節編號或名稱為準）
+        const seenChapters = new Set();
         chapterMatches = chapterMatches.filter(m => {
-          const numMatch = m.title.match(/第[一二三四五六七八九十百零\d]+章/);
-          if (numMatch && !seenNums.has(numMatch[0])) {
-            seenNums.add(numMatch[0]);
-            return true;
+          // 提取章節標識（如「第一章」「序章」「楔子」等）
+          const chapterIdMatch = m.title.match(/第[一二三四五六七八九十百零\d]+章|序章|楔子|引子|前言|尾聲|終章|番外|後記/i);
+          if (chapterIdMatch) {
+            const chapterId = chapterIdMatch[0];
+            if (!seenChapters.has(chapterId)) {
+              seenChapters.add(chapterId);
+              return true;
+            }
           }
           return false;
         });
 
-        if (chapterMatches.length > 1) {
+        // 只要有章節就顯示（改為 >= 1）
+        if (chapterMatches.length >= 1) {
           // 顯示浮動導航
           chapterNavContainer.classList.add('show');
           chapterBadge.textContent = chapterMatches.length;
@@ -1717,6 +1777,7 @@
         let charactersInfo = '';
         characterRows.forEach((row, idx) => {
           const fields = [];
+          const gender = row.querySelector('.char-gender').value;
           const name = row.querySelector('.char-name').value.trim();
           const personality = row.querySelector('.char-personality').value.trim();
           const goal = row.querySelector('.char-goal').value.trim();
@@ -1724,6 +1785,7 @@
           const secret = row.querySelector('.char-secret').value.trim();
           const relation = row.querySelector('.char-relation').value.trim();
           if (name) fields.push(name);
+          if (gender && gender !== '不明') fields.push(`性別：${gender}`);
           if (personality) fields.push(`個性：${personality}`);
           if (goal) fields.push(`目標：${goal}`);
           if (weakness) fields.push(`弱點：${weakness}`);
