@@ -1438,15 +1438,31 @@
       }
 
       function parseAndShowChapters(text) {
-        const chapterRegex = /第[一二三四五六七八九十百零\d]+章[^\n]*/g;
-        chapterMatches = [];
+        const chapterRegex = /第[一二三四五六七八九十百零\d]+章[：:][^\n]*/g;
+        const rawMatches = [];
         let match;
         
         while ((match = chapterRegex.exec(text)) !== null) {
-          chapterMatches.push({
+          rawMatches.push({
             title: match[0],
             index: match.index
           });
+        }
+
+        // 去除重複的章節（根據章節名稱去重，只保留第一次出現的位置）
+        const seenTitles = new Set();
+        chapterMatches = [];
+        
+        for (const m of rawMatches) {
+          // 提取章節編號作為唯一識別（如「第一章」「第二章」）
+          const chapterNumMatch = m.title.match(/第[一二三四五六七八九十百零\d]+章/);
+          if (chapterNumMatch) {
+            const chapterNum = chapterNumMatch[0];
+            if (!seenTitles.has(chapterNum)) {
+              seenTitles.add(chapterNum);
+              chapterMatches.push(m);
+            }
+          }
         }
 
         if (chapterMatches.length > 1) {
