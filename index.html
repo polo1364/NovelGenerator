@@ -1608,7 +1608,8 @@
       generateBtn.addEventListener('click', async () => {
         hideStatus();
         resultDiv.textContent = '';
-        chapterNav.style.display = 'none';
+        chapterNavContainer.classList.remove('show');
+        chapterMatches = [];
         localStorage.removeItem('savedStory');
         latestStory = '';
         downloadBtn.disabled = true;
