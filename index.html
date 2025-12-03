@@ -3,415 +3,1041 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>小說生成器</title>
+    <title>小說生成器 | AI 創作工坊</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Serif+TC:wght@400;500;600;700&family=LXGW+WenKai+TC:wght@300;400;700&display=swap" rel="stylesheet">
     <style>
       :root {
-        --primary: #4e73df;
-        --primary-hover: #3c5ec5;
-        --secondary: #6c757d;
-        --secondary-hover: #5a6268;
-        --background: #f2f4f8;
+        --primary: #1a1a2e;
+        --primary-light: #16213e;
+        --accent: #e94560;
+        --accent-hover: #ff6b6b;
+        --gold: #f4a261;
+        --gold-light: #f8c291;
+        --text: #2d3436;
+        --text-light: #636e72;
+        --bg: #fefefe;
         --card-bg: #ffffff;
-        --section-bg: #f8f9fc;
-        --input-bg: #fdfdfd;
+        --section-bg: linear-gradient(135deg, #fdfbfb 0%, #ebedee 100%);
+        --input-bg: #fff;
+        --border: #e0e0e0;
+        --shadow: 0 10px 40px rgba(0, 0, 0, 0.08);
+        --shadow-hover: 0 15px 50px rgba(0, 0, 0, 0.12);
       }
+
+      * {
+        box-sizing: border-box;
+      }
+
       body {
         margin: 0;
-        font-family: 'Segoe UI', Roboto, sans-serif;
-        background: var(--background);
-        color: #333;
-        display: flex;
-        justify-content: center;
-        align-items: flex-start;
+        font-family: 'LXGW WenKai TC', 'Noto Serif TC', serif;
+        background: var(--bg);
+        background-image: 
+          radial-gradient(circle at 20% 80%, rgba(233, 69, 96, 0.03) 0%, transparent 50%),
+          radial-gradient(circle at 80% 20%, rgba(244, 162, 97, 0.03) 0%, transparent 50%),
+          linear-gradient(180deg, #fefefe 0%, #f8f9fa 100%);
+        color: var(--text);
         min-height: 100vh;
-        padding: 40px 20px;
+        padding: 40px 20px 80px;
       }
+
+      /* 頂部裝飾條 */
+      body::before {
+        content: '';
+        position: fixed;
+        top: 0;
+        left: 0;
+        right: 0;
+        height: 4px;
+        background: linear-gradient(90deg, var(--accent), var(--gold), var(--accent));
+        z-index: 1000;
+      }
+
+      .container {
+        max-width: 1000px;
+        margin: 0 auto;
+      }
+
+      /* 頭部區域 */
+      header {
+        text-align: center;
+        margin-bottom: 50px;
+        position: relative;
+      }
+
+      header::after {
+        content: '✦';
+        display: block;
+        font-size: 1.5rem;
+        color: var(--gold);
+        margin-top: 20px;
+        animation: twinkle 2s ease-in-out infinite;
+      }
+
+      @keyframes twinkle {
+        0%, 100% { opacity: 0.5; transform: scale(1); }
+        50% { opacity: 1; transform: scale(1.2); }
+      }
+
+      h1 {
+        font-family: 'Noto Serif TC', serif;
+        font-size: 3rem;
+        font-weight: 700;
+        margin: 0;
+        background: linear-gradient(135deg, var(--primary) 0%, var(--accent) 100%);
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+        background-clip: text;
+        letter-spacing: 0.1em;
+      }
+
+      .subtitle {
+        margin-top: 16px;
+        color: var(--text-light);
+        font-size: 1.1rem;
+        line-height: 1.8;
+        max-width: 600px;
+        margin-left: auto;
+        margin-right: auto;
+      }
+
+      /* 主卡片 */
       .card {
         background: var(--card-bg);
-        border-radius: 10px;
-        box-shadow: 0 6px 16px rgba(0, 0, 0, 0.06);
-        max-width: 900px;
-        width: 100%;
-        padding: 32px;
+        border-radius: 20px;
+        box-shadow: var(--shadow);
+        padding: 40px;
+        margin-bottom: 30px;
+        border: 1px solid rgba(0, 0, 0, 0.03);
+        transition: box-shadow 0.3s ease;
       }
-      h1 {
-        font-size: 2rem;
-        margin: 0;
-        color: var(--primary);
+
+      .card:hover {
+        box-shadow: var(--shadow-hover);
       }
-      .subtitle {
-        margin-top: 6px;
-        margin-bottom: 26px;
-        color: var(--secondary);
-        font-size: 0.95rem;
-      }
+
+      /* 區塊樣式 */
       .section {
         background: var(--section-bg);
-        border-radius: 6px;
-        padding: 20px;
+        border-radius: 16px;
+        padding: 28px;
+        margin-bottom: 24px;
+        border: 1px solid var(--border);
+        position: relative;
+        overflow: hidden;
+      }
+
+      .section::before {
+        content: '';
+        position: absolute;
+        top: 0;
+        left: 0;
+        width: 4px;
+        height: 100%;
+        background: linear-gradient(180deg, var(--accent), var(--gold));
+        border-radius: 4px 0 0 4px;
+      }
+
+      .section-title {
+        font-family: 'Noto Serif TC', serif;
+        font-weight: 600;
+        font-size: 1.3rem;
+        color: var(--primary);
+        margin: 0 0 20px 0;
+        display: flex;
+        align-items: center;
+        gap: 10px;
+      }
+
+      .section-title::before {
+        content: attr(data-icon);
+        font-size: 1.2rem;
+      }
+
+      /* 輸入組件 */
+      .input-group {
         margin-bottom: 20px;
       }
-      .section-title {
-        font-weight: 600;
-        font-size: 1.1rem;
-        color: var(--primary);
-        margin-top: 0;
-        margin-bottom: 14px;
-      }
-      .input-group {
-        margin-bottom: 14px;
-      }
+
       .input-group label {
         display: block;
-        margin-bottom: 4px;
-        font-weight: 600;
+        margin-bottom: 8px;
+        font-weight: 500;
         color: var(--primary);
+        font-size: 0.95rem;
       }
+
       .label-row {
         display: flex;
         justify-content: space-between;
         align-items: center;
-        margin-bottom: 4px;
+        margin-bottom: 8px;
+        flex-wrap: wrap;
+        gap: 10px;
       }
+
       .label-row label {
-        font-weight: 600;
+        font-weight: 500;
         color: var(--primary);
-      }
-      .label-row button {
-        background: var(--secondary);
-        color: #fff;
-        padding: 6px 12px;
-        font-size: 0.85rem;
-        border: none;
-        border-radius: 4px;
-        cursor: pointer;
-        transition: background 0.2s ease;
-        margin-left: 8px;
-      }
-      .label-row button:hover {
-        background: var(--secondary-hover);
+        margin-bottom: 0;
       }
 
-      /* API 金鑰輸入與顯示隱藏控制 */
-      .api-key-container {
-        display: flex;
-        align-items: center;
-        gap: 8px;
-      }
-      .api-key-container button.api-toggle {
-        background: var(--secondary);
-        color: #fff;
-        padding: 6px 12px;
-        font-size: 0.85rem;
-        border: none;
-        border-radius: 4px;
-        cursor: pointer;
-        transition: background 0.2s ease;
-        white-space: nowrap;
-      }
-      .api-key-container button.api-toggle:hover {
-        background: var(--secondary-hover);
-      }
-
-      /* 主要人物動態行 */
-      .character-row {
-        display: flex;
-        flex-wrap: wrap;
-        gap: 8px;
-        margin-bottom: 12px;
-        align-items: center;
-      }
-
-      /* 人物行首的編號標籤 */
-      .character-row .char-index {
-        flex: 0 0 64px;
-        font-weight: 600;
-        color: var(--primary);
-        display: flex;
-        align-items: center;
-      }
-
-      .character-row input {
-        flex: 1 1 140px;
-        min-width: 120px;
-      }
-
-      .character-row button {
-        background: var(--secondary);
-        color: #fff;
-        padding: 6px 12px;
-        font-size: 0.85rem;
-        border: none;
-        border-radius: 4px;
-        cursor: pointer;
-        transition: background 0.2s ease;
-        white-space: nowrap;
-      }
-
-      .character-row button:hover {
-        background: var(--secondary-hover);
-      }
-
-      /* 章節按鈕容器與按鈕樣式 */
-      .chapter-buttons {
-        display: flex;
-        flex-wrap: wrap;
-        gap: 8px;
-        margin-top: 20px;
-      }
-      .chapter-buttons button {
-        background: var(--primary);
-        color: #fff;
-        padding: 6px 12px;
-        font-size: 0.9rem;
-        border: none;
-        border-radius: 4px;
-        cursor: pointer;
-        transition: background 0.2s ease;
-      }
-      .chapter-buttons button:hover {
-        background: var(--primary-hover);
-      }
-      .chapter-buttons button.active {
-        background: var(--secondary);
-      }
       input[type="text"],
       input[type="number"],
+      input[type="password"],
       select,
       textarea {
         width: 100%;
-        padding: 10px 12px;
-        border: 1px solid #ced4da;
-        border-radius: 4px;
+        padding: 14px 18px;
+        border: 2px solid var(--border);
+        border-radius: 12px;
         background: var(--input-bg);
+        font-family: inherit;
         font-size: 1rem;
-        box-sizing: border-box;
-        transition: border-color 0.2s, box-shadow 0.2s;
+        color: var(--text);
+        transition: all 0.3s ease;
       }
+
       input:focus,
       textarea:focus,
       select:focus {
         outline: none;
-        border-color: var(--primary);
-        box-shadow: 0 0 0 3px rgba(78, 115, 223, 0.2);
+        border-color: var(--accent);
+        box-shadow: 0 0 0 4px rgba(233, 69, 96, 0.1);
       }
+
       textarea {
-        min-height: 90px;
+        min-height: 100px;
         resize: vertical;
+        line-height: 1.6;
       }
+
+      select {
+        cursor: pointer;
+        appearance: none;
+        background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='24' height='24' viewBox='0 0 24 24' fill='none' stroke='%23636e72' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'%3E%3C/polyline%3E%3C/svg%3E");
+        background-repeat: no-repeat;
+        background-position: right 12px center;
+        background-size: 18px;
+        padding-right: 45px;
+      }
+
+      /* API 金鑰容器 */
+      .api-key-container {
+        display: flex;
+        gap: 10px;
+      }
+
+      .api-key-container input {
+        flex: 1;
+      }
+
+      /* 按鈕樣式 */
+      button {
+        font-family: inherit;
+        font-size: 0.95rem;
+        font-weight: 500;
+        padding: 12px 24px;
+        border: none;
+        border-radius: 10px;
+        cursor: pointer;
+        transition: all 0.3s ease;
+        position: relative;
+        overflow: hidden;
+      }
+
+      button::after {
+        content: '';
+        position: absolute;
+        top: 50%;
+        left: 50%;
+        width: 0;
+        height: 0;
+        background: rgba(255, 255, 255, 0.2);
+        border-radius: 50%;
+        transform: translate(-50%, -50%);
+        transition: width 0.4s, height 0.4s;
+      }
+
+      button:active::after {
+        width: 300px;
+        height: 300px;
+      }
+
+      .btn-primary {
+        background: linear-gradient(135deg, var(--accent) 0%, #ff6b6b 100%);
+        color: #fff;
+        box-shadow: 0 4px 15px rgba(233, 69, 96, 0.3);
+      }
+
+      .btn-primary:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 6px 20px rgba(233, 69, 96, 0.4);
+      }
+
+      .btn-secondary {
+        background: var(--primary);
+        color: #fff;
+      }
+
+      .btn-secondary:hover {
+        background: var(--primary-light);
+        transform: translateY(-2px);
+      }
+
+      .btn-outline {
+        background: transparent;
+        color: var(--text);
+        border: 2px solid var(--border);
+      }
+
+      .btn-outline:hover {
+        border-color: var(--accent);
+        color: var(--accent);
+      }
+
+      .btn-gold {
+        background: linear-gradient(135deg, var(--gold) 0%, var(--gold-light) 100%);
+        color: var(--primary);
+        box-shadow: 0 4px 15px rgba(244, 162, 97, 0.3);
+      }
+
+      .btn-gold:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 6px 20px rgba(244, 162, 97, 0.4);
+      }
+
+      .btn-small {
+        padding: 8px 16px;
+        font-size: 0.85rem;
+      }
+
+      button:disabled {
+        opacity: 0.5;
+        cursor: not-allowed;
+        transform: none !important;
+      }
+
+      /* 主按鈕區 */
       .buttons {
         display: flex;
         flex-wrap: wrap;
         gap: 12px;
-        margin-top: 8px;
+        margin-top: 10px;
       }
-      button {
+
+      /* 人物設定區 */
+      .character-row {
+        display: grid;
+        grid-template-columns: 70px repeat(6, 1fr) auto;
+        gap: 10px;
+        margin-bottom: 14px;
+        align-items: center;
+        padding: 16px;
+        background: rgba(255, 255, 255, 0.7);
+        border-radius: 12px;
+        border: 1px solid var(--border);
+        transition: all 0.3s ease;
+      }
+
+      .character-row:hover {
+        border-color: var(--accent);
+        box-shadow: 0 4px 12px rgba(233, 69, 96, 0.08);
+      }
+
+      .char-index {
+        font-weight: 600;
+        color: var(--accent);
+        font-size: 0.9rem;
+      }
+
+      .character-row input {
+        padding: 10px 12px;
+        font-size: 0.9rem;
+      }
+
+      .character-row button {
+        padding: 10px 14px;
+        white-space: nowrap;
+      }
+
+      @media (max-width: 900px) {
+        .character-row {
+          grid-template-columns: 1fr 1fr;
+        }
+        .char-index {
+          grid-column: 1 / -1;
+        }
+      }
+
+      @media (max-width: 500px) {
+        .character-row {
+          grid-template-columns: 1fr;
+        }
+      }
+
+      /* 狀態訊息 */
+      .status {
+        margin-top: 16px;
+        padding: 14px 20px;
+        border-radius: 10px;
+        font-size: 0.95rem;
+        display: none;
+        align-items: center;
+        gap: 10px;
+      }
+
+      .status.show {
+        display: flex;
+      }
+
+      .status.loading {
+        background: linear-gradient(90deg, #f8f9fa, #e9ecef, #f8f9fa);
+        background-size: 200% 100%;
+        animation: shimmer 1.5s infinite;
+        color: var(--text);
+      }
+
+      .status.success {
+        background: #d4edda;
+        color: #155724;
+      }
+
+      .status.error {
+        background: #f8d7da;
+        color: #721c24;
+      }
+
+      @keyframes shimmer {
+        0% { background-position: -200% 0; }
+        100% { background-position: 200% 0; }
+      }
+
+      .status-icon {
+        font-size: 1.2rem;
+      }
+
+      /* 輸出區 */
+      .output {
+        margin-top: 30px;
+        padding: 40px;
+        border: 2px solid var(--border);
+        border-radius: 16px;
+        background: linear-gradient(180deg, #fff 0%, #fafafa 100%);
+        font-family: 'Noto Serif TC', serif;
+        font-size: 1.15rem;
+        line-height: 2;
+        white-space: pre-wrap;
+        color: var(--text);
+        min-height: 200px;
+        position: relative;
+      }
+
+      .output:empty::before {
+        content: '生成的故事將會在這裡顯示...';
+        color: #adb5bd;
+        font-style: italic;
+      }
+
+      .output-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 20px;
+      }
+
+      .output-title {
+        font-family: 'Noto Serif TC', serif;
+        font-size: 1.3rem;
+        font-weight: 600;
+        color: var(--primary);
+      }
+
+      /* ======================= */
+      /* 書籤功能 - 大幅優化 */
+      /* ======================= */
+      .bookmark-card {
+        background: linear-gradient(135deg, var(--primary) 0%, var(--primary-light) 100%);
+        color: #fff;
+        border-radius: 20px;
+        padding: 30px;
+        box-shadow: var(--shadow);
+      }
+
+      .bookmark-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 24px;
+        flex-wrap: wrap;
+        gap: 16px;
+      }
+
+      .bookmark-title {
+        font-family: 'Noto Serif TC', serif;
+        font-size: 1.5rem;
+        font-weight: 600;
+        display: flex;
+        align-items: center;
+        gap: 12px;
+      }
+
+      .bookmark-title::before {
+        content: '📚';
+        font-size: 1.4rem;
+      }
+
+      .bookmark-count {
+        background: rgba(255, 255, 255, 0.2);
+        padding: 4px 12px;
+        border-radius: 20px;
+        font-size: 0.85rem;
+        font-weight: 400;
+      }
+
+      .bookmark-actions {
+        display: flex;
+        gap: 10px;
+        flex-wrap: wrap;
+      }
+
+      .bookmark-actions button {
+        background: rgba(255, 255, 255, 0.15);
+        color: #fff;
+        border: 1px solid rgba(255, 255, 255, 0.2);
+      }
+
+      .bookmark-actions button:hover {
+        background: rgba(255, 255, 255, 0.25);
+      }
+
+      /* 書籤搜尋與排序 */
+      .bookmark-toolbar {
+        display: flex;
+        gap: 12px;
+        margin-bottom: 20px;
+        flex-wrap: wrap;
+      }
+
+      .bookmark-search {
+        flex: 1;
+        min-width: 200px;
+        position: relative;
+      }
+
+      .bookmark-search input {
+        padding-left: 45px;
+        background: rgba(255, 255, 255, 0.1);
+        border: 1px solid rgba(255, 255, 255, 0.2);
+        color: #fff;
+      }
+
+      .bookmark-search input::placeholder {
+        color: rgba(255, 255, 255, 0.5);
+      }
+
+      .bookmark-search input:focus {
+        background: rgba(255, 255, 255, 0.15);
+        border-color: rgba(255, 255, 255, 0.4);
+        box-shadow: none;
+      }
+
+      .bookmark-search::before {
+        content: '🔍';
+        position: absolute;
+        left: 16px;
+        top: 50%;
+        transform: translateY(-50%);
+        font-size: 1rem;
+        z-index: 1;
+      }
+
+      .bookmark-sort {
+        background: rgba(255, 255, 255, 0.1);
+        border: 1px solid rgba(255, 255, 255, 0.2);
+        color: #fff;
+        min-width: 140px;
+      }
+
+      .bookmark-sort option {
         background: var(--primary);
         color: #fff;
-        padding: 10px 24px;
+      }
+
+      /* 書籤列表 */
+      .bookmark-list {
+        list-style: none;
+        padding: 0;
+        margin: 0;
+        max-height: 400px;
+        overflow-y: auto;
+      }
+
+      .bookmark-list::-webkit-scrollbar {
+        width: 6px;
+      }
+
+      .bookmark-list::-webkit-scrollbar-track {
+        background: rgba(255, 255, 255, 0.1);
+        border-radius: 3px;
+      }
+
+      .bookmark-list::-webkit-scrollbar-thumb {
+        background: rgba(255, 255, 255, 0.3);
+        border-radius: 3px;
+      }
+
+      .bookmark-item {
+        display: flex;
+        align-items: center;
+        gap: 16px;
+        padding: 16px 20px;
+        background: rgba(255, 255, 255, 0.08);
+        border-radius: 12px;
+        margin-bottom: 10px;
+        transition: all 0.3s ease;
+        border: 1px solid transparent;
+      }
+
+      .bookmark-item:hover {
+        background: rgba(255, 255, 255, 0.12);
+        border-color: rgba(255, 255, 255, 0.2);
+        transform: translateX(4px);
+      }
+
+      .bookmark-item-icon {
+        font-size: 1.5rem;
+        flex-shrink: 0;
+      }
+
+      .bookmark-item-content {
+        flex: 1;
+        min-width: 0;
+      }
+
+      .bookmark-item-title {
+        font-weight: 500;
         font-size: 1rem;
+        margin-bottom: 6px;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+      }
+
+      .bookmark-item-meta {
+        display: flex;
+        gap: 16px;
+        font-size: 0.8rem;
+        opacity: 0.7;
+      }
+
+      .bookmark-item-actions {
+        display: flex;
+        gap: 8px;
+        flex-shrink: 0;
+      }
+
+      .bookmark-item-actions button {
+        padding: 8px 12px;
+        font-size: 0.8rem;
+        background: rgba(255, 255, 255, 0.1);
         border: none;
-        border-radius: 4px;
-        cursor: pointer;
-        transition: background 0.2s ease;
       }
-      button:hover {
-        background: var(--primary-hover);
+
+      .bookmark-item-actions button:hover {
+        background: rgba(255, 255, 255, 0.2);
       }
-      button:disabled {
-        background: #b8c4e3;
-        cursor: not-allowed;
+
+      .bookmark-item-actions .btn-load {
+        background: var(--gold);
+        color: var(--primary);
       }
-      .status {
-        margin-top: 10px;
-        font-size: 0.95rem;
-        color: var(--secondary);
+
+      .bookmark-item-actions .btn-load:hover {
+        background: var(--gold-light);
       }
-      .output {
-        margin-top: 20px;
-        padding: 24px;
-        border: 1px solid #e6e6e6;
-        border-radius: 4px;
-        background: #ffffff;
+
+      .bookmark-empty {
+        text-align: center;
+        padding: 40px;
+        opacity: 0.7;
+      }
+
+      .bookmark-empty-icon {
+        font-size: 3rem;
+        margin-bottom: 16px;
+      }
+
+      /* 書籤編輯彈窗 */
+      .modal-overlay {
+        position: fixed;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        background: rgba(0, 0, 0, 0.6);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        z-index: 2000;
+        opacity: 0;
+        visibility: hidden;
+        transition: all 0.3s ease;
+        padding: 20px;
+      }
+
+      .modal-overlay.show {
+        opacity: 1;
+        visibility: visible;
+      }
+
+      .modal {
+        background: #fff;
+        border-radius: 20px;
+        padding: 32px;
+        max-width: 500px;
+        width: 100%;
+        max-height: 80vh;
+        overflow-y: auto;
+        transform: translateY(20px);
+        transition: transform 0.3s ease;
+        color: var(--text);
+      }
+
+      .modal-overlay.show .modal {
+        transform: translateY(0);
+      }
+
+      .modal-title {
         font-family: 'Noto Serif TC', serif;
-        font-size: 1.1rem;
-        line-height: 1.8;
-        white-space: pre-wrap;
+        font-size: 1.5rem;
+        font-weight: 600;
+        margin: 0 0 24px 0;
+        color: var(--primary);
+      }
+
+      .modal-actions {
+        display: flex;
+        gap: 12px;
+        justify-content: flex-end;
+        margin-top: 24px;
+      }
+
+      /* 章節導航 */
+      .chapter-nav {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 8px;
+        margin-top: 20px;
+        padding-top: 20px;
+        border-top: 1px solid var(--border);
+      }
+
+      .chapter-nav button {
+        padding: 8px 16px;
+        font-size: 0.85rem;
+        background: #f8f9fa;
+        color: var(--text);
+        border: 1px solid var(--border);
+      }
+
+      .chapter-nav button:hover {
+        background: var(--accent);
+        color: #fff;
+        border-color: var(--accent);
+      }
+
+      .chapter-nav button.active {
+        background: var(--primary);
+        color: #fff;
+        border-color: var(--primary);
+      }
+
+      /* 動畫 */
+      @keyframes fadeInUp {
+        from {
+          opacity: 0;
+          transform: translateY(20px);
+        }
+        to {
+          opacity: 1;
+          transform: translateY(0);
+        }
+      }
+
+      .card, .bookmark-card {
+        animation: fadeInUp 0.6s ease-out;
+      }
+
+      .card:nth-child(2) { animation-delay: 0.1s; }
+      .bookmark-card { animation-delay: 0.2s; }
+
+      /* 響應式 */
+      @media (max-width: 768px) {
+        body {
+          padding: 20px 16px 60px;
+        }
+
+        h1 {
+          font-size: 2rem;
+        }
+
+        .card {
+          padding: 24px;
+        }
+
+        .section {
+          padding: 20px;
+        }
+
+        .output {
+          padding: 24px;
+          font-size: 1.05rem;
+        }
+
+        .bookmark-card {
+          padding: 20px;
+        }
+
+        .buttons {
+          flex-direction: column;
+        }
+
+        .buttons button {
+          width: 100%;
+        }
       }
     </style>
   </head>
   <body>
-    <div class="card">
-      <h1>小說生成器</h1>
-      <p class="subtitle">
-        組合主題、背景、人物與章節數，產出專屬於您的長篇故事。完成後可以直接閱讀或下載純文字檔。
-      </p>
+    <div class="container">
+      <header>
+        <h1>小說生成器</h1>
+        <p class="subtitle">
+          結合 AI 的無限創意，打造專屬於你的長篇故事<br>
+          設定主題、人物、背景，一鍵生成精彩小說
+        </p>
+      </header>
 
-      <!-- 基本設定 -->
-      <div class="section">
-      <h2 class="section-title">基本設定</h2>
-      <div class="input-group">
-        <label for="apiKey">Gemini API 金鑰</label>
-        <div class="api-key-container">
-          <input
-            type="password"
-            id="apiKey"
-            placeholder="請輸入您的 API 金鑰"
-            autocomplete="off"
-          />
-          <button type="button" id="toggleApiKeyVisibility" class="api-toggle">顯示</button>
-        </div>
-      </div>
-      <div class="input-group">
-        <label for="model">選擇模型</label>
-        <select id="model">
-          <option value="gemini-2.5-flash">gemini‑2.5‑flash</option>
-          <option value="gemini-pro">gemini‑pro</option>
-        </select>
-      </div>
-      </div>
-
-      <!-- 故事元素 -->
-      <div class="section">
-        <h2 class="section-title">故事元素</h2>
-        <div class="input-group">
-          <label for="theme">主題</label>
-          <select id="theme">
-            <option value="">請選擇主題</option>
-            <option value="奇幻冒險">奇幻冒險</option>
-            <option value="未來科幻">未來科幻</option>
-            <option value="浪漫愛情">浪漫愛情</option>
-            <option value="懸疑推理">懸疑推理</option>
-            <option value="歷史傳奇">歷史傳奇</option>
-            <option value="青春成長">青春成長</option>
-            <option value="冒險史詩">冒險史詩</option>
-            <option value="玄幻修真">玄幻修真</option>
-            <option value="現代都市">現代都市</option>
-            <option value="魔法學院">魔法學院</option>
-            <option value="恐怖驚悚">恐怖驚悚</option>
-            <option value="喜劇逗趣">喜劇逗趣</option>
-            <option value="現實主義">現實主義</option>
-            <option value="懷舊故事">懷舊故事</option>
-            <option value="神秘奇案">神秘奇案</option>
-            <option value="動物寓言">動物寓言</option>
-            <option value="社會批判">社會批判</option>
-            <option value="魔幻現實">魔幻現實</option>
-            <option value="古裝武俠">古裝武俠</option>
-            <option value="時空穿越">時空穿越</option>
-          </select>
-        </div>
-        <div class="input-group">
-          <label for="setting">背景設定</label>
-          <select id="setting">
-            <option value="">請選擇背景</option>
-            <option value="虛構的中世紀王國">虛構的中世紀王國</option>
-            <option value="21世紀的臺灣都市">21世紀的臺灣都市</option>
-            <option value="遙遠的太空殖民地">遙遠的太空殖民地</option>
-            <option value="虛擬實境世界">虛擬實境世界</option>
-            <option value="古代皇宮">古代皇宮</option>
-            <option value="末日後的荒土">末日後的荒土</option>
-            <option value="近未來的高科技城市">近未來的高科技城市</option>
-            <option value="魔法學院">魔法學院</option>
-            <option value="蒸汽龐克城市">蒸汽龐克城市</option>
-            <option value="深海王國">深海王國</option>
-            <option value="繁華的銀河商場">繁華的銀河商場</option>
-            <option value="隱藏於雲端的城堡">隱藏於雲端的城堡</option>
-            <option value="古老的山林村落">古老的山林村落</option>
-            <option value="雪山上的修道院">雪山上的修道院</option>
-            <option value="熱帶雨林深處">熱帶雨林深處</option>
-            <option value="巨型迷宮都市">巨型迷宮都市</option>
-            <option value="殖民海盜船">殖民海盜船</option>
-            <option value="宇宙戰艦上">宇宙戰艦上</option>
-            <option value="明朝宮廷">明朝宮廷</option>
-            <option value="平行宇宙">平行宇宙</option>
-          </select>
-        </div>
-        <div class="input-group">
-          <div class="label-row">
-            <label>主要人物設定</label>
-            <div>
-              <button id="randomAllCharactersBtn" type="button">隨機人物</button>
-              <button id="addCharacterBtn" type="button">新增人物</button>
+      <div class="card">
+        <!-- 基本設定 -->
+        <div class="section">
+          <h2 class="section-title" data-icon="⚙️">基本設定</h2>
+          <div class="input-group">
+            <label for="apiKey">Gemini API 金鑰</label>
+            <div class="api-key-container">
+              <input
+                type="password"
+                id="apiKey"
+                placeholder="請輸入您的 API 金鑰"
+                autocomplete="off"
+              />
+              <button type="button" id="toggleApiKeyVisibility" class="btn-outline btn-small">顯示</button>
             </div>
           </div>
-          <div id="charactersContainer"></div>
+          <div class="input-group">
+            <label for="model">選擇模型</label>
+            <select id="model">
+              <option value="gemini-2.5-flash">Gemini 2.5 Flash</option>
+              <option value="gemini-pro">Gemini Pro</option>
+            </select>
+          </div>
         </div>
-        <div class="input-group">
-          <label for="style">故事風格</label>
-          <select id="style">
-            <option value="">請選擇風格</option>
-            <option value="詩意">詩意</option>
-            <option value="幽默">幽默</option>
-            <option value="黑暗">黑暗</option>
-            <option value="勵志">勵志</option>
-            <option value="浪漫">浪漫</option>
-            <option value="刺激">刺激</option>
-            <option value="溫馨">溫馨</option>
-            <option value="懸疑">懸疑</option>
-            <option value="熱血">熱血</option>
-            <option value="魔幻">魔幻</option>
-            <option value="古典華麗">古典華麗</option>
-            <option value="荒誕">荒誕</option>
-            <option value="現實主義">現實主義</option>
-            <option value="輕鬆寫意">輕鬆寫意</option>
-            <option value="酷炫科技">酷炫科技</option>
-            <option value="優雅浪漫">優雅浪漫</option>
-            <option value="大河戲劇">大河戲劇</option>
-            <option value="黑色幽默">黑色幽默</option>
-            <option value="心理驚悚">心理驚悚</option>
-            <option value="流行網絡">流行網絡</option>
+
+        <!-- 故事元素 -->
+        <div class="section">
+          <h2 class="section-title" data-icon="📖">故事元素</h2>
+          <div class="input-group">
+            <label for="theme">主題</label>
+            <select id="theme">
+              <option value="">請選擇主題</option>
+              <option value="奇幻冒險">奇幻冒險</option>
+              <option value="未來科幻">未來科幻</option>
+              <option value="浪漫愛情">浪漫愛情</option>
+              <option value="懸疑推理">懸疑推理</option>
+              <option value="歷史傳奇">歷史傳奇</option>
+              <option value="青春成長">青春成長</option>
+              <option value="冒險史詩">冒險史詩</option>
+              <option value="玄幻修真">玄幻修真</option>
+              <option value="現代都市">現代都市</option>
+              <option value="魔法學院">魔法學院</option>
+              <option value="恐怖驚悚">恐怖驚悚</option>
+              <option value="喜劇逗趣">喜劇逗趣</option>
+              <option value="現實主義">現實主義</option>
+              <option value="懷舊故事">懷舊故事</option>
+              <option value="神秘奇案">神秘奇案</option>
+              <option value="動物寓言">動物寓言</option>
+              <option value="社會批判">社會批判</option>
+              <option value="魔幻現實">魔幻現實</option>
+              <option value="古裝武俠">古裝武俠</option>
+              <option value="時空穿越">時空穿越</option>
+            </select>
+          </div>
+          <div class="input-group">
+            <label for="setting">背景設定</label>
+            <select id="setting">
+              <option value="">請選擇背景</option>
+              <option value="虛構的中世紀王國">虛構的中世紀王國</option>
+              <option value="21世紀的臺灣都市">21世紀的臺灣都市</option>
+              <option value="遙遠的太空殖民地">遙遠的太空殖民地</option>
+              <option value="虛擬實境世界">虛擬實境世界</option>
+              <option value="古代皇宮">古代皇宮</option>
+              <option value="末日後的荒土">末日後的荒土</option>
+              <option value="近未來的高科技城市">近未來的高科技城市</option>
+              <option value="魔法學院">魔法學院</option>
+              <option value="蒸汽龐克城市">蒸汽龐克城市</option>
+              <option value="深海王國">深海王國</option>
+              <option value="繁華的銀河商場">繁華的銀河商場</option>
+              <option value="隱藏於雲端的城堡">隱藏於雲端的城堡</option>
+              <option value="古老的山林村落">古老的山林村落</option>
+              <option value="雪山上的修道院">雪山上的修道院</option>
+              <option value="熱帶雨林深處">熱帶雨林深處</option>
+              <option value="巨型迷宮都市">巨型迷宮都市</option>
+              <option value="殖民海盜船">殖民海盜船</option>
+              <option value="宇宙戰艦上">宇宙戰艦上</option>
+              <option value="明朝宮廷">明朝宮廷</option>
+              <option value="平行宇宙">平行宇宙</option>
+            </select>
+          </div>
+          <div class="input-group">
+            <div class="label-row">
+              <label>主要人物設定</label>
+              <div style="display: flex; gap: 8px;">
+                <button id="randomAllCharactersBtn" type="button" class="btn-outline btn-small">🎲 隨機人物</button>
+                <button id="addCharacterBtn" type="button" class="btn-outline btn-small">+ 新增人物</button>
+              </div>
+            </div>
+            <div id="charactersContainer"></div>
+          </div>
+          <div class="input-group">
+            <label for="style">故事風格</label>
+            <select id="style">
+              <option value="">請選擇風格</option>
+              <option value="詩意">詩意</option>
+              <option value="幽默">幽默</option>
+              <option value="黑暗">黑暗</option>
+              <option value="勵志">勵志</option>
+              <option value="浪漫">浪漫</option>
+              <option value="刺激">刺激</option>
+              <option value="溫馨">溫馨</option>
+              <option value="懸疑">懸疑</option>
+              <option value="熱血">熱血</option>
+              <option value="魔幻">魔幻</option>
+              <option value="古典華麗">古典華麗</option>
+              <option value="荒誕">荒誕</option>
+              <option value="現實主義">現實主義</option>
+              <option value="輕鬆寫意">輕鬆寫意</option>
+              <option value="酷炫科技">酷炫科技</option>
+              <option value="優雅浪漫">優雅浪漫</option>
+              <option value="大河戲劇">大河戲劇</option>
+              <option value="黑色幽默">黑色幽默</option>
+              <option value="心理驚悚">心理驚悚</option>
+              <option value="流行網絡">流行網絡</option>
+            </select>
+          </div>
+          <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px;">
+            <div class="input-group" style="margin-bottom: 0;">
+              <label for="chapters">章節數</label>
+              <input type="number" id="chapters" placeholder="如：10" min="1" max="50" step="1" />
+            </div>
+            <div class="input-group" style="margin-bottom: 0;">
+              <label for="length">預計總字數</label>
+              <input type="number" id="length" placeholder="如：50000" min="1000" max="200000" step="1000" />
+            </div>
+          </div>
+        </div>
+
+        <!-- 其他說明 -->
+        <div class="section">
+          <h2 class="section-title" data-icon="✏️">其他說明</h2>
+          <div class="input-group" style="margin-bottom: 0;">
+            <label for="notes">補充說明（選填）</label>
+            <textarea id="notes" placeholder="如有額外情節或風格要求，可在此補充。例如：希望主角有反轉的結局、加入時間旅行元素等。"></textarea>
+          </div>
+        </div>
+
+        <!-- 控制按鈕 -->
+        <div class="buttons">
+          <button id="randomBtn" type="button" class="btn-gold">🎲 隨機填充</button>
+          <button id="generateBtn" type="button" class="btn-primary">✨ 開始生成</button>
+          <button id="continueBtn" type="button" class="btn-secondary" disabled>➤ 繼續生成</button>
+          <button id="downloadBtn" type="button" class="btn-outline" disabled>⬇ 下載小說</button>
+        </div>
+
+        <!-- 狀態訊息 -->
+        <div id="status" class="status">
+          <span class="status-icon"></span>
+          <span class="status-text"></span>
+        </div>
+
+        <!-- 輸出區 -->
+        <div class="output-header" style="margin-top: 30px;">
+          <span class="output-title">📜 生成結果</span>
+        </div>
+        <div id="result" class="output"></div>
+        <div id="chapterNav" class="chapter-nav" style="display: none;"></div>
+      </div>
+
+      <!-- 書籤區 - 全新設計 -->
+      <div class="bookmark-card">
+        <div class="bookmark-header">
+          <h2 class="bookmark-title">
+            我的書籤
+            <span id="bookmarkCount" class="bookmark-count">0 篇</span>
+          </h2>
+          <div class="bookmark-actions">
+            <button id="addBookmarkBtn" type="button" class="btn-small">💾 儲存目前故事</button>
+            <button id="exportBookmarksBtn" type="button" class="btn-small">📤 匯出全部</button>
+            <button id="importBookmarksBtn" type="button" class="btn-small">📥 匯入</button>
+          </div>
+        </div>
+
+        <div class="bookmark-toolbar">
+          <div class="bookmark-search">
+            <input type="text" id="bookmarkSearch" placeholder="搜尋書籤..." />
+          </div>
+          <select id="bookmarkSort" class="bookmark-sort">
+            <option value="newest">最新優先</option>
+            <option value="oldest">最舊優先</option>
+            <option value="name">名稱排序</option>
+            <option value="length">長度排序</option>
           </select>
         </div>
-        <div class="input-group">
-          <label for="chapters">章節數</label>
-          <input
-            type="number"
-            id="chapters"
-            placeholder="如：10"
-            min="1"
-            max="50"
-            step="1"
-          />
-        </div>
-        <div class="input-group">
-          <label for="length">預計總字數</label>
-          <input
-            type="number"
-            id="length"
-            placeholder="如：50000"
-            min="1000"
-            max="200000"
-            step="1000"
-          />
-        </div>
-      </div>
 
-      <!-- 其他說明 -->
-      <div class="section">
-        <h2 class="section-title">其他說明</h2>
-        <div class="input-group">
-          <label for="notes">補充說明（選填）</label>
-          <textarea
-            id="notes"
-            placeholder="如有額外情節或風格要求，可在此補充。"
-          ></textarea>
-        </div>
+        <ul id="bookmarkList" class="bookmark-list"></ul>
       </div>
-
-      <!-- 控制按鈕 -->
-      <div class="buttons">
-        <button id="randomBtn" type="button">隨機填充</button>
-        <button id="generateBtn" type="button">開始生成</button>
-        <!-- 繼續生成按鈕在產出初始內容後顯示 -->
-        <button id="continueBtn" type="button" disabled>繼續生成</button>
-        <button id="downloadBtn" type="button" disabled>下載小說</button>
-      </div>
-      <div id="status" class="status"></div>
-      <div id="result" class="output"></div>
     </div>
 
+    <!-- 編輯書籤彈窗 -->
+    <div id="editModal" class="modal-overlay">
+      <div class="modal">
+        <h3 class="modal-title">編輯書籤</h3>
+        <div class="input-group">
+          <label for="editBookmarkTitle">書籤標題</label>
+          <input type="text" id="editBookmarkTitle" placeholder="輸入書籤標題" />
+        </div>
+        <div class="input-group">
+          <label for="editBookmarkTags">標籤（用逗號分隔）</label>
+          <input type="text" id="editBookmarkTags" placeholder="如：奇幻, 冒險, 主角光環" />
+        </div>
+        <div class="input-group" style="margin-bottom: 0;">
+          <label for="editBookmarkNotes">備註</label>
+          <textarea id="editBookmarkNotes" placeholder="添加備註..."></textarea>
+        </div>
+        <div class="modal-actions">
+          <button type="button" id="cancelEditBtn" class="btn-outline">取消</button>
+          <button type="button" id="saveEditBtn" class="btn-primary">儲存</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- 隱藏的檔案輸入 -->
+    <input type="file" id="importFileInput" accept=".json" style="display: none;" />
+
     <script>
-      // 取得元素
+      // ==================== 元素取得 ====================
       const apiKeyInput = document.getElementById('apiKey');
       const modelSelect = document.getElementById('model');
       const themeSelect = document.getElementById('theme');
@@ -426,418 +1052,180 @@
       const continueBtn = document.getElementById('continueBtn');
       const statusDiv = document.getElementById('status');
       const resultDiv = document.getElementById('result');
-
-      // API 金鑰顯示/隱藏按鈕
+      const chapterNav = document.getElementById('chapterNav');
       const toggleApiKeyVisibility = document.getElementById('toggleApiKeyVisibility');
-
-      // 新增角色相關元素
       const charactersContainer = document.getElementById('charactersContainer');
       const randomAllCharactersBtn = document.getElementById('randomAllCharactersBtn');
       const addCharacterBtn = document.getElementById('addCharacterBtn');
 
-      // 目前產出的故事文字
-      let latestStory = '';
+      // 書籤元素
+      const addBookmarkBtn = document.getElementById('addBookmarkBtn');
+      const exportBookmarksBtn = document.getElementById('exportBookmarksBtn');
+      const importBookmarksBtn = document.getElementById('importBookmarksBtn');
+      const importFileInput = document.getElementById('importFileInput');
+      const bookmarkSearch = document.getElementById('bookmarkSearch');
+      const bookmarkSort = document.getElementById('bookmarkSort');
+      const bookmarkList = document.getElementById('bookmarkList');
+      const bookmarkCount = document.getElementById('bookmarkCount');
 
-      // 儲存與讀取 API 金鑰
-      const storedKey = localStorage.getItem('geminiApiKey');
-      if (storedKey) {
-        apiKeyInput.value = storedKey;
+      // 編輯彈窗元素
+      const editModal = document.getElementById('editModal');
+      const editBookmarkTitle = document.getElementById('editBookmarkTitle');
+      const editBookmarkTags = document.getElementById('editBookmarkTags');
+      const editBookmarkNotes = document.getElementById('editBookmarkNotes');
+      const cancelEditBtn = document.getElementById('cancelEditBtn');
+      const saveEditBtn = document.getElementById('saveEditBtn');
+
+      let latestStory = '';
+      let editingBookmarkId = null;
+
+      // ==================== 狀態顯示 ====================
+      function showStatus(type, message) {
+        const icons = {
+          loading: '⏳',
+          success: '✅',
+          error: '❌'
+        };
+        statusDiv.className = `status show ${type}`;
+        statusDiv.querySelector('.status-icon').textContent = icons[type] || '';
+        statusDiv.querySelector('.status-text').textContent = message;
       }
+
+      function hideStatus() {
+        statusDiv.className = 'status';
+      }
+
+      // ==================== API 金鑰 ====================
+      const storedKey = localStorage.getItem('geminiApiKey');
+      if (storedKey) apiKeyInput.value = storedKey;
+
       apiKeyInput.addEventListener('change', () => {
         const val = apiKeyInput.value.trim();
-        if (val) localStorage.setItem('geminiApiKey', val);
+        if (val) {
+          try {
+            localStorage.setItem('geminiApiKey', val);
+          } catch (e) {
+            showStatus('error', 'API 金鑰儲存失敗');
+          }
+        }
       });
 
-      // 載入先前生成並儲存的故事（如果有）
+      toggleApiKeyVisibility.addEventListener('click', () => {
+        const isPassword = apiKeyInput.type === 'password';
+        apiKeyInput.type = isPassword ? 'text' : 'password';
+        toggleApiKeyVisibility.textContent = isPassword ? '隱藏' : '顯示';
+      });
+
+      // ==================== 載入已儲存的故事 ====================
       const savedStory = localStorage.getItem('savedStory');
       if (savedStory) {
         latestStory = savedStory;
         resultDiv.textContent = savedStory;
         downloadBtn.disabled = false;
         continueBtn.disabled = false;
+        parseAndShowChapters(savedStory);
       }
 
-      // 切換 API 金鑰顯示/隱藏
-      if (toggleApiKeyVisibility) {
-        toggleApiKeyVisibility.addEventListener('click', () => {
-          const currentType = apiKeyInput.getAttribute('type');
-          if (currentType === 'password') {
-            apiKeyInput.setAttribute('type', 'text');
-            toggleApiKeyVisibility.textContent = '隱藏';
-          } else {
-            apiKeyInput.setAttribute('type', 'password');
-            toggleApiKeyVisibility.textContent = '顯示';
-          }
-        });
-      }
-
-      // 隨機資料庫
-      const themes = [
-        '奇幻冒險',
-        '未來科幻',
-        '浪漫愛情',
-        '懸疑推理',
-        '歷史傳奇',
-        '青春成長',
-        '冒險史詩',
-        '玄幻修真',
-        '現代都市',
-        '魔法學院',
-        '恐怖驚悚',
-        '喜劇逗趣',
-        '現實主義',
-        '懷舊故事',
-        '神秘奇案',
-        '動物寓言',
-        '社會批判',
-        '魔幻現實',
-        '古裝武俠',
-        '時空穿越',
-      ];
-      const settings = [
-        '虛構的中世紀王國',
-        '21世紀的臺灣都市',
-        '遙遠的太空殖民地',
-        '虛擬實境世界',
-        '古代皇宮',
-        '末日後的荒土',
-        '近未來的高科技城市',
-        '魔法學院',
-        '蒸汽龐克城市',
-        '深海王國',
-      ];
-      const charactersSamples = [
-        '一位勇敢的少年與他的神秘導師',
-        '一個叛逆的黑客與一名懷有秘密的特工',
-        '一位失憶的戰士與一個外星科學家',
-        '一名平凡少女與她的魔法朋友',
-        '一個失去家園的旅人與一隻會說話的動物',
-        '一位年輕的巫師與他的忠實貓咪夥伴',
-        '一名落魄騎士與他的騙子朋友',
-        '一個熱血少年和沉默寡言的劍士',
-        '一位外星公主與地球少年',
-        '一名機器人與它的創造者',
-      ];
-      const stylesArr = [
-        '詩意',
-        '幽默',
-        '黑暗',
-        '勵志',
-        '浪漫',
-        '刺激',
-        '溫馨',
-        '懸疑',
-        '熱血',
-        '魔幻',
-      ];
-
-      // 擴充選項：額外主題、背景與風格
-      // 為了保持向下相容，我們將新的類別透過 push 方式加入原本陣列
-      // 主題清單已在上方擴充，不再重複加入
-      settings.push(
-        '繁華的銀河商場',
-        '隱藏於雲端的城堡',
-        '古老的山林村落',
-        '雪山上的修道院',
-        '熱帶雨林深處',
-        '巨型迷宮都市',
-        '殖民海盜船',
-        '宇宙戰艦上',
-        '明朝宮廷',
-        '平行宇宙'
-      );
-      stylesArr.push(
-        '古典華麗',
-        '荒誕',
-        '現實主義',
-        '輕鬆寫意',
-        '酷炫科技',
-        '優雅浪漫',
-        '大河戲劇',
-        '黑色幽默',
-        '心理驚悚',
-        '流行網絡'
-      );
+      // ==================== 隨機資料庫 ====================
+      const themes = ['奇幻冒險','未來科幻','浪漫愛情','懸疑推理','歷史傳奇','青春成長','冒險史詩','玄幻修真','現代都市','魔法學院','恐怖驚悚','喜劇逗趣','現實主義','懷舊故事','神秘奇案','動物寓言','社會批判','魔幻現實','古裝武俠','時空穿越'];
+      const settings = ['虛構的中世紀王國','21世紀的臺灣都市','遙遠的太空殖民地','虛擬實境世界','古代皇宮','末日後的荒土','近未來的高科技城市','魔法學院','蒸汽龐克城市','深海王國','繁華的銀河商場','隱藏於雲端的城堡','古老的山林村落','雪山上的修道院','熱帶雨林深處','巨型迷宮都市','殖民海盜船','宇宙戰艦上','明朝宮廷','平行宇宙'];
+      const stylesArr = ['詩意','幽默','黑暗','勵志','浪漫','刺激','溫馨','懸疑','熱血','魔幻','古典華麗','荒誕','現實主義','輕鬆寫意','酷炫科技','優雅浪漫','大河戲劇','黑色幽默','心理驚悚','流行網絡'];
       const chapterOpts = [5, 8, 10, 12, 15];
       const lengthOpts = [30000, 50000, 70000, 90000];
 
-  // 角色元素資料庫
-  const nameOptions = [
-    '艾琳','洛恩','凱亞','米爾','席恩','薇拉','祈安','杜林','希爾維','萊雅',
-    '伊凡','法蘭','格蘭','梅芙','安娜','雷格','索菲','艾略特','亞歷克','莫妮卡',
-    '路西','伊芙','加百列','亞當','瑪雅','艾德','薩拉','杰登','琪拉','德瑞克',
-    '凱瑟琳','馬丁','羅絲','奧利維','昆汀','哈莉','伯納德','海倫','丹尼爾','雷切爾',
-    '山姆','艾薇','諾亞','艾米莉','布萊恩','艾蜜莉亞','達米安','露西亞','米蘭達','亞歷山大',
-    '波琳娜','亨利','蘇菲亞','費南多','克萊兒','埃德加','歐文','莉亞','查爾斯','哈娜',
-    '杰克','瑪蒂爾達','托尼','娜塔莉','達瑞斯','克里斯','艾瑪','羅伯特','凱特','格蕾絲',
-    '莫里斯','普拉多','勞拉','維克多','凱莉','菲利普','瑞秋','史蒂夫','羅伊','哈德森',
-    '妮可','克麗絲汀','萊昂','梅根','杜蘭','馬雅','蘭斯洛特','卡羅爾','伊麗莎白','伊薩貝拉',
-    '考特尼','蔣琴','唐娜','塞德里克','布蘭妮','雷蒙','凱薩琳','阿萊克斯','加布里埃拉','西蒙'
-  ];
-  const personalityOptions = [
-    '外冷內熱','自卑但嘴硬','樂觀又衝動','冷靜但偏執','溫柔卻不輕信任何人','堅韌而沉默',
-    '幽默開朗','善良又單純','多疑且謹慎','自信而傲慢','懶散卻超凡聰明','義氣而固執',
-    '急躁但心地善良','謙虛而機智','天真又好奇','冷酷無情','善於交際','孤僻沉默',
-    '勇敢衝動','理性克制',
-    '愛幻想','孤單','嫉妒心強','勇於挑戰','樂於助人','多愁善感','懶散','好動','機智靈活','心直口快',
-    '優柔寡斷','善於隱忍','頑強','懷疑一切','思維嚴謹','黑暗內心','衝動火爆','陰晴不定','客觀理性','自律自省',
-    '貪心','粗枝大葉','孤高自傲','悲天憫人','求知欲強','保守傳統','冒險精神','浪漫情懷','鐵面無私','情感豐沛',
-    '不拘小節','嬉皮笑臉','深謀遠慮','勇敢無畏','友善熱情','純真孩氣','冷漠疏離','心思纖細','謙遜低調','剛愎自用',
-    '風趣幽默','充滿正義感','善於操控','常常懷疑自己','樂觀開朗','感性細膩','玩世不恭','奮發向上','無厘頭','固執己見',
-    '反覆無常','忍耐力強','憨厚老實','孤僻怪異','古怪多變','嫉惡如仇','天真浪漫','豪放不羈','富有創意','隨遇而安',
-    '心狠手辣','重視禮節','熱愛自由','貪玩','節儉','心地善良','喜歡冒險','專注執著','真誠坦率','小心翼翼'
-    ,'倔強固執','天馬行空','善解人意','易燃易爆炸','過度樂觀','莫名自信','唯我獨尊','嫉惡如仇','悲觀厭世','凡事求真'
-  ];
-  const goalOptions = [
-    '找回失落的家族徽章','破解禁書的封印','救回被詛咒的朋友','查出學院裡的內鬼','證明自己不是怪物',
-    '尋找失蹤的師父','復仇雪恥','拯救世界免於毀滅','逃離自身的命運','尋求內心的自由',
-    '揭開古老遺跡的秘密','完成父母未竟的夢想','打倒暴政的君王','尋找傳說中的寶藏','守護故鄉免於侵略',
-    '破解血統之謎','治癒自己的病痛','成為最強者','阻止末日降臨','改變未來的預言',
-    '統治整個國度','找到通往平行世界的門','破解古老魔法的謎語','阻止邪惡教團復活','拯救族人免於滅絕',
-    '與心愛之人重逢','找出真正的身世','讓世界和平','消滅所有黑暗力量','完成最後一任務',
-    '揭露巨大陰謀','修復破碎的王國','找到失蹤的寶藏','治癒世界的疾病','摧毀邪惡組織',
-    '報復前世的仇敵','探索未知星系','保護自然環境','發現永恆之泉','統一各族勢力',
-    '尋找失傳的魔法卷軸','解放奴役的人民','阻止黑暗儀式','完成祖先的遺願','建立和平的世界',
-    '揭開身世之謎','戰勝心魔','擺脫家族詛咒','實現冒險夢想','奪回失去的王位',
-    '找到傳說中的武器','復活已逝的愛人','破除命運束縛','從奴役中解放族人','尋求真正的友誼',
-    '建立強大的團隊','開創新秩序','揭開古墓的秘密','穿越時空拯救世界','追求藝術極致',
-    '完成一場史詩之旅','阻止時空崩壞','推翻腐敗政權','尋找永恆的愛情','保護弱小',
-    '拯救被遺忘的種族','阻止瘟疫蔓延','尋找新的家園','實現科學突破','救贖自己',
-    '治療親人的疾病','打破命運輪迴','組織反抗軍','守護神秘寶石','阻止世界融合',
-    '找回失去的能力','尋求力量的來源','證明自己的價值','成為傳說中的英雄','阻止末日機器',
-    '重建家園','找到記憶碎片','守護生命之樹','維持世界平衡','拯救被囚禁的靈魂',
-    '探索海底世界','阻止洪水','追尋真理','成為最偉大的巫師','開創新世界',
-    '繼承神的力量','阻止瘋狂科學家','完成最後的冒險','找到宇宙的起源','救助孤兒院',
-    '解開歷史謎團','平息戰爭','召喚神龍'
-    ,'尋找失散多年的親人','突破自我極限','統一四海八荒','實現和平共處','追求神秘力量'
-  ];
-  const weaknessOptions = [
-    '害怕黑暗','遇到壓力就說謊','太容易相信別人','強迫症嚴重','一旦承諾就不肯回頭',
-    '畏懼深海','恐高症','容易發怒','過於固執','患有失眠','對魔法過敏','不擅長謊言',
-    '心軟','容易焦慮','懼怕孤獨','怕血','記憶衰退','常自我懷疑','體力差','情緒起伏大',
-    '恐水','三分鐘熱度','貪吃','愛睡覺','沒自信','容易嫉妒','怕蛇','無法拒絕他人','懼怕孤獨','受到金錢誘惑',
-    '懦弱','怕寂寞','怕失敗','眼神不好','迷失自我','容易暈血','過度同情心','情緒不穩','飲食失調','缺乏耐心',
-    '怕被拒絕','易感寂寞','時間管理差','容易分心','優柔寡斷','怕寵物','對聲音過敏','會暈車','不會游泳','怕蜘蛛',
-    '對金錢著迷','過於誠實','不能保守秘密','健忘','反射神經差','害怕蛙','愛出風頭','情緒化','傲慢自大','懷疑一切',
-    '受不起批評','追求完美','過度開朗','得失心重','過於善良','常常遲到','自控力差','容易煩惱','懷舊','過於現實',
-    '怕痛','不擅交際','愛拖延','不善理財','怕換環境','低血糖','怕雷','愛哭','怕醫院','無安全感',
-    '太在意他人眼光','怕火','怕蟑螂','怕雨','怕被孤立','怕未知','怕黑夜','恐懼高壓','怕失去朋友','過於衝動',
-    '易怒','有強迫症','潔癖','過於挑剔','缺乏信心','害怕說謊','金錢迷惑'
-    ,'過度自責','怕黑怕鬼','無法長時間專注','過於敏感','喜歡攀比'
-  ];
-  const secretOptions = [
-    '其實能聽見魔杖的聲音','曾經施放過禁咒','血統有爭議','與反派有血緣關係','記憶被人動過手腳',
-    '身上藏有古老符文','是預言中的孩子','隱藏著第二人格','真正的身份是王族','手握未來的預言',
-    '擁有毀滅世界的力量','殺過無辜的人','靈魂被分裂','與神靈簽下契約','體內寄宿龍族血脈',
-    '被人控制思想','持有禁書','曾是敵軍間諜','擁有可以逆天改命的能力','已經死亡又復活過',
-    '身份是天界使者','出生於敵對國度','持有能控制時間的裝置','曾經是反派手下','其真正目的是復仇',
-    '身體中封印著魔神','曾殺死親人','擁有不可告人的戀情','曾在另一時空活過','靈魂被惡靈附身',
-    '曾經是王族成員','擁有預知能力','體內封印著神獸','曾與外星人接觸','是雙重間諜',
-    '從未出生在這個世界','是失蹤王子/公主','其父母是名偉大的英雄','曾暗中幫助過敵人','體內流著龍的血',
-    '曾與惡魔做交易','其實是穿越者','前世是大魔法師','失去了靈魂的一部分','曾經毀掉一個村莊',
-    '覺醒了禁忌力量','曾經統治世界','與神秘組織有勾結','擁有死亡回溯的能力','隱藏著第三人格',
-    '擁有永生','身體其實是複製品','曾經愛上敵人','是預言之子','其實是另一性別',
-    '一部分記憶被封印','曾偷竊神器','內心住著惡魔','曾經犧牲一個城鎮','真實身份是魔王之子',
-    '與宿敵是兄弟姐妹','被標記為叛徒','曾在夢中毀滅世界','是天使與人類的混血','曾經是神的使者',
-    '背負血海深仇','體內有一把劍','擁有召喚亡靈的能力','是失落文明的繼承者','其實是一個幻影',
-    '曾經殺過至親','是反派的父親/母親','隱藏著巨額財富','與龍簽訂契約','曾是名殺手',
-    '擁有穿梭夢境的能力','身體裡有另一個靈魂','曾經背叛整個國家','是對手的愛人','其實早已死去',
-    '持有通往另一世界的門','被預言將帶來毀滅','曾是敵軍的領袖','曾經拯救世界卻沒人知道','是未來自己',
-    '被改造過','曾經是機器人','隱藏著一個孩子','曾在時間漩渦迷失','其實是邪神的孩子',
-    '曾與妖精簽約','過去是強大巫師','靈魂被詛咒','與祖先對話','某部分身體不是自己的',
-    '其實是克隆人','有未來的記憶','預知自己死亡','曾經被神選中','體內封印著魔王',
-    '過去是天宮守衛','曾經是星際海盜'
-  ];
-  const relationOptions = [
-    '與父親關係疏離','與舊情人有未了結','與另一位角色有誓約','曾背叛過最好的朋友','欠了黑幫巨債',
-    '對導師又敬又恨','視敵為兄弟','秘密愛慕夥伴','被家族逐出','與宿敵互相尊重',
-    '欠下不可還清的救命恩情','與同伴競爭','誓死保護弟弟','曾救過反派','暗中合作又互相利用',
-    '關係複雜的親戚','與政府存在牽連','被流放後結識旅伴','與古老神祇有契約','隱瞞了前世的牽絆',
-    '與前任情人再度重逢','與宿敵曾是兄弟','暗戀同性朋友','被家族視為異類','與某位神祇簽訂契約',
-    '是另一人物的失散親人','對敵人充滿惻隱','與某生物有共生關係','與歷史人物有血緣','為了家族而犧牲個人幸福',
-    '曾是情敵','相愛相殺','是相互扶持的旅行夥伴','是一見鐘情','幼時玩伴',
-    '前世夫妻','互為師徒','因恩怨結緣','宿敵卻互相理解','上司與下屬',
-    '患難之交','情同手足','生死之交','重生後的敵人','生命互相依存',
-    '命運的牽絆','養父與養子','雙胞胎','一方是另外一方的影子','靈魂鏈接',
-    '契約關係','曾經救過對方一命','互為對方的拯救','衝突不斷的夥伴','青梅竹馬',
-    '不打不相識','互相欣賞','半路兄妹','義氣相挺','因誤會而敵對',
-    '雇主與傭兵','雙方有婚約','原先同門，後分道揚鑣','神與信徒','投機合作',
-    '彼此利用','朋友兼競爭對手','暗中守護','因權力爭鬥相識','破鏡重圓',
-    '雙方是遠房親戚','相互傾慕','前世死敵','互為鏡像','輪迴中的羈絆',
-    '遺志的繼承者與傳承者','徒弟與師兄','生死敵對','代替對方完成使命','被迫成為同伴',
-    '一方欠另一方人情','彼此心有愧疚','共同的敵人','最好的朋友','走失後相遇',
-    '祖孫跨越時空相遇','同為研究伙伴','競爭愛慕對象','無血緣卻像家人','常常吵架卻默契十足',
-    '未婚夫妻','互相牽制','相互承諾一起冒險','親子關係','被預言會互相殘殺',
-    '同時愛上第三者','曾互救生命','星際旅伴','同為失落族人','異族戀人',
-    '並肩作戰','結拜兄弟','重逢於旅途','天作之合','自由與責任的牽絆'
-  ];
-
-  // 初始化兩個人物行（預設隨機）
-  document.addEventListener('DOMContentLoaded', () => {
-    addCharacterRow(true);
-    addCharacterRow(true);
-  });
+      const nameOptions = ['艾琳','洛恩','凱亞','米爾','席恩','薇拉','祈安','杜林','希爾維','萊雅','伊凡','法蘭','格蘭','梅芙','安娜','雷格','索菲','艾略特','亞歷克','莫妮卡','路西','伊芙','加百列','亞當','瑪雅','艾德','薩拉','杰登','琪拉','德瑞克'];
+      const personalityOptions = ['外冷內熱','自卑但嘴硬','樂觀又衝動','冷靜但偏執','溫柔卻不輕信任何人','堅韌而沉默','幽默開朗','善良又單純','多疑且謹慎','自信而傲慢','懶散卻超凡聰明','義氣而固執','急躁但心地善良','謙虛而機智','天真又好奇'];
+      const goalOptions = ['找回失落的家族徽章','破解禁書的封印','救回被詛咒的朋友','查出學院裡的內鬼','證明自己不是怪物','尋找失蹤的師父','復仇雪恥','拯救世界免於毀滅','逃離自身的命運','尋求內心的自由'];
+      const weaknessOptions = ['害怕黑暗','遇到壓力就說謊','太容易相信別人','強迫症嚴重','一旦承諾就不肯回頭','畏懼深海','恐高症','容易發怒','過於固執','患有失眠'];
+      const secretOptions = ['其實能聽見魔杖的聲音','曾經施放過禁咒','血統有爭議','與反派有血緣關係','記憶被人動過手腳','身上藏有古老符文','是預言中的孩子','隱藏著第二人格','真正的身份是王族','手握未來的預言'];
+      const relationOptions = ['與父親關係疏離','與舊情人有未了結','與另一位角色有誓約','曾背叛過最好的朋友','欠了黑幫巨債','對導師又敬又恨','視敵為兄弟','秘密愛慕夥伴','被家族逐出','與宿敵互相尊重'];
 
       function pickRandom(arr) {
         return arr[Math.floor(Math.random() * arr.length)];
       }
 
-  // 建立單個人物行
-  function addCharacterRow(randomize = false) {
-    const row = document.createElement('div');
-    row.className = 'character-row';
-    // 計算當前索引以顯示人物編號
-    const index = charactersContainer.children.length + 1;
-    row.innerHTML = `
-      <div class="char-index">人物${index}</div>
-      <input type="text" class="char-name" placeholder="姓名 / 角色" />
-      <input type="text" class="char-personality" placeholder="個性 (如 外冷內熱)" />
-      <input type="text" class="char-goal" placeholder="目標 (如 拯救世界)" />
-      <input type="text" class="char-weakness" placeholder="弱點 (如 害怕黑暗)" />
-      <input type="text" class="char-secret" placeholder="秘密 (如 身世謎樣)" />
-      <input type="text" class="char-relation" placeholder="人際 (如 與人有誓約)" />
-      <button type="button" class="char-random-btn">隨機</button>
-    `;
-    // 隨機按鈕事件
-    const randBtn = row.querySelector('.char-random-btn');
-    randBtn.addEventListener('click', () => randomizeRow(row));
-    charactersContainer.appendChild(row);
-    if (randomize) randomizeRow(row);
-  }
+      // ==================== 人物設定 ====================
+      function addCharacterRow(randomize = false) {
+        const row = document.createElement('div');
+        row.className = 'character-row';
+        const index = charactersContainer.children.length + 1;
+        row.innerHTML = `
+          <div class="char-index">人物 ${index}</div>
+          <input type="text" class="char-name" placeholder="姓名" />
+          <input type="text" class="char-personality" placeholder="個性" />
+          <input type="text" class="char-goal" placeholder="目標" />
+          <input type="text" class="char-weakness" placeholder="弱點" />
+          <input type="text" class="char-secret" placeholder="秘密" />
+          <input type="text" class="char-relation" placeholder="人際" />
+          <button type="button" class="char-random-btn btn-outline btn-small">🎲</button>
+        `;
+        const randBtn = row.querySelector('.char-random-btn');
+        randBtn.addEventListener('click', () => randomizeRow(row));
+        charactersContainer.appendChild(row);
+        if (randomize) randomizeRow(row);
+      }
 
-  // 隨機化單個人物行
-  function randomizeRow(row) {
-    row.querySelector('.char-name').value = pickRandom(nameOptions);
-    row.querySelector('.char-personality').value = pickRandom(personalityOptions);
-    row.querySelector('.char-goal').value = pickRandom(goalOptions);
-    row.querySelector('.char-weakness').value = pickRandom(weaknessOptions);
-    row.querySelector('.char-secret').value = pickRandom(secretOptions);
-    row.querySelector('.char-relation').value = pickRandom(relationOptions);
-  }
+      function randomizeRow(row) {
+        row.querySelector('.char-name').value = pickRandom(nameOptions);
+        row.querySelector('.char-personality').value = pickRandom(personalityOptions);
+        row.querySelector('.char-goal').value = pickRandom(goalOptions);
+        row.querySelector('.char-weakness').value = pickRandom(weaknessOptions);
+        row.querySelector('.char-secret').value = pickRandom(secretOptions);
+        row.querySelector('.char-relation').value = pickRandom(relationOptions);
+      }
 
-      // 隨機填充按鈕：填入所有欄位
+      document.addEventListener('DOMContentLoaded', () => {
+        addCharacterRow(true);
+        addCharacterRow(true);
+        renderBookmarks();
+      });
+
+      randomAllCharactersBtn.addEventListener('click', () => {
+        Array.from(charactersContainer.children).forEach(row => randomizeRow(row));
+      });
+
+      addCharacterBtn.addEventListener('click', () => addCharacterRow(true));
+
       randomBtn.addEventListener('click', () => {
         themeSelect.value = pickRandom(themes);
         settingSelect.value = pickRandom(settings);
         styleSelect.value = pickRandom(stylesArr);
         chaptersInput.value = pickRandom(chapterOpts);
         lengthInput.value = pickRandom(lengthOpts);
-    // 隨機化所有人物行
-    Array.from(charactersContainer.children).forEach((row) => randomizeRow(row));
+        Array.from(charactersContainer.children).forEach(row => randomizeRow(row));
       });
 
-  // 隨機化所有人物按鈕
-  randomAllCharactersBtn.addEventListener('click', () => {
-    Array.from(charactersContainer.children).forEach((row) => randomizeRow(row));
-  });
-
-  // 新增人物按鈕
-  addCharacterBtn.addEventListener('click', () => {
-    addCharacterRow(true);
-  });
-
-      // 下載功能
-      function downloadFile(filename, text) {
-        const link = document.createElement('a');
-        link.setAttribute('href', 'data:text/plain;charset=utf-8,' + encodeURIComponent(text));
-        link.setAttribute('download', filename);
-        document.body.appendChild(link);
-        link.click();
-        document.body.removeChild(link);
-      }
-      downloadBtn.addEventListener('click', () => {
-        if (!latestStory) return;
-        const title = themeSelect.value || '生成小說';
-        downloadFile(title + '.txt', latestStory);
-      });
-
-      // 繼續生成：在已有故事基礎上請求後續內容
-      continueBtn.addEventListener('click', async () => {
-        statusDiv.textContent = '';
-        statusDiv.style.color = varSecondaryColor();
-        // 如果沒有已生成的故事則不處理
-        if (!latestStory) {
-          statusDiv.textContent = '尚未有故事可繼續，請先生成。';
-          statusDiv.style.color = '#e84d3d';
-          return;
-        }
-        const apiKey = apiKeyInput.value.trim();
-        const model = modelSelect.value;
-        if (!apiKey) {
-          statusDiv.textContent = '請輸入 API 金鑰。';
-          statusDiv.style.color = '#e84d3d';
-          return;
-        }
-        // 組成續篇提示語：將目前故事作為前文，請模型延續
-        const continuePrompt = latestStory + '\n\n請保持以上故事的主題、背景、人物與風格，繼續撰寫後續章節或故事內容，直到此章節結束或故事完結。';
-        statusDiv.textContent = '續篇生成中...';
-        statusDiv.style.color = varSecondaryColor();
-        // 禁用按鈕避免重複請求
-        continueBtn.disabled = true;
-        generateBtn.disabled = true;
-        try {
-          const endpoint =
-            'https://generativelanguage.googleapis.com/v1beta/models/' + encodeURIComponent(model) + ':generateContent';
-          const payload = {
-            contents: [
-              {
-                parts: [
-                  { text: continuePrompt },
-                ],
-              },
-            ],
-          };
-          const response = await fetch(endpoint, {
-            method: 'POST',
-            headers: {
-              'Content-Type': 'application/json',
-              'x-goog-api-key': apiKey,
-            },
-            body: JSON.stringify(payload),
+      // ==================== 章節導航 ====================
+      function parseAndShowChapters(text) {
+        const chapterRegex = /第[一二三四五六七八九十百零\d]+章[^\n]*/g;
+        const matches = text.match(chapterRegex);
+        if (matches && matches.length > 1) {
+          chapterNav.style.display = 'flex';
+          chapterNav.innerHTML = matches.map((title, i) => 
+            `<button type="button" data-chapter="${i}">${title.substring(0, 15)}${title.length > 15 ? '...' : ''}</button>`
+          ).join('');
+          chapterNav.querySelectorAll('button').forEach(btn => {
+            btn.addEventListener('click', () => {
+              const idx = parseInt(btn.dataset.chapter);
+              const chapterStart = text.indexOf(matches[idx]);
+              // 計算大約位置並滾動
+              const ratio = chapterStart / text.length;
+              const scrollTarget = resultDiv.scrollHeight * ratio;
+              resultDiv.scrollTop = scrollTarget;
+              chapterNav.querySelectorAll('button').forEach(b => b.classList.remove('active'));
+              btn.classList.add('active');
+            });
           });
-          const data = await response.json();
-          if (data.error) {
-            statusDiv.textContent = '錯誤：' + data.error.message;
-            statusDiv.style.color = '#e84d3d';
-            continueBtn.disabled = false;
-            generateBtn.disabled = false;
-            return;
-          }
-          if (data.candidates && data.candidates.length > 0) {
-            const parts = data.candidates[0].content.parts || [];
-            const continuation = parts.map((p) => p.text || '').join('').trim();
-            if (continuation) {
-              // 追加新內容
-              latestStory += '\n\n' + continuation;
-              resultDiv.textContent = latestStory;
-              localStorage.setItem('savedStory', latestStory);
-              statusDiv.textContent = '續篇完成！';
-              statusDiv.style.color = '#008a00';
-              downloadBtn.disabled = false;
-            } else {
-              statusDiv.textContent = '沒有獲得續篇內容，可能已完結。';
-              statusDiv.style.color = '#e84d3d';
-            }
-          } else {
-            statusDiv.textContent = '沒有獲得續篇內容，可能已完結。';
-            statusDiv.style.color = '#e84d3d';
-          }
-        } catch (err) {
-          statusDiv.textContent = '請求失敗：' + err.message;
-          statusDiv.style.color = '#e84d3d';
-        } finally {
-          continueBtn.disabled = false;
-          generateBtn.disabled = false;
+        } else {
+          chapterNav.style.display = 'none';
         }
-      });
+      }
 
-
-      // 生成小說
+      // ==================== 生成故事 ====================
       generateBtn.addEventListener('click', async () => {
-        statusDiv.textContent = '';
-        statusDiv.style.color = varSecondaryColor();
+        hideStatus();
         resultDiv.textContent = '';
-        // 清除先前儲存的故事，使舊故事在點擊生成後消失
+        chapterNav.style.display = 'none';
         localStorage.removeItem('savedStory');
         latestStory = '';
         downloadBtn.disabled = true;
@@ -847,38 +1235,36 @@
         const model = modelSelect.value;
         const theme = themeSelect.value.trim();
         const setting = settingSelect.value.trim();
-        // 組合人物資訊
+        
         const characterRows = Array.from(charactersContainer.querySelectorAll('.character-row'));
         let charactersInfo = '';
         characterRows.forEach((row, idx) => {
+          const fields = [];
           const name = row.querySelector('.char-name').value.trim();
           const personality = row.querySelector('.char-personality').value.trim();
           const goal = row.querySelector('.char-goal').value.trim();
           const weakness = row.querySelector('.char-weakness').value.trim();
           const secret = row.querySelector('.char-secret').value.trim();
           const relation = row.querySelector('.char-relation').value.trim();
-          const fields = [];
           if (name) fields.push(name);
           if (personality) fields.push(`個性：${personality}`);
           if (goal) fields.push(`目標：${goal}`);
           if (weakness) fields.push(`弱點：${weakness}`);
           if (secret) fields.push(`秘密：${secret}`);
           if (relation) fields.push(`人際：${relation}`);
-          if (fields.length > 0) {
-            charactersInfo += `人物${idx + 1}：${fields.join('，')}。\n`;
-          }
+          if (fields.length > 0) charactersInfo += `人物${idx + 1}：${fields.join('，')}。\n`;
         });
+        
         const style = styleSelect.value.trim();
         const chapters = chaptersInput.value.trim();
         const length = lengthInput.value.trim();
         const notes = notesInput.value.trim();
 
         if (!apiKey) {
-          statusDiv.textContent = '請輸入 API 金鑰。';
-          statusDiv.style.color = '#e84d3d';
+          showStatus('error', '請輸入 API 金鑰');
           return;
         }
-        // 構建提示語
+
         let prompt = '';
         if (theme) prompt += `主題：${theme}。`;
         if (setting) prompt += `背景設定：${setting}。`;
@@ -887,65 +1273,398 @@
         if (chapters) prompt += `故事分為 ${chapters} 章節。`;
         if (length) prompt += `總篇幅約 ${length} 字。`;
         if (notes) prompt += `其他說明：${notes}。`;
+        
         if (!theme && !setting && !charactersInfo && !style && !chapters && !length && !notes) {
-          statusDiv.textContent = '請至少填寫一項設定或使用隨機填充。';
-          statusDiv.style.color = '#e84d3d';
+          showStatus('error', '請至少填寫一項設定或使用隨機填充');
           return;
         }
+        
         prompt += '請以繁體中文撰寫長篇小說，結構完整，有起承轉合；若有指定章節，請標明章節標題。';
 
-        statusDiv.textContent = '生成中...';
-        statusDiv.style.color = varSecondaryColor();
+        showStatus('loading', '故事生成中，請稍候...');
+        generateBtn.disabled = true;
+
         try {
-          const endpoint =
-            'https://generativelanguage.googleapis.com/v1beta/models/' + encodeURIComponent(model) + ':generateContent';
-          const payload = {
-            contents: [
-              {
-                parts: [
-                  { text: prompt },
-                ],
-              },
-            ],
-          };
+          const endpoint = `https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(model)}:generateContent`;
           const response = await fetch(endpoint, {
             method: 'POST',
             headers: {
               'Content-Type': 'application/json',
               'x-goog-api-key': apiKey,
             },
-            body: JSON.stringify(payload),
+            body: JSON.stringify({
+              contents: [{ parts: [{ text: prompt }] }],
+            }),
           });
           const data = await response.json();
+          
           if (data.error) {
-            statusDiv.textContent = '錯誤：' + data.error.message;
-            statusDiv.style.color = '#e84d3d';
+            showStatus('error', '錯誤：' + data.error.message);
             return;
           }
+          
           if (data.candidates && data.candidates.length > 0) {
             const parts = data.candidates[0].content.parts || [];
-            const story = parts.map((p) => p.text || '').join('');
+            const story = parts.map(p => p.text || '').join('');
             latestStory = story.trim();
-            // 顯示全文並儲存到 localStorage
             resultDiv.textContent = latestStory;
-            localStorage.setItem('savedStory', latestStory);
-            statusDiv.textContent = '生成完成！';
-            statusDiv.style.color = '#008a00';
+            
+            try {
+              localStorage.setItem('savedStory', latestStory);
+            } catch (e) {
+              console.warn('無法儲存故事至 localStorage：', e);
+            }
+            
+            showStatus('success', '生成完成！');
             downloadBtn.disabled = false;
             continueBtn.disabled = false;
+            parseAndShowChapters(latestStory);
           } else {
-            statusDiv.textContent = '沒有獲得內容，請調整設定。';
-            statusDiv.style.color = '#e84d3d';
+            showStatus('error', '沒有獲得內容，請調整設定');
           }
         } catch (err) {
-          statusDiv.textContent = '請求失敗：' + err.message;
-          statusDiv.style.color = '#e84d3d';
+          showStatus('error', '請求失敗：' + err.message);
+        } finally {
+          generateBtn.disabled = false;
         }
       });
 
-      function varSecondaryColor() {
-        return getComputedStyle(document.documentElement).getPropertyValue('--secondary') || '#6c757d';
+      // ==================== 繼續生成 ====================
+      continueBtn.addEventListener('click', async () => {
+        if (!latestStory) {
+          showStatus('error', '尚未有故事可繼續，請先生成');
+          return;
+        }
+        
+        const apiKey = apiKeyInput.value.trim();
+        const model = modelSelect.value;
+        
+        if (!apiKey) {
+          showStatus('error', '請輸入 API 金鑰');
+          return;
+        }
+
+        const continuePrompt = latestStory + '\n\n請保持以上故事的主題、背景、人物與風格，繼續撰寫後續章節或故事內容，直到此章節結束或故事完結。';
+        
+        showStatus('loading', '續篇生成中...');
+        continueBtn.disabled = true;
+        generateBtn.disabled = true;
+
+        try {
+          const endpoint = `https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(model)}:generateContent`;
+          const response = await fetch(endpoint, {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              'x-goog-api-key': apiKey,
+            },
+            body: JSON.stringify({
+              contents: [{ parts: [{ text: continuePrompt }] }],
+            }),
+          });
+          const data = await response.json();
+          
+          if (data.error) {
+            showStatus('error', '錯誤：' + data.error.message);
+            return;
+          }
+          
+          if (data.candidates && data.candidates.length > 0) {
+            const parts = data.candidates[0].content.parts || [];
+            const continuation = parts.map(p => p.text || '').join('').trim();
+            if (continuation) {
+              latestStory += '\n\n' + continuation;
+              resultDiv.textContent = latestStory;
+              try {
+                localStorage.setItem('savedStory', latestStory);
+              } catch (e) {
+                showStatus('error', '故事內容過長，未能自動儲存');
+              }
+              showStatus('success', '續篇完成！');
+              downloadBtn.disabled = false;
+              parseAndShowChapters(latestStory);
+            } else {
+              showStatus('error', '沒有獲得續篇內容，可能已完結');
+            }
+          } else {
+            showStatus('error', '沒有獲得續篇內容，可能已完結');
+          }
+        } catch (err) {
+          showStatus('error', '請求失敗：' + err.message);
+        } finally {
+          continueBtn.disabled = false;
+          generateBtn.disabled = false;
+        }
+      });
+
+      // ==================== 下載功能 ====================
+      function downloadFile(filename, text) {
+        const link = document.createElement('a');
+        link.setAttribute('href', 'data:text/plain;charset=utf-8,' + encodeURIComponent(text));
+        link.setAttribute('download', filename);
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
       }
+
+      downloadBtn.addEventListener('click', () => {
+        if (!latestStory) return;
+        const title = themeSelect.value || '生成小說';
+        downloadFile(title + '.txt', latestStory);
+      });
+
+      // ==================== 書籤功能 (大幅優化) ====================
+      function loadBookmarks() {
+        try {
+          const raw = localStorage.getItem('bookmarks');
+          if (!raw) return [];
+          return JSON.parse(raw);
+        } catch (e) {
+          console.warn('無法讀取書籤：', e);
+          return [];
+        }
+      }
+
+      function saveBookmarks(bookmarks) {
+        try {
+          localStorage.setItem('bookmarks', JSON.stringify(bookmarks));
+        } catch (e) {
+          showStatus('error', '書籤儲存失敗，可能已達儲存上限');
+        }
+      }
+
+      function formatDate(timestamp) {
+        const date = new Date(timestamp);
+        return `${date.getFullYear()}/${(date.getMonth()+1).toString().padStart(2,'0')}/${date.getDate().toString().padStart(2,'0')} ${date.getHours().toString().padStart(2,'0')}:${date.getMinutes().toString().padStart(2,'0')}`;
+      }
+
+      function formatWordCount(text) {
+        const count = text.length;
+        if (count >= 10000) return (count / 10000).toFixed(1) + ' 萬字';
+        if (count >= 1000) return (count / 1000).toFixed(1) + ' 千字';
+        return count + ' 字';
+      }
+
+      function getFilteredAndSortedBookmarks() {
+        let bookmarks = loadBookmarks();
+        const searchTerm = bookmarkSearch.value.trim().toLowerCase();
+        const sortBy = bookmarkSort.value;
+
+        // 搜尋過濾
+        if (searchTerm) {
+          bookmarks = bookmarks.filter(bm => 
+            (bm.title && bm.title.toLowerCase().includes(searchTerm)) ||
+            (bm.tags && bm.tags.some(t => t.toLowerCase().includes(searchTerm))) ||
+            (bm.notes && bm.notes.toLowerCase().includes(searchTerm))
+          );
+        }
+
+        // 排序
+        switch (sortBy) {
+          case 'newest':
+            bookmarks.sort((a, b) => b.id - a.id);
+            break;
+          case 'oldest':
+            bookmarks.sort((a, b) => a.id - b.id);
+            break;
+          case 'name':
+            bookmarks.sort((a, b) => (a.title || '').localeCompare(b.title || ''));
+            break;
+          case 'length':
+            bookmarks.sort((a, b) => (b.content?.length || 0) - (a.content?.length || 0));
+            break;
+        }
+
+        return bookmarks;
+      }
+
+      function renderBookmarks() {
+        const allBookmarks = loadBookmarks();
+        const bookmarks = getFilteredAndSortedBookmarks();
+        
+        bookmarkCount.textContent = `${allBookmarks.length} 篇`;
+        bookmarkList.innerHTML = '';
+
+        if (bookmarks.length === 0) {
+          bookmarkList.innerHTML = `
+            <li class="bookmark-empty">
+              <div class="bookmark-empty-icon">📚</div>
+              <div>${allBookmarks.length === 0 ? '還沒有書籤，生成故事後點擊「儲存目前故事」' : '找不到符合條件的書籤'}</div>
+            </li>
+          `;
+          return;
+        }
+
+        bookmarks.forEach(bm => {
+          const li = document.createElement('li');
+          li.className = 'bookmark-item';
+          li.innerHTML = `
+            <div class="bookmark-item-icon">📖</div>
+            <div class="bookmark-item-content">
+              <div class="bookmark-item-title">${bm.title || '未命名書籤'}</div>
+              <div class="bookmark-item-meta">
+                <span>📅 ${formatDate(bm.id)}</span>
+                <span>📝 ${formatWordCount(bm.content || '')}</span>
+                ${bm.tags && bm.tags.length > 0 ? `<span>🏷️ ${bm.tags.slice(0,3).join(', ')}</span>` : ''}
+              </div>
+            </div>
+            <div class="bookmark-item-actions">
+              <button type="button" class="btn-load" data-action="load">載入</button>
+              <button type="button" data-action="edit">編輯</button>
+              <button type="button" data-action="delete">刪除</button>
+            </div>
+          `;
+
+          // 載入
+          li.querySelector('[data-action="load"]').addEventListener('click', () => {
+            latestStory = bm.content;
+            resultDiv.textContent = latestStory;
+            downloadBtn.disabled = !latestStory;
+            continueBtn.disabled = !latestStory;
+            try {
+              localStorage.setItem('savedStory', latestStory);
+            } catch (e) {}
+            showStatus('success', '書籤已載入');
+            parseAndShowChapters(latestStory);
+            document.querySelector('.card').scrollIntoView({ behavior: 'smooth' });
+          });
+
+          // 編輯
+          li.querySelector('[data-action="edit"]').addEventListener('click', () => {
+            editingBookmarkId = bm.id;
+            editBookmarkTitle.value = bm.title || '';
+            editBookmarkTags.value = (bm.tags || []).join(', ');
+            editBookmarkNotes.value = bm.notes || '';
+            editModal.classList.add('show');
+          });
+
+          // 刪除
+          li.querySelector('[data-action="delete"]').addEventListener('click', () => {
+            if (confirm('確定要刪除此書籤嗎？')) {
+              const list = loadBookmarks().filter(b => b.id !== bm.id);
+              saveBookmarks(list);
+              renderBookmarks();
+              showStatus('success', '書籤已刪除');
+            }
+          });
+
+          bookmarkList.appendChild(li);
+        });
+      }
+
+      // 新增書籤
+      addBookmarkBtn.addEventListener('click', () => {
+        if (!latestStory || latestStory.trim() === '') {
+          showStatus('error', '沒有可儲存的內容');
+          return;
+        }
+        const bookmarks = loadBookmarks();
+        let title = latestStory.trim().replace(/\s+/g, ' ').substring(0, 50);
+        if (title.length < latestStory.trim().length) title += '...';
+        
+        const newBookmark = {
+          id: Date.now(),
+          title,
+          content: latestStory,
+          tags: [],
+          notes: '',
+        };
+        bookmarks.push(newBookmark);
+        saveBookmarks(bookmarks);
+        renderBookmarks();
+        showStatus('success', '書籤已儲存！');
+      });
+
+      // 搜尋和排序
+      bookmarkSearch.addEventListener('input', renderBookmarks);
+      bookmarkSort.addEventListener('change', renderBookmarks);
+
+      // 編輯彈窗
+      cancelEditBtn.addEventListener('click', () => {
+        editModal.classList.remove('show');
+        editingBookmarkId = null;
+      });
+
+      saveEditBtn.addEventListener('click', () => {
+        if (!editingBookmarkId) return;
+        const bookmarks = loadBookmarks();
+        const bm = bookmarks.find(b => b.id === editingBookmarkId);
+        if (bm) {
+          bm.title = editBookmarkTitle.value.trim() || bm.title;
+          bm.tags = editBookmarkTags.value.split(',').map(t => t.trim()).filter(t => t);
+          bm.notes = editBookmarkNotes.value.trim();
+          saveBookmarks(bookmarks);
+          renderBookmarks();
+          showStatus('success', '書籤已更新');
+        }
+        editModal.classList.remove('show');
+        editingBookmarkId = null;
+      });
+
+      editModal.addEventListener('click', (e) => {
+        if (e.target === editModal) {
+          editModal.classList.remove('show');
+          editingBookmarkId = null;
+        }
+      });
+
+      // 匯出書籤
+      exportBookmarksBtn.addEventListener('click', () => {
+        const bookmarks = loadBookmarks();
+        if (bookmarks.length === 0) {
+          showStatus('error', '沒有書籤可匯出');
+          return;
+        }
+        const dataStr = JSON.stringify(bookmarks, null, 2);
+        const blob = new Blob([dataStr], { type: 'application/json' });
+        const url = URL.createObjectURL(blob);
+        const link = document.createElement('a');
+        link.href = url;
+        link.download = `小說書籤_${new Date().toISOString().split('T')[0]}.json`;
+        link.click();
+        URL.revokeObjectURL(url);
+        showStatus('success', '書籤已匯出');
+      });
+
+      // 匯入書籤
+      importBookmarksBtn.addEventListener('click', () => {
+        importFileInput.click();
+      });
+
+      importFileInput.addEventListener('change', (e) => {
+        const file = e.target.files[0];
+        if (!file) return;
+        
+        const reader = new FileReader();
+        reader.onload = (event) => {
+          try {
+            const imported = JSON.parse(event.target.result);
+            if (!Array.isArray(imported)) throw new Error('格式錯誤');
+            
+            const existing = loadBookmarks();
+            const existingIds = new Set(existing.map(b => b.id));
+            let added = 0;
+            
+            imported.forEach(bm => {
+              if (bm.id && bm.content && !existingIds.has(bm.id)) {
+                existing.push(bm);
+                added++;
+              }
+            });
+            
+            saveBookmarks(existing);
+            renderBookmarks();
+            showStatus('success', `已匯入 ${added} 筆書籤`);
+          } catch (err) {
+            showStatus('error', '匯入失敗：檔案格式錯誤');
+          }
+        };
+        reader.readAsText(file);
+        e.target.value = '';
+      });
+
+      // 初始化書籤列表
+      renderBookmarks();
     </script>
   </body>
 </html>
