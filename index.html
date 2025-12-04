@@ -1583,14 +1583,15 @@
           if (!raw) return false;
           
           const settings = JSON.parse(raw);
+          let hasData = false;
           
           // 載入基本設定
-          if (settings.theme) themeSelect.value = settings.theme;
-          if (settings.setting) settingSelect.value = settings.setting;
-          if (settings.style) styleSelect.value = settings.style;
-          if (settings.chapters) chaptersInput.value = settings.chapters;
-          if (settings.length) lengthInput.value = settings.length;
-          if (settings.notes) notesInput.value = settings.notes;
+          if (settings.theme) { themeSelect.value = settings.theme; hasData = true; }
+          if (settings.setting) { settingSelect.value = settings.setting; hasData = true; }
+          if (settings.style) { styleSelect.value = settings.style; hasData = true; }
+          if (settings.chapters) { chaptersInput.value = settings.chapters; hasData = true; }
+          if (settings.length) { lengthInput.value = settings.length; hasData = true; }
+          if (settings.notes) { notesInput.value = settings.notes; hasData = true; }
           
           // 載入人物設定
           if (settings.characters && settings.characters.length > 0) {
@@ -1600,17 +1601,21 @@
             settings.characters.forEach(char => {
               addCharacterRow(false); // 不隨機
               const row = charactersContainer.lastElementChild;
-              row.querySelector('.char-gender').value = char.gender || '不明';
-              row.querySelector('.char-name').value = char.name || '';
-              row.querySelector('.char-personality').value = char.personality || '';
-              row.querySelector('.char-goal').value = char.goal || '';
-              row.querySelector('.char-weakness').value = char.weakness || '';
-              row.querySelector('.char-secret').value = char.secret || '';
-              row.querySelector('.char-relation').value = char.relation || '';
+              if (row) {
+                row.querySelector('.char-gender').value = char.gender || '不明';
+                row.querySelector('.char-name').value = char.name || '';
+                row.querySelector('.char-personality').value = char.personality || '';
+                row.querySelector('.char-goal').value = char.goal || '';
+                row.querySelector('.char-weakness').value = char.weakness || '';
+                row.querySelector('.char-secret').value = char.secret || '';
+                row.querySelector('.char-relation').value = char.relation || '';
+              }
             });
-            return true;
+            hasData = true;
           }
-          return false;
+          
+          console.log('設定已從本地載入', settings);
+          return hasData;
         } catch (e) {
           console.warn('無法載入設定：', e);
           return false;
@@ -1623,7 +1628,8 @@
         el.addEventListener('input', debounce(saveSettingsToLocal, 500));
       });
 
-      document.addEventListener('DOMContentLoaded', () => {
+      // 初始化：載入設定或建立預設人物
+      (function initSettings() {
         // 嘗試載入已儲存的設定
         const hasSettings = loadSettingsFromLocal();
         
@@ -1634,7 +1640,7 @@
         }
         
         renderBookmarks();
-      });
+      })();
 
       randomAllCharactersBtn.addEventListener('click', () => {
         randomizeAllCharacters();
@@ -2419,9 +2425,6 @@
         reader.readAsText(file);
         e.target.value = '';
       });
-
-      // 初始化書籤列表
-      renderBookmarks();
     </script>
   </body>
 </html>
