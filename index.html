@@ -4,6 +4,27 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>小說生成器 | AI 創作工坊</title>
+    
+    <!-- PWA 支援 -->
+    <meta name="description" content="AI 小說生成器 - 離線可用的創作工具">
+    <meta name="theme-color" content="#1a1a2e">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="小說生成器">
+    
+    <!-- 離線字體備援 -->
+    <style>
+      /* 離線時使用系統字體 */
+      @font-face {
+        font-family: 'Offline Serif';
+        src: local('Noto Serif TC'), local('Noto Serif CJK TC'), local('Source Han Serif TC'), 
+             local('PingFang TC'), local('Microsoft JhengHei'), local('微軟正黑體'),
+             local('Heiti TC'), local('Apple LiGothic'), local('SimHei');
+        font-weight: 400 700;
+        font-display: swap;
+      }
+    </style>
+    
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Noto+Serif+TC:wght@400;500;600;700&family=LXGW+WenKai+TC:wght@300;400;700&display=swap" rel="stylesheet">
@@ -32,7 +53,7 @@
 
       body {
         margin: 0;
-        font-family: 'LXGW WenKai TC', 'Noto Serif TC', serif;
+        font-family: 'LXGW WenKai TC', 'Noto Serif TC', 'Offline Serif', 'PingFang TC', 'Microsoft JhengHei', '微軟正黑體', sans-serif;
         background: var(--bg);
         background-image: 
           radial-gradient(circle at 20% 80%, rgba(233, 69, 96, 0.03) 0%, transparent 50%),
@@ -1139,15 +1160,73 @@
           flex-direction: column;
         }
       }
+
+      /* 離線狀態提示 */
+      .offline-banner {
+        position: fixed;
+        top: 4px;
+        left: 0;
+        right: 0;
+        background: linear-gradient(135deg, #f39c12, #e74c3c);
+        color: white;
+        text-align: center;
+        padding: 8px 16px;
+        font-size: 0.9rem;
+        z-index: 9999;
+        display: none;
+        animation: slideDown 0.3s ease;
+      }
+
+      .offline-banner.show {
+        display: block;
+      }
+
+      .offline-banner.online {
+        background: linear-gradient(135deg, #27ae60, #2ecc71);
+      }
+
+      @keyframes slideDown {
+        from {
+          transform: translateY(-100%);
+          opacity: 0;
+        }
+        to {
+          transform: translateY(0);
+          opacity: 1;
+        }
+      }
+
+      /* 離線模式下禁用生成按鈕的樣式 */
+      .offline-disabled {
+        opacity: 0.5;
+        cursor: not-allowed;
+        position: relative;
+      }
+
+      .offline-disabled::after {
+        content: '📴 需要網路';
+        position: absolute;
+        top: 50%;
+        left: 50%;
+        transform: translate(-50%, -50%);
+        font-size: 0.75rem;
+        white-space: nowrap;
+      }
     </style>
   </head>
   <body>
+    <!-- 離線狀態提示 -->
+    <div id="offlineBanner" class="offline-banner">
+      📴 目前為離線模式 - 朗讀、閱讀、匯出、匯入功能仍可使用
+    </div>
+
     <div class="container">
       <header>
         <h1>小說生成器</h1>
         <p class="subtitle">
           結合 AI 的無限創意，打造專屬於你的長篇故事<br>
-          設定主題、人物、背景，一鍵生成精彩小說
+          設定主題、人物、背景，一鍵生成精彩小說<br>
+          <small style="opacity: 0.7;">💡 支援離線閱讀、朗讀、匯出、匯入書籤</small>
         </p>
       </header>
 
@@ -1279,6 +1358,7 @@
             <div class="speech-buttons">
               <button id="playPauseBtn" class="btn-primary">▶️ 開始朗讀</button>
               <button id="stopSpeechBtn" class="btn-outline">⏹️ 停止</button>
+              <button id="resetSpeechBtn" class="btn-outline" title="清除進度，從頭開始">🔄 重置</button>
             </div>
             <div class="speech-progress">
               <div class="speech-progress-bar">
@@ -1371,6 +1451,58 @@
     <input type="file" id="importFileInput" accept=".json" style="display: none;" />
 
     <script>
+      // ==================== 離線模式檢測 ====================
+      const offlineBanner = document.getElementById('offlineBanner');
+      let isOnline = navigator.onLine;
+
+      function updateOnlineStatus() {
+        isOnline = navigator.onLine;
+        
+        if (!isOnline) {
+          offlineBanner.textContent = '📴 目前為離線模式 - 朗讀、閱讀、匯出、匯入功能仍可使用';
+          offlineBanner.classList.remove('online');
+          offlineBanner.classList.add('show');
+          
+          // 禁用需要網路的按鈕
+          if (generateBtn) {
+            generateBtn.disabled = true;
+            generateBtn.title = '離線模式下無法生成故事';
+          }
+          if (continueBtn) {
+            continueBtn.disabled = true;
+            continueBtn.title = '離線模式下無法繼續生成';
+          }
+        } else {
+          offlineBanner.textContent = '✅ 已恢復網路連線';
+          offlineBanner.classList.add('online');
+          offlineBanner.classList.add('show');
+          
+          // 恢復按鈕
+          if (generateBtn) {
+            generateBtn.disabled = false;
+            generateBtn.title = '';
+          }
+          if (continueBtn && latestStory) {
+            continueBtn.disabled = false;
+            continueBtn.title = '';
+          }
+          
+          // 3秒後隱藏提示
+          setTimeout(() => {
+            offlineBanner.classList.remove('show');
+          }, 3000);
+        }
+      }
+
+      // 監聽網路狀態變化
+      window.addEventListener('online', updateOnlineStatus);
+      window.addEventListener('offline', updateOnlineStatus);
+
+      // 初始檢查
+      if (!navigator.onLine) {
+        setTimeout(updateOnlineStatus, 500);
+      }
+
       // ==================== 元素取得 ====================
       const apiKeyInput = document.getElementById('apiKey');
       const modelSelect = document.getElementById('model');
@@ -1422,6 +1554,7 @@
       const emotionMode = document.getElementById('emotionMode');
       const playPauseBtn = document.getElementById('playPauseBtn');
       const stopSpeechBtn = document.getElementById('stopSpeechBtn');
+      const resetSpeechBtn = document.getElementById('resetSpeechBtn');
       const speechProgressFill = document.getElementById('speechProgressFill');
       const speechProgressText = document.getElementById('speechProgressText');
 
@@ -2172,6 +2305,12 @@
 
       // ==================== 生成故事 ====================
       generateBtn.addEventListener('click', async () => {
+        // 檢查離線狀態
+        if (!navigator.onLine) {
+          showStatus('error', '📴 目前為離線模式，無法生成故事。請連接網路後再試。');
+          return;
+        }
+        
         hideStatus();
         resultDiv.textContent = '';
         chapterNavContainer.classList.remove('show');
@@ -2299,6 +2438,12 @@
 
       // ==================== 繼續生成 ====================
       continueBtn.addEventListener('click', async () => {
+        // 檢查離線狀態
+        if (!navigator.onLine) {
+          showStatus('error', '📴 目前為離線模式，無法繼續生成。請連接網路後再試。');
+          return;
+        }
+        
         if (!latestStory) {
           showStatus('error', '尚未有故事可繼續，請先生成');
           return;
@@ -2701,6 +2846,41 @@
       let currentSegmentIndex = 0;
       let availableVoices = [];
 
+      // 儲存朗讀進度
+      function saveSpeechProgress() {
+        try {
+          const progress = {
+            segmentIndex: currentSegmentIndex,
+            rate: speechRate.value,
+            pitch: speechPitch.value,
+            voice: voiceSelect.value,
+            emotion: emotionMode.value,
+            timestamp: Date.now()
+          };
+          localStorage.setItem('speechProgress', JSON.stringify(progress));
+        } catch (e) {
+          console.warn('無法儲存朗讀進度：', e);
+        }
+      }
+
+      // 載入朗讀進度
+      function loadSpeechProgress() {
+        try {
+          const raw = localStorage.getItem('speechProgress');
+          if (!raw) return null;
+          return JSON.parse(raw);
+        } catch (e) {
+          return null;
+        }
+      }
+
+      // 清除朗讀進度
+      function clearSpeechProgress() {
+        try {
+          localStorage.removeItem('speechProgress');
+        } catch (e) {}
+      }
+
       // 載入語音列表
       function loadVoices() {
         availableVoices = speechSynth.getVoices();
@@ -2841,11 +3021,14 @@
         if (index >= speechSegments.length) {
           // 朗讀完成
           stopSpeech();
+          clearSpeechProgress();
           speechProgressText.textContent = '✅ 朗讀完成';
           return;
         }
         
         currentSegmentIndex = index;
+        saveSpeechProgress(); // 儲存當前進度
+        
         const text = speechSegments[index];
         const params = analyzeEmotion(text);
         
@@ -2893,6 +3076,7 @@
           // 暫停
           speechSynth.pause();
           isPaused = true;
+          saveSpeechProgress(); // 暫停時儲存進度
           playPauseBtn.textContent = '▶️ 繼續朗讀';
           speechProgressText.textContent = '⏸️ 已暫停';
         } else if (isPaused) {
@@ -2911,10 +3095,37 @@
             return;
           }
           
+          // 檢查是否有儲存的進度
+          const savedProgress = loadSpeechProgress();
+          let startIndex = 0;
+          
+          if (savedProgress && savedProgress.segmentIndex > 0 && savedProgress.segmentIndex < speechSegments.length) {
+            // 詢問是否從上次位置繼續
+            const resumeFromSaved = confirm(`發現上次朗讀進度（第 ${savedProgress.segmentIndex + 1}/${speechSegments.length} 段）\n\n點擊「確定」從上次位置繼續\n點擊「取消」從頭開始`);
+            
+            if (resumeFromSaved) {
+              startIndex = savedProgress.segmentIndex;
+              // 恢復設定
+              if (savedProgress.rate) speechRate.value = savedProgress.rate;
+              if (savedProgress.pitch) speechPitch.value = savedProgress.pitch;
+              if (savedProgress.emotion) emotionMode.value = savedProgress.emotion;
+              rateValue.textContent = speechRate.value + 'x';
+              pitchValue.textContent = speechPitch.value;
+              // 語音需要在語音列表載入後設定
+              setTimeout(() => {
+                if (savedProgress.voice && availableVoices.find(v => v.name === savedProgress.voice)) {
+                  voiceSelect.value = savedProgress.voice;
+                }
+              }, 100);
+            } else {
+              clearSpeechProgress();
+            }
+          }
+          
           isSpeaking = true;
           isPaused = false;
           playPauseBtn.textContent = '⏸️ 暫停';
-          speakSegment(0);
+          speakSegment(startIndex);
         }
       }
 
@@ -2923,16 +3134,31 @@
         speechSynth.cancel();
         isSpeaking = false;
         isPaused = false;
+        saveSpeechProgress(); // 停止時也儲存進度
         currentSegmentIndex = 0;
         playPauseBtn.textContent = '▶️ 開始朗讀';
         speechProgressFill.style.width = '0%';
         speechProgressText.textContent = '準備就緒';
+      }
+      
+      // 重置朗讀（從頭開始）
+      function resetSpeech() {
+        stopSpeech();
+        clearSpeechProgress();
+        currentSegmentIndex = 0;
+        speechProgressText.textContent = '已重置，準備從頭開始';
       }
 
       // 事件綁定
       speakBtn.addEventListener('click', () => {
         speechPanel.style.display = 'block';
         speechPanel.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        
+        // 檢查是否有儲存的進度，顯示提示
+        const savedProgress = loadSpeechProgress();
+        if (savedProgress && savedProgress.segmentIndex > 0) {
+          speechProgressText.textContent = `📍 上次進度：第 ${savedProgress.segmentIndex + 1} 段`;
+        }
       });
 
       closeSpeechPanel.addEventListener('click', () => {
@@ -2942,6 +3168,7 @@
 
       playPauseBtn.addEventListener('click', toggleSpeech);
       stopSpeechBtn.addEventListener('click', stopSpeech);
+      resetSpeechBtn.addEventListener('click', resetSpeech);
 
       speechRate.addEventListener('input', () => {
         rateValue.textContent = speechRate.value + 'x';
@@ -2951,8 +3178,11 @@
         pitchValue.textContent = speechPitch.value;
       });
 
-      // 頁面離開時停止朗讀
+      // 頁面離開時儲存進度
       window.addEventListener('beforeunload', () => {
+        if (isSpeaking || currentSegmentIndex > 0) {
+          saveSpeechProgress();
+        }
         speechSynth.cancel();
       });
     </script>
