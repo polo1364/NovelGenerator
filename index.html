@@ -2549,7 +2549,9 @@
         // 目錄章節特徵：以數字編號開頭，如 "1." "2." 或有 ** 粗體標記
         
         // 章節模式：第X章、序章、楔子、尾聲、終章、番外等
-        const chapterPattern = /(?:第[一二三四五六七八九十百零\d]+章|序章|楔子|引子|前言|尾聲|終章|番外|後記|epilogue|prologue)[：:]*[^\n]*/i;
+        // 支援：一二三...（小寫）、壹貳參...（大寫）、1234...（阿拉伯數字）
+        const chapterNumPattern = '[一二三四五六七八九十百零壹貳參肆伍陸柒捌玖拾佰\\d]+';
+        const chapterPattern = new RegExp(`(?:第${chapterNumPattern}章|序章|楔子|引子|前言|尾聲|終章|番外|後記|epilogue|prologue)[：:]*[^\\n]*`, 'i');
         
         const lines = text.split('\n');
         
@@ -2557,7 +2559,8 @@
           const line = lines[i];
           
           // 匹配以 ## 或 ### 開頭的章節標題（這是正文章節）
-          const markdownMatch = line.match(/^##[#]?\s*((?:第[一二三四五六七八九十百零\d]+章|序章|楔子|引子|前言|尾聲|終章|番外|後記)[：:].*)$/i);
+          const markdownRegex = new RegExp(`^##[#]?\\s*((?:第${chapterNumPattern}章|序章|楔子|引子|前言|尾聲|終章|番外|後記)[：:].*)$`, 'i');
+          const markdownMatch = line.match(markdownRegex);
           
           if (markdownMatch) {
             // 計算這一行在原文中的位置
@@ -2585,7 +2588,8 @@
             const isAfterBlankLine = prevLine.trim() === '' || prevLine.trim() === '---';
             
             if (!isListItem && isAfterBlankLine) {
-              const match = line.match(/^((?:第[一二三四五六七八九十百零\d]+章|序章|楔子|引子|前言|尾聲|終章|番外|後記)[：:].*)$/i);
+              const standaloneRegex = new RegExp(`^((?:第${chapterNumPattern}章|序章|楔子|引子|前言|尾聲|終章|番外|後記)[：:].*)$`, 'i');
+              const match = line.match(standaloneRegex);
               if (match) {
                 let index = 0;
                 for (let j = 0; j < i; j++) {
@@ -2604,8 +2608,9 @@
         // 去除重複（以章節編號或名稱為準）
         const seenChapters = new Set();
         chapterMatches = chapterMatches.filter(m => {
-          // 提取章節標識（如「第一章」「序章」「楔子」等）
-          const chapterIdMatch = m.title.match(/第[一二三四五六七八九十百零\d]+章|序章|楔子|引子|前言|尾聲|終章|番外|後記/i);
+          // 提取章節標識（如「第一章」「第壹章」「序章」「楔子」等）
+          const chapterIdRegex = new RegExp(`第${chapterNumPattern}章|序章|楔子|引子|前言|尾聲|終章|番外|後記`, 'i');
+          const chapterIdMatch = m.title.match(chapterIdRegex);
           if (chapterIdMatch) {
             const chapterId = chapterIdMatch[0];
             if (!seenChapters.has(chapterId)) {
