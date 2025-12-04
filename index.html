@@ -990,6 +990,155 @@
           width: 100%;
         }
       }
+
+      /* 朗讀控制面板樣式 */
+      .speech-panel {
+        background: linear-gradient(135deg, #fff9f0 0%, #fff 100%);
+        border: 2px solid var(--accent);
+        border-radius: 16px;
+        padding: 20px;
+        margin-top: 20px;
+        box-shadow: 0 8px 32px rgba(233, 69, 96, 0.15);
+      }
+
+      .speech-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 16px;
+        padding-bottom: 12px;
+        border-bottom: 1px solid var(--border);
+      }
+
+      .speech-title {
+        font-size: 1.1rem;
+        font-weight: 600;
+        color: var(--accent);
+      }
+
+      .speech-close {
+        background: none;
+        border: none;
+        font-size: 1.2rem;
+        cursor: pointer;
+        color: #999;
+        padding: 4px 8px;
+        border-radius: 4px;
+        transition: all 0.2s;
+      }
+
+      .speech-close:hover {
+        background: rgba(233, 69, 96, 0.1);
+        color: var(--accent);
+      }
+
+      .speech-controls {
+        display: flex;
+        flex-direction: column;
+        gap: 14px;
+      }
+
+      .speech-row {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+      }
+
+      .speech-row label {
+        min-width: 80px;
+        font-weight: 500;
+        color: var(--text);
+      }
+
+      .speech-row select,
+      .speech-row input[type="range"] {
+        flex: 1;
+      }
+
+      .speech-row input[type="range"] {
+        -webkit-appearance: none;
+        height: 6px;
+        background: linear-gradient(to right, var(--accent), var(--gold));
+        border-radius: 3px;
+        cursor: pointer;
+      }
+
+      .speech-row input[type="range"]::-webkit-slider-thumb {
+        -webkit-appearance: none;
+        width: 18px;
+        height: 18px;
+        background: var(--accent);
+        border-radius: 50%;
+        cursor: pointer;
+        box-shadow: 0 2px 6px rgba(233, 69, 96, 0.3);
+      }
+
+      .speech-row span {
+        min-width: 45px;
+        text-align: right;
+        font-size: 0.9rem;
+        color: #666;
+      }
+
+      .speech-buttons {
+        display: flex;
+        gap: 12px;
+        margin-top: 8px;
+      }
+
+      .speech-buttons button {
+        flex: 1;
+      }
+
+      .speech-progress {
+        margin-top: 12px;
+        padding-top: 12px;
+        border-top: 1px dashed var(--border);
+      }
+
+      .speech-progress-bar {
+        height: 8px;
+        background: #eee;
+        border-radius: 4px;
+        overflow: hidden;
+        margin-bottom: 8px;
+      }
+
+      .speech-progress-fill {
+        height: 100%;
+        background: linear-gradient(90deg, var(--accent), var(--gold));
+        width: 0%;
+        transition: width 0.3s ease;
+        border-radius: 4px;
+      }
+
+      #speechProgressText {
+        font-size: 0.85rem;
+        color: #666;
+      }
+
+      /* 朗讀中的文字高亮 */
+      .speaking-highlight {
+        background: linear-gradient(120deg, rgba(255, 215, 0, 0.3) 0%, rgba(233, 69, 96, 0.2) 100%);
+        border-radius: 4px;
+        padding: 2px 4px;
+        transition: background 0.3s;
+      }
+
+      @media (max-width: 600px) {
+        .speech-row {
+          flex-wrap: wrap;
+        }
+        
+        .speech-row label {
+          min-width: 100%;
+          margin-bottom: 4px;
+        }
+        
+        .speech-buttons {
+          flex-direction: column;
+        }
+      }
     </style>
   </head>
   <body>
@@ -1085,12 +1234,59 @@
           <button id="generateBtn" type="button" class="btn-primary">✨ 開始生成</button>
           <button id="continueBtn" type="button" class="btn-secondary" disabled>➤ 繼續生成</button>
           <button id="downloadBtn" type="button" class="btn-outline" disabled>⬇ 下載小說</button>
+          <button id="speakBtn" type="button" class="btn-outline" disabled>🔊 朗讀文章</button>
         </div>
 
         <!-- 狀態訊息 -->
         <div id="status" class="status">
           <span class="status-icon"></span>
           <span class="status-text"></span>
+        </div>
+
+        <!-- 朗讀控制面板 -->
+        <div id="speechPanel" class="speech-panel" style="display: none;">
+          <div class="speech-header">
+            <span class="speech-title">🎙️ 朗讀控制</span>
+            <button id="closeSpeechPanel" class="speech-close">✕</button>
+          </div>
+          <div class="speech-controls">
+            <div class="speech-row">
+              <label>語音：</label>
+              <select id="voiceSelect"></select>
+            </div>
+            <div class="speech-row">
+              <label>語速：</label>
+              <input type="range" id="speechRate" min="0.5" max="2" step="0.1" value="1" />
+              <span id="rateValue">1.0x</span>
+            </div>
+            <div class="speech-row">
+              <label>音調：</label>
+              <input type="range" id="speechPitch" min="0.5" max="2" step="0.1" value="1" />
+              <span id="pitchValue">1.0</span>
+            </div>
+            <div class="speech-row">
+              <label>情緒模式：</label>
+              <select id="emotionMode">
+                <option value="auto">🎭 自動偵測</option>
+                <option value="narration">📖 平穩敘述</option>
+                <option value="dramatic">🎬 戲劇張力</option>
+                <option value="gentle">🌸 溫柔細膩</option>
+                <option value="excited">⚡ 激昂熱血</option>
+                <option value="sad">💧 悲傷低沉</option>
+                <option value="mysterious">🌙 神秘懸疑</option>
+              </select>
+            </div>
+            <div class="speech-buttons">
+              <button id="playPauseBtn" class="btn-primary">▶️ 開始朗讀</button>
+              <button id="stopSpeechBtn" class="btn-outline">⏹️ 停止</button>
+            </div>
+            <div class="speech-progress">
+              <div class="speech-progress-bar">
+                <div id="speechProgressFill" class="speech-progress-fill"></div>
+              </div>
+              <span id="speechProgressText">準備就緒</span>
+            </div>
+          </div>
         </div>
 
         <!-- 輸出區 -->
@@ -1214,6 +1410,21 @@
       const bookmarkList = document.getElementById('bookmarkList');
       const bookmarkCount = document.getElementById('bookmarkCount');
 
+      // 朗讀元素
+      const speakBtn = document.getElementById('speakBtn');
+      const speechPanel = document.getElementById('speechPanel');
+      const closeSpeechPanel = document.getElementById('closeSpeechPanel');
+      const voiceSelect = document.getElementById('voiceSelect');
+      const speechRate = document.getElementById('speechRate');
+      const speechPitch = document.getElementById('speechPitch');
+      const rateValue = document.getElementById('rateValue');
+      const pitchValue = document.getElementById('pitchValue');
+      const emotionMode = document.getElementById('emotionMode');
+      const playPauseBtn = document.getElementById('playPauseBtn');
+      const stopSpeechBtn = document.getElementById('stopSpeechBtn');
+      const speechProgressFill = document.getElementById('speechProgressFill');
+      const speechProgressText = document.getElementById('speechProgressText');
+
       // 編輯彈窗元素
       const editModal = document.getElementById('editModal');
       const editBookmarkTitle = document.getElementById('editBookmarkTitle');
@@ -1271,6 +1482,7 @@
         resultDiv.textContent = savedStory;
         downloadBtn.disabled = false;
         continueBtn.disabled = false;
+        speakBtn.disabled = false;
         parseAndShowChapters(savedStory);
       }
 
@@ -2073,6 +2285,7 @@
             showStatus('success', '生成完成！');
             downloadBtn.disabled = false;
             continueBtn.disabled = false;
+            speakBtn.disabled = false;
             parseAndShowChapters(latestStory);
           } else {
             showStatus('error', '沒有獲得內容，請調整設定');
@@ -2150,6 +2363,7 @@
               }
               showStatus('success', '續篇完成！');
               downloadBtn.disabled = false;
+              speakBtn.disabled = false;
               parseAndShowChapters(latestStory);
             } else {
               showStatus('error', '沒有獲得續篇內容，可能已完結');
@@ -2335,6 +2549,7 @@
             resultDiv.textContent = latestStory;
             downloadBtn.disabled = !latestStory;
             continueBtn.disabled = !latestStory;
+            speakBtn.disabled = !latestStory;
             try {
               localStorage.setItem('savedStory', latestStory);
             } catch (e) {}
@@ -2475,6 +2690,270 @@
         };
         reader.readAsText(file);
         e.target.value = '';
+      });
+
+      // ==================== 情緒朗讀功能 ====================
+      let speechSynth = window.speechSynthesis;
+      let currentUtterance = null;
+      let isSpeaking = false;
+      let isPaused = false;
+      let speechSegments = [];
+      let currentSegmentIndex = 0;
+      let availableVoices = [];
+
+      // 載入語音列表
+      function loadVoices() {
+        availableVoices = speechSynth.getVoices();
+        voiceSelect.innerHTML = '';
+        
+        // 優先顯示中文語音
+        const zhVoices = availableVoices.filter(v => v.lang.includes('zh') || v.lang.includes('TW') || v.lang.includes('CN'));
+        const otherVoices = availableVoices.filter(v => !v.lang.includes('zh') && !v.lang.includes('TW') && !v.lang.includes('CN'));
+        
+        if (zhVoices.length > 0) {
+          const zhGroup = document.createElement('optgroup');
+          zhGroup.label = '中文語音';
+          zhVoices.forEach((voice, i) => {
+            const option = document.createElement('option');
+            option.value = voice.name;
+            option.textContent = `${voice.name} (${voice.lang})`;
+            if (i === 0) option.selected = true;
+            zhGroup.appendChild(option);
+          });
+          voiceSelect.appendChild(zhGroup);
+        }
+        
+        if (otherVoices.length > 0) {
+          const otherGroup = document.createElement('optgroup');
+          otherGroup.label = '其他語音';
+          otherVoices.slice(0, 10).forEach(voice => {
+            const option = document.createElement('option');
+            option.value = voice.name;
+            option.textContent = `${voice.name} (${voice.lang})`;
+            otherGroup.appendChild(option);
+          });
+          voiceSelect.appendChild(otherGroup);
+        }
+        
+        if (availableVoices.length === 0) {
+          const option = document.createElement('option');
+          option.textContent = '載入中...';
+          voiceSelect.appendChild(option);
+        }
+      }
+
+      // 初始化語音
+      loadVoices();
+      if (speechSynth.onvoiceschanged !== undefined) {
+        speechSynth.onvoiceschanged = loadVoices;
+      }
+
+      // 情緒分析與參數調整
+      function analyzeEmotion(text) {
+        const mode = emotionMode.value;
+        if (mode !== 'auto') {
+          return getEmotionParams(mode);
+        }
+        
+        // 自動偵測情緒
+        const sadKeywords = ['悲傷', '哭泣', '淚水', '死亡', '離別', '痛苦', '絕望', '心碎', '哀傷', '悼念', '嘆息', '憂愁'];
+        const excitedKeywords = ['激動', '興奮', '勝利', '衝刺', '爆發', '熱血', '燃燒', '戰鬥', '吶喊', '奮起', '怒吼', '突破'];
+        const mysteriousKeywords = ['神秘', '陰森', '詭異', '黑暗', '未知', '秘密', '隱藏', '恐怖', '懸疑', '謎團', '幽暗', '詛咒'];
+        const gentleKeywords = ['溫柔', '輕聲', '微笑', '愛情', '甜蜜', '擁抱', '親吻', '溫暖', '呢喃', '柔情', '浪漫', '心動'];
+        const dramaticKeywords = ['震驚', '揭露', '轉折', '意外', '真相', '背叛', '復仇', '命運', '對決', '高潮', '決戰'];
+        
+        let sadScore = sadKeywords.filter(k => text.includes(k)).length;
+        let excitedScore = excitedKeywords.filter(k => text.includes(k)).length;
+        let mysteriousScore = mysteriousKeywords.filter(k => text.includes(k)).length;
+        let gentleScore = gentleKeywords.filter(k => text.includes(k)).length;
+        let dramaticScore = dramaticKeywords.filter(k => text.includes(k)).length;
+        
+        // 檢查標點符號
+        if ((text.match(/！/g) || []).length > 2) excitedScore += 2;
+        if ((text.match(/？/g) || []).length > 2) mysteriousScore += 1;
+        if ((text.match(/⋯|…/g) || []).length > 1) sadScore += 1;
+        
+        const maxScore = Math.max(sadScore, excitedScore, mysteriousScore, gentleScore, dramaticScore);
+        
+        if (maxScore === 0) return getEmotionParams('narration');
+        if (sadScore === maxScore) return getEmotionParams('sad');
+        if (excitedScore === maxScore) return getEmotionParams('excited');
+        if (mysteriousScore === maxScore) return getEmotionParams('mysterious');
+        if (gentleScore === maxScore) return getEmotionParams('gentle');
+        if (dramaticScore === maxScore) return getEmotionParams('dramatic');
+        
+        return getEmotionParams('narration');
+      }
+
+      function getEmotionParams(emotion) {
+        const baseRate = parseFloat(speechRate.value);
+        const basePitch = parseFloat(speechPitch.value);
+        
+        switch (emotion) {
+          case 'sad':
+            return { rate: baseRate * 0.8, pitch: basePitch * 0.85, volume: 0.85, pause: 400 };
+          case 'excited':
+            return { rate: baseRate * 1.15, pitch: basePitch * 1.1, volume: 1.0, pause: 150 };
+          case 'mysterious':
+            return { rate: baseRate * 0.85, pitch: basePitch * 0.9, volume: 0.9, pause: 350 };
+          case 'gentle':
+            return { rate: baseRate * 0.9, pitch: basePitch * 1.05, volume: 0.85, pause: 250 };
+          case 'dramatic':
+            return { rate: baseRate * 1.0, pitch: basePitch * 1.0, volume: 1.0, pause: 300 };
+          case 'narration':
+          default:
+            return { rate: baseRate, pitch: basePitch, volume: 0.95, pause: 200 };
+        }
+      }
+
+      // 分割文字為段落（保持情緒連貫）
+      function splitTextToSegments(text) {
+        // 按段落和句號分割
+        const paragraphs = text.split(/\n\n+/);
+        const segments = [];
+        
+        paragraphs.forEach(para => {
+          if (!para.trim()) return;
+          
+          // 較長段落再細分
+          if (para.length > 200) {
+            const sentences = para.split(/(?<=[。！？])/);
+            let chunk = '';
+            sentences.forEach(s => {
+              if ((chunk + s).length > 150) {
+                if (chunk) segments.push(chunk.trim());
+                chunk = s;
+              } else {
+                chunk += s;
+              }
+            });
+            if (chunk) segments.push(chunk.trim());
+          } else {
+            segments.push(para.trim());
+          }
+        });
+        
+        return segments.filter(s => s.length > 0);
+      }
+
+      // 朗讀單一段落
+      function speakSegment(index) {
+        if (index >= speechSegments.length) {
+          // 朗讀完成
+          stopSpeech();
+          speechProgressText.textContent = '✅ 朗讀完成';
+          return;
+        }
+        
+        currentSegmentIndex = index;
+        const text = speechSegments[index];
+        const params = analyzeEmotion(text);
+        
+        const utterance = new SpeechSynthesisUtterance(text);
+        
+        // 設定語音
+        const selectedVoice = availableVoices.find(v => v.name === voiceSelect.value);
+        if (selectedVoice) utterance.voice = selectedVoice;
+        
+        utterance.rate = params.rate;
+        utterance.pitch = params.pitch;
+        utterance.volume = params.volume;
+        
+        utterance.onend = () => {
+          // 段落間停頓
+          setTimeout(() => {
+            if (isSpeaking && !isPaused) {
+              speakSegment(index + 1);
+            }
+          }, params.pause);
+        };
+        
+        utterance.onerror = (e) => {
+          console.error('朗讀錯誤：', e);
+          if (isSpeaking) speakSegment(index + 1);
+        };
+        
+        // 更新進度
+        const progress = ((index + 1) / speechSegments.length) * 100;
+        speechProgressFill.style.width = progress + '%';
+        speechProgressText.textContent = `正在朗讀 ${index + 1}/${speechSegments.length} 段...`;
+        
+        currentUtterance = utterance;
+        speechSynth.speak(utterance);
+      }
+
+      // 開始/暫停朗讀
+      function toggleSpeech() {
+        if (!latestStory) {
+          showStatus('error', '沒有可朗讀的內容');
+          return;
+        }
+        
+        if (isSpeaking && !isPaused) {
+          // 暫停
+          speechSynth.pause();
+          isPaused = true;
+          playPauseBtn.textContent = '▶️ 繼續朗讀';
+          speechProgressText.textContent = '⏸️ 已暫停';
+        } else if (isPaused) {
+          // 繼續
+          speechSynth.resume();
+          isPaused = false;
+          playPauseBtn.textContent = '⏸️ 暫停';
+          speechProgressText.textContent = `正在朗讀 ${currentSegmentIndex + 1}/${speechSegments.length} 段...`;
+        } else {
+          // 開始新朗讀
+          const text = resultDiv.textContent || latestStory;
+          speechSegments = splitTextToSegments(text);
+          
+          if (speechSegments.length === 0) {
+            showStatus('error', '沒有可朗讀的內容');
+            return;
+          }
+          
+          isSpeaking = true;
+          isPaused = false;
+          playPauseBtn.textContent = '⏸️ 暫停';
+          speakSegment(0);
+        }
+      }
+
+      // 停止朗讀
+      function stopSpeech() {
+        speechSynth.cancel();
+        isSpeaking = false;
+        isPaused = false;
+        currentSegmentIndex = 0;
+        playPauseBtn.textContent = '▶️ 開始朗讀';
+        speechProgressFill.style.width = '0%';
+        speechProgressText.textContent = '準備就緒';
+      }
+
+      // 事件綁定
+      speakBtn.addEventListener('click', () => {
+        speechPanel.style.display = 'block';
+        speechPanel.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      });
+
+      closeSpeechPanel.addEventListener('click', () => {
+        stopSpeech();
+        speechPanel.style.display = 'none';
+      });
+
+      playPauseBtn.addEventListener('click', toggleSpeech);
+      stopSpeechBtn.addEventListener('click', stopSpeech);
+
+      speechRate.addEventListener('input', () => {
+        rateValue.textContent = speechRate.value + 'x';
+      });
+
+      speechPitch.addEventListener('input', () => {
+        pitchValue.textContent = speechPitch.value;
+      });
+
+      // 頁面離開時停止朗讀
+      window.addEventListener('beforeunload', () => {
+        speechSynth.cancel();
       });
     </script>
   </body>
