@@ -1053,6 +1053,81 @@
         color: var(--accent);
       }
 
+      /* 特殊元素多選格子 */
+      .special-elements-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+        gap: 10px;
+        margin-top: 8px;
+      }
+
+      .special-element-item {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        padding: 10px 12px;
+        background: rgba(255, 255, 255, 0.8);
+        border: 2px solid var(--border);
+        border-radius: 10px;
+        cursor: pointer;
+        transition: all 0.2s ease;
+        user-select: none;
+      }
+
+      .special-element-item:hover {
+        border-color: var(--accent);
+        background: rgba(233, 69, 96, 0.05);
+      }
+
+      .special-element-item.selected {
+        border-color: var(--accent);
+        background: linear-gradient(135deg, rgba(233, 69, 96, 0.1), rgba(244, 162, 97, 0.1));
+        box-shadow: 0 2px 8px rgba(233, 69, 96, 0.15);
+      }
+
+      .special-element-item input[type="checkbox"] {
+        display: none;
+      }
+
+      .special-element-item .checkbox-custom {
+        width: 18px;
+        height: 18px;
+        border: 2px solid var(--border);
+        border-radius: 4px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        transition: all 0.2s;
+        flex-shrink: 0;
+      }
+
+      .special-element-item.selected .checkbox-custom {
+        background: var(--accent);
+        border-color: var(--accent);
+      }
+
+      .special-element-item.selected .checkbox-custom::after {
+        content: '✓';
+        color: white;
+        font-size: 12px;
+        font-weight: bold;
+      }
+
+      .special-element-item .element-label {
+        font-size: 0.9rem;
+        color: var(--text);
+      }
+
+      .special-element-item .element-icon {
+        font-size: 1.1rem;
+      }
+
+      @media (max-width: 600px) {
+        .special-elements-grid {
+          grid-template-columns: repeat(2, 1fr);
+        }
+      }
+
       .speech-controls {
         display: flex;
         flex-direction: column;
@@ -1298,6 +1373,65 @@
           </div>
         </div>
 
+        <!-- 進階設定 -->
+        <div class="section">
+          <h2 class="section-title" data-icon="🎛️">進階設定</h2>
+          <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px;">
+            <div class="input-group" style="margin-bottom: 0;">
+              <label for="narrative">敘事視角</label>
+              <select id="narrative">
+                <option value="">請選擇視角</option>
+              </select>
+            </div>
+            <div class="input-group" style="margin-bottom: 0;">
+              <label for="era">時代設定</label>
+              <select id="era">
+                <option value="">請選擇時代</option>
+              </select>
+            </div>
+          </div>
+          <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-top: 16px;">
+            <div class="input-group" style="margin-bottom: 0;">
+              <label for="pacing">故事節奏</label>
+              <select id="pacing">
+                <option value="">請選擇節奏</option>
+              </select>
+            </div>
+            <div class="input-group" style="margin-bottom: 0;">
+              <label for="rating">內容分級</label>
+              <select id="rating">
+                <option value="">請選擇分級</option>
+              </select>
+            </div>
+          </div>
+          <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-top: 16px;">
+            <div class="input-group" style="margin-bottom: 0;">
+              <label for="worldComplexity">世界觀複雜度</label>
+              <select id="worldComplexity">
+                <option value="">請選擇複雜度</option>
+              </select>
+            </div>
+            <div class="input-group" style="margin-bottom: 0;">
+              <label for="emotionalTone">情感基調</label>
+              <select id="emotionalTone">
+                <option value="">請選擇基調</option>
+              </select>
+            </div>
+          </div>
+          <div class="input-group" style="margin-top: 16px;">
+            <label for="ending">結局傾向</label>
+            <select id="ending">
+              <option value="">請選擇結局</option>
+            </select>
+          </div>
+          
+          <!-- 特殊元素多選 -->
+          <div class="input-group" style="margin-top: 16px;">
+            <label>特殊元素（可多選）</label>
+            <div id="specialElementsContainer" class="special-elements-grid"></div>
+          </div>
+        </div>
+
         <!-- 其他說明 -->
         <div class="section">
           <h2 class="section-title" data-icon="✏️">其他說明</h2>
@@ -1523,6 +1657,16 @@
       const randomAllCharactersBtn = document.getElementById('randomAllCharactersBtn');
       const addCharacterBtn = document.getElementById('addCharacterBtn');
 
+      // 進階設定元素
+      const narrativeSelect = document.getElementById('narrative');
+      const eraSelect = document.getElementById('era');
+      const pacingSelect = document.getElementById('pacing');
+      const ratingSelect = document.getElementById('rating');
+      const worldComplexitySelect = document.getElementById('worldComplexity');
+      const emotionalToneSelect = document.getElementById('emotionalTone');
+      const endingSelect = document.getElementById('ending');
+      const specialElementsContainer = document.getElementById('specialElementsContainer');
+
       // 浮動章節導航元素
       const chapterNavContainer = document.getElementById('chapterNavContainer');
       const chapterNavToggle = document.getElementById('chapterNavToggle');
@@ -1691,6 +1835,135 @@
       const weaknessOptions = ['害怕黑暗','遇到壓力就說謊','太容易相信別人','強迫症嚴重','一旦承諾就不肯回頭','畏懼深海','恐高症','容易發怒','過於固執','患有失眠','對魔法過敏','不擅長謊言','心軟','容易焦慮','懼怕孤獨','怕血','記憶衰退','常自我懷疑','體力差','情緒起伏大','恐水','三分鐘熱度','貪吃','愛睡覺','沒自信','容易嫉妒','怕蛇','無法拒絕他人','受到金錢誘惑','懦弱','怕寂寞','怕失敗','眼神不好','迷失自我','容易暈血','過度同情心','情緒不穩','飲食失調','缺乏耐心','怕被拒絕','易感寂寞','時間管理差','容易分心','優柔寡斷','怕寵物','對聲音過敏','會暈車','不會游泳','怕蜘蛛','對金錢著迷','過於誠實','不能保守秘密','健忘','反射神經差','害怕蛙','愛出風頭','情緒化','傲慢自大','懷疑一切','受不起批評','追求完美','過度開朗','得失心重','過於善良','常常遲到','自控力差','容易煩惱','懷舊','過於現實','怕痛','不擅交際','愛拖延','不善理財','怕換環境','低血糖','怕雷','愛哭','怕醫院','無安全感','太在意他人眼光','怕火','怕蟑螂','怕雨','怕被孤立','怕未知','怕黑夜','恐懼高壓','怕失去朋友','過於衝動','易怒','有強迫症','潔癖','過於挑剔','缺乏信心','害怕說謊','金錢迷惑','過度自責','怕黑怕鬼','無法長時間專注','過於敏感','喜歡攀比'];
       const secretOptions = ['其實能聽見魔杖的聲音','曾經施放過禁咒','血統有爭議','與反派有血緣關係','記憶被人動過手腳','身上藏有古老符文','是預言中的孩子','隱藏著第二人格','真正的身份是王族','手握未來的預言','擁有毀滅世界的力量','殺過無辜的人','靈魂被分裂','與神靈簽下契約','體內寄宿龍族血脈','被人控制思想','持有禁書','曾是敵軍間諜','擁有可以逆天改命的能力','已經死亡又復活過','身份是天界使者','出生於敵對國度','持有能控制時間的裝置','曾經是反派手下','其真正目的是復仇','身體中封印著魔神','曾殺死親人','擁有不可告人的戀情','曾在另一時空活過','靈魂被惡靈附身','曾經是王族成員','擁有預知能力','體內封印著神獸','曾與外星人接觸','是雙重間諜','從未出生在這個世界','是失蹤王子/公主','其父母是名偉大的英雄','曾暗中幫助過敵人','體內流著龍的血','曾與惡魔做交易','其實是穿越者','前世是大魔法師','失去了靈魂的一部分','曾經毀掉一個村莊','覺醒了禁忌力量','曾經統治世界','與神秘組織有勾結','擁有死亡回溯的能力','隱藏著第三人格','擁有永生','身體其實是複製品','曾經愛上敵人','是預言之子','其實是另一性別','一部分記憶被封印','曾偷竊神器','內心住著惡魔','曾經犧牲一個城鎮','真實身份是魔王之子','與宿敵是兄弟姐妹','被標記為叛徒','曾在夢中毀滅世界','是天使與人類的混血','曾經是神的使者','背負血海深仇','體內有一把劍','擁有召喚亡靈的能力','是失落文明的繼承者','其實是一個幻影','曾經殺過至親','是反派的父親/母親','隱藏著巨額財富','與龍簽訂契約','曾是名殺手','擁有穿梭夢境的能力','身體裡有另一個靈魂','曾經背叛整個國家','是對手的愛人','其實早已死去','持有通往另一世界的門','被預言將帶來毀滅','曾是敵軍的領袖','曾經拯救世界卻沒人知道','是未來自己','被改造過','曾經是機器人','隱藏著一個孩子','曾在時間漩渦迷失','其實是邪神的孩子','曾與妖精簽約','過去是強大巫師','靈魂被詛咒','與祖先對話','某部分身體不是自己的','其實是克隆人','有未來的記憶','預知自己死亡','曾經被神選中','體內封印著魔王','過去是天宮守衛','曾經是星際海盜'];
       const relationOptions = ['與父親關係疏離','與舊情人有未了結','與另一位角色有誓約','曾背叛過最好的朋友','欠了黑幫巨債','對導師又敬又恨','視敵為兄弟','秘密愛慕夥伴','被家族逐出','與宿敵互相尊重','欠下不可還清的救命恩情','與同伴競爭','誓死保護弟弟','曾救過反派','暗中合作又互相利用','關係複雜的親戚','與政府存在牽連','被流放後結識旅伴','與古老神祇有契約','隱瞞了前世的牽絆','與前任情人再度重逢','與宿敵曾是兄弟','暗戀同性朋友','被家族視為異類','與某位神祇簽訂契約','是另一人物的失散親人','對敵人充滿惻隱','與某生物有共生關係','與歷史人物有血緣','為了家族而犧牲個人幸福','曾是情敵','相愛相殺','是相互扶持的旅行夥伴','是一見鐘情','幼時玩伴','前世夫妻','互為師徒','因恩怨結緣','宿敵卻互相理解','上司與下屬','患難之交','情同手足','生死之交','重生後的敵人','生命互相依存','命運的牽絆','養父與養子','雙胞胎','一方是另外一方的影子','靈魂鏈接','契約關係','曾經救過對方一命','互為對方的拯救','衝突不斷的夥伴','青梅竹馬','不打不相識','互相欣賞','半路兄妹','義氣相挺','因誤會而敵對','雇主與傭兵','雙方有婚約','原先同門，後分道揚鑣','神與信徒','投機合作','彼此利用','朋友兼競爭對手','暗中守護','因權力爭鬥相識','破鏡重圓','雙方是遠房親戚','相互傾慕','前世死敵','互為鏡像','輪迴中的羈絆','遺志的繼承者與傳承者','徒弟與師兄','生死敵對','代替對方完成使命','被迫成為同伴','一方欠另一方人情','彼此心有愧疚','共同的敵人','最好的朋友','走失後相遇','祖孫跨越時空相遇','同為研究伙伴','競爭愛慕對象','無血緣卻像家人','常常吵架卻默契十足','未婚夫妻','互相牽制','相互承諾一起冒險','親子關係','被預言會互相殘殺','同時愛上第三者','曾互救生命','星際旅伴','同為失落族人','異族戀人','並肩作戰','結拜兄弟','重逢於旅途','天作之合','自由與責任的牽絆'];
+
+      // ==================== 進階設定資料 ====================
+      // 敘事視角
+      const narrativeOptions = [
+        { value: '第一人稱', label: '第一人稱 - 「我走進房間...」' },
+        { value: '第三人稱限知', label: '第三人稱限知 - 跟隨主角視角' },
+        { value: '第三人稱全知', label: '第三人稱全知 - 上帝視角' },
+        { value: '多視角切換', label: '多視角切換 - 每章不同角色' },
+        { value: '第二人稱', label: '第二人稱 - 「你走進房間...」' },
+        { value: '書信體', label: '書信體 - 以書信/日記呈現' },
+        { value: '回憶錄', label: '回憶錄 - 主角回顧往事' },
+        { value: '旁白敘述', label: '旁白敘述 - 故事外的講述者' }
+      ];
+
+      // 時代設定
+      const eraOptions = [
+        { value: '遠古神話時代', label: '🏛️ 遠古/神話時代' },
+        { value: '先秦時代', label: '⚔️ 先秦時代（春秋戰國）' },
+        { value: '秦漢時代', label: '🏯 秦漢時代' },
+        { value: '魏晉南北朝', label: '🎭 魏晉南北朝' },
+        { value: '隋唐時代', label: '🌸 隋唐盛世' },
+        { value: '宋元時代', label: '📜 宋元時代' },
+        { value: '明清時代', label: '🏮 明清時代' },
+        { value: '民國時代', label: '🎩 民國時代（1912-1949）' },
+        { value: '二戰時期', label: '💣 二戰時期' },
+        { value: '冷戰時期', label: '🕵️ 冷戰時期（1950-1990）' },
+        { value: '現代', label: '🏙️ 現代（當代社會）' },
+        { value: '近未來', label: '🔮 近未來（2050-2100）' },
+        { value: '遠未來', label: '🚀 遠未來（星際時代）' },
+        { value: '末日後', label: '☢️ 末日後世界' },
+        { value: '架空歷史', label: '🌀 架空歷史' },
+        { value: '平行時空', label: '🔄 平行時空' },
+        { value: '時間穿越', label: '⏳ 跨越多個時代' },
+        { value: '西方中世紀', label: '🏰 西方中世紀' },
+        { value: '維多利亞時代', label: '👒 維多利亞時代' },
+        { value: '工業革命', label: '⚙️ 工業革命時期' }
+      ];
+
+      // 故事節奏
+      const pacingOptions = [
+        { value: '慢熱鋪陳', label: '🐢 慢熱鋪陳 - 細膩描寫，慢慢展開' },
+        { value: '標準節奏', label: '⚖️ 標準節奏 - 平衡敘述與動作' },
+        { value: '快節奏', label: '🏃 快節奏 - 緊湊刺激，事件密集' },
+        { value: '爽文節奏', label: '⚡ 爽文節奏 - 高潮迭起，打臉不斷' },
+        { value: '懸疑節奏', label: '🔍 懸疑節奏 - 層層剝繭，真相漸露' },
+        { value: '文藝節奏', label: '🎭 文藝節奏 - 重視內心，淡化情節' },
+        { value: '史詩節奏', label: '📖 史詩節奏 - 宏大敘事，時間跨度長' },
+        { value: '日常節奏', label: '☕ 日常節奏 - 生活瑣事，治癒舒適' }
+      ];
+
+      // 內容分級
+      const ratingOptions = [
+        { value: '全年齡', label: '👶 全年齡 - 適合所有人閱讀' },
+        { value: '輕度', label: '🔹 輕度 - 可有輕微暴力/曖昧' },
+        { value: '成人向', label: '🔸 成人向 - 較激烈的戰鬥/情感描寫' },
+        { value: '純愛向', label: '💕 純愛向 - 感情為主，清水無虐' },
+        { value: '暗黑向', label: '🖤 暗黑向 - 黑暗劇情，道德灰色' }
+      ];
+
+      // 世界觀複雜度
+      const worldComplexityOptions = [
+        { value: '簡單', label: '🔘 簡單 - 單一場景/勢力，易於理解' },
+        { value: '中等', label: '🔵 中等 - 2-3個陣營/國家' },
+        { value: '複雜', label: '🔴 複雜 - 多國/多勢力/詳細設定' },
+        { value: '史詩級', label: '🌟 史詩級 - 龐大世界觀，多線並進' },
+        { value: '極簡', label: '⚪ 極簡 - 背景模糊，聚焦角色' }
+      ];
+
+      // 情感基調
+      const emotionalToneOptions = [
+        { value: '歡樂輕鬆', label: '😄 歡樂輕鬆 - HE向，搞笑日常' },
+        { value: '溫馨治癒', label: '🌸 溫馨治癒 - 暖心故事' },
+        { value: '虐心糾結', label: '💔 虐心糾結 - 情感拉扯' },
+        { value: '黑暗沉重', label: '🖤 黑暗沉重 - BE向，悲劇' },
+        { value: '熱血燃向', label: '🔥 熱血燃向 - 戰鬥/競技/成長' },
+        { value: '懸疑緊張', label: '😰 懸疑緊張 - 令人屏息' },
+        { value: '浪漫甜蜜', label: '💗 浪漫甜蜜 - 戀愛為主' },
+        { value: '史詩壯闘', label: '⚔️ 史詩壯闘 - 宏大英雄敘事' },
+        { value: '諷刺幽默', label: '😏 諷刺幽默 - 黑色喜劇' },
+        { value: '哲理深沉', label: '🤔 哲理深沉 - 探討人生意義' },
+        { value: '詭異驚悚', label: '👻 詭異驚悚 - 恐怖氛圍' },
+        { value: '青春活力', label: '🌈 青春活力 - 校園/成長' }
+      ];
+
+      // 結局傾向
+      const endingOptions = [
+        { value: 'HE', label: '😊 HE（Happy End）- 圓滿結局' },
+        { value: 'BE', label: '😢 BE（Bad End）- 悲劇結局' },
+        { value: 'OE', label: '🤔 OE（Open End）- 開放式結局' },
+        { value: '逆轉結局', label: '😱 逆轉結局 - 最後大反轉' },
+        { value: 'TE', label: '✨ TE（True End）- 真結局/隱藏結局' },
+        { value: '半開放', label: '🌅 半開放 - 主線完結，留有餘韻' },
+        { value: '輪迴結局', label: '🔄 輪迴結局 - 首尾呼應/重新開始' },
+        { value: '多結局', label: '🔀 多結局暗示 - 可能走向不同分支' }
+      ];
+
+      // 特殊元素
+      const specialElements = [
+        { id: 'system', icon: '📊', label: '系統/面板' },
+        { id: 'transmigration', icon: '🔄', label: '穿越/重生' },
+        { id: 'goldenFinger', icon: '✨', label: '金手指/外掛' },
+        { id: 'harem', icon: '👥', label: '後宮/逆後宮' },
+        { id: 'invincible', icon: '💪', label: '無敵流' },
+        { id: 'farming', icon: '🌾', label: '種田/經營' },
+        { id: 'food', icon: '🍜', label: '美食描寫' },
+        { id: 'pet', icon: '🐾', label: '寵物/靈獸' },
+        { id: 'faction', icon: '⚔️', label: '陣營對立' },
+        { id: 'competition', icon: '🏆', label: '比賽/競技' },
+        { id: 'revenge', icon: '🗡️', label: '復仇主線' },
+        { id: 'puzzle', icon: '🧩', label: '解謎/探險' },
+        { id: 'romance', icon: '💕', label: '戀愛線' },
+        { id: 'mystery', icon: '🔮', label: '神秘力量' },
+        { id: 'kingdom', icon: '👑', label: '王國建設' },
+        { id: 'upgrade', icon: '📈', label: '升級打怪' },
+        { id: 'dungeon', icon: '🏰', label: '副本/迷宮' },
+        { id: 'survival', icon: '🏕️', label: '生存挑戰' },
+        { id: 'conspiracy', icon: '🕸️', label: '陰謀論' },
+        { id: 'family', icon: '👨‍👩‍👧', label: '家族興衰' },
+        { id: 'school', icon: '🏫', label: '學院/門派' },
+        { id: 'military', icon: '🎖️', label: '軍事戰爭' },
+        { id: 'politics', icon: '🏛️', label: '權謀政治' },
+        { id: 'technology', icon: '🤖', label: '科技元素' },
+        { id: 'magic', icon: '🪄', label: '魔法體系' },
+        { id: 'martial', icon: '🥋', label: '武功修煉' },
+        { id: 'trade', icon: '💰', label: '商戰經商' },
+        { id: 'heist', icon: '🎭', label: '盜賊/詐騙' },
+        { id: 'apocalypse', icon: '☠️', label: '末日危機' },
+        { id: 'timeLoop', icon: '⏰', label: '時間輪迴' }
+      ];
 
       function pickRandom(arr) {
         return arr[Math.floor(Math.random() * arr.length)];
@@ -1911,6 +2184,12 @@
       // ==================== 本地儲存設定 ====================
       function saveSettingsToLocal() {
         try {
+          // 收集已選擇的特殊元素
+          const selectedElements = [];
+          specialElementsContainer.querySelectorAll('.special-element-item.selected').forEach(item => {
+            selectedElements.push(item.dataset.id);
+          });
+
           const settings = {
             theme: themeSelect.value,
             setting: settingSelect.value,
@@ -1918,6 +2197,15 @@
             chapters: chaptersInput.value,
             length: lengthInput.value,
             notes: notesInput.value,
+            // 進階設定
+            narrative: narrativeSelect.value,
+            era: eraSelect.value,
+            pacing: pacingSelect.value,
+            rating: ratingSelect.value,
+            worldComplexity: worldComplexitySelect.value,
+            emotionalTone: emotionalToneSelect.value,
+            ending: endingSelect.value,
+            specialElements: selectedElements,
             characters: []
           };
           
@@ -1955,6 +2243,28 @@
           if (settings.chapters) { chaptersInput.value = settings.chapters; hasData = true; }
           if (settings.length) { lengthInput.value = settings.length; hasData = true; }
           if (settings.notes) { notesInput.value = settings.notes; hasData = true; }
+
+          // 載入進階設定
+          if (settings.narrative) { narrativeSelect.value = settings.narrative; hasData = true; }
+          if (settings.era) { eraSelect.value = settings.era; hasData = true; }
+          if (settings.pacing) { pacingSelect.value = settings.pacing; hasData = true; }
+          if (settings.rating) { ratingSelect.value = settings.rating; hasData = true; }
+          if (settings.worldComplexity) { worldComplexitySelect.value = settings.worldComplexity; hasData = true; }
+          if (settings.emotionalTone) { emotionalToneSelect.value = settings.emotionalTone; hasData = true; }
+          if (settings.ending) { endingSelect.value = settings.ending; hasData = true; }
+
+          // 載入特殊元素
+          if (settings.specialElements && settings.specialElements.length > 0) {
+            settings.specialElements.forEach(id => {
+              const item = specialElementsContainer.querySelector(`[data-id="${id}"]`);
+              if (item) {
+                item.classList.add('selected');
+                const checkbox = item.querySelector('input[type="checkbox"]');
+                if (checkbox) checkbox.checked = true;
+              }
+            });
+            hasData = true;
+          }
           
           // 載入人物設定
           if (settings.characters && settings.characters.length > 0) {
@@ -1987,7 +2297,8 @@
       }
       
       // 監聽基本設定的變更
-      [themeSelect, settingSelect, styleSelect, chaptersInput, lengthInput, notesInput].forEach(el => {
+      [themeSelect, settingSelect, styleSelect, chaptersInput, lengthInput, notesInput,
+       narrativeSelect, eraSelect, pacingSelect, ratingSelect, worldComplexitySelect, emotionalToneSelect, endingSelect].forEach(el => {
         el.addEventListener('change', saveSettingsToLocal);
         el.addEventListener('input', debounce(saveSettingsToLocal, 500));
       });
@@ -2016,6 +2327,82 @@
           option.value = style;
           option.textContent = style;
           styleSelect.appendChild(option);
+        });
+
+        // 敘事視角選項
+        narrativeOptions.forEach(item => {
+          const option = document.createElement('option');
+          option.value = item.value;
+          option.textContent = item.label;
+          narrativeSelect.appendChild(option);
+        });
+
+        // 時代設定選項
+        eraOptions.forEach(item => {
+          const option = document.createElement('option');
+          option.value = item.value;
+          option.textContent = item.label;
+          eraSelect.appendChild(option);
+        });
+
+        // 故事節奏選項
+        pacingOptions.forEach(item => {
+          const option = document.createElement('option');
+          option.value = item.value;
+          option.textContent = item.label;
+          pacingSelect.appendChild(option);
+        });
+
+        // 內容分級選項
+        ratingOptions.forEach(item => {
+          const option = document.createElement('option');
+          option.value = item.value;
+          option.textContent = item.label;
+          ratingSelect.appendChild(option);
+        });
+
+        // 世界觀複雜度選項
+        worldComplexityOptions.forEach(item => {
+          const option = document.createElement('option');
+          option.value = item.value;
+          option.textContent = item.label;
+          worldComplexitySelect.appendChild(option);
+        });
+
+        // 情感基調選項
+        emotionalToneOptions.forEach(item => {
+          const option = document.createElement('option');
+          option.value = item.value;
+          option.textContent = item.label;
+          emotionalToneSelect.appendChild(option);
+        });
+
+        // 結局傾向選項
+        endingOptions.forEach(item => {
+          const option = document.createElement('option');
+          option.value = item.value;
+          option.textContent = item.label;
+          endingSelect.appendChild(option);
+        });
+
+        // 特殊元素多選
+        specialElements.forEach(item => {
+          const div = document.createElement('div');
+          div.className = 'special-element-item';
+          div.dataset.id = item.id;
+          div.innerHTML = `
+            <input type="checkbox" id="element-${item.id}" />
+            <span class="checkbox-custom"></span>
+            <span class="element-icon">${item.icon}</span>
+            <span class="element-label">${item.label}</span>
+          `;
+          div.addEventListener('click', () => {
+            div.classList.toggle('selected');
+            const checkbox = div.querySelector('input[type="checkbox"]');
+            checkbox.checked = !checkbox.checked;
+            saveSettingsToLocal();
+          });
+          specialElementsContainer.appendChild(div);
         });
       }
 
@@ -2052,6 +2439,32 @@
         styleSelect.value = pickRandom(stylesArr);
         chaptersInput.value = pickRandom(chapterOpts);
         lengthInput.value = pickRandom(lengthOpts);
+        
+        // 進階設定隨機
+        narrativeSelect.value = pickRandom(narrativeOptions).value;
+        eraSelect.value = pickRandom(eraOptions).value;
+        pacingSelect.value = pickRandom(pacingOptions).value;
+        ratingSelect.value = pickRandom(ratingOptions).value;
+        worldComplexitySelect.value = pickRandom(worldComplexityOptions).value;
+        emotionalToneSelect.value = pickRandom(emotionalToneOptions).value;
+        endingSelect.value = pickRandom(endingOptions).value;
+        
+        // 隨機選擇 2-5 個特殊元素
+        const allItems = specialElementsContainer.querySelectorAll('.special-element-item');
+        allItems.forEach(item => {
+          item.classList.remove('selected');
+          const checkbox = item.querySelector('input[type="checkbox"]');
+          if (checkbox) checkbox.checked = false;
+        });
+        
+        const shuffled = Array.from(allItems).sort(() => Math.random() - 0.5);
+        const numToSelect = Math.floor(Math.random() * 4) + 2; // 2-5 個
+        shuffled.slice(0, numToSelect).forEach(item => {
+          item.classList.add('selected');
+          const checkbox = item.querySelector('input[type="checkbox"]');
+          if (checkbox) checkbox.checked = true;
+        });
+        
         randomizeAllCharacters();
         saveSettingsToLocal();
       });
@@ -2353,6 +2766,22 @@
         const length = lengthInput.value.trim();
         const notes = notesInput.value.trim();
 
+        // 進階設定
+        const narrative = narrativeSelect.value.trim();
+        const era = eraSelect.value.trim();
+        const pacing = pacingSelect.value.trim();
+        const rating = ratingSelect.value.trim();
+        const worldComplexity = worldComplexitySelect.value.trim();
+        const emotionalTone = emotionalToneSelect.value.trim();
+        const ending = endingSelect.value.trim();
+        
+        // 收集特殊元素
+        const selectedElements = [];
+        specialElementsContainer.querySelectorAll('.special-element-item.selected').forEach(item => {
+          const label = item.querySelector('.element-label').textContent;
+          selectedElements.push(label);
+        });
+
         if (!apiKey) {
           showStatus('error', '請輸入 API 金鑰');
           return;
@@ -2361,8 +2790,16 @@
         let prompt = '';
         if (theme) prompt += `主題：${theme}。`;
         if (setting) prompt += `背景設定：${setting}。`;
+        if (era) prompt += `時代背景：${era}。`;
         if (charactersInfo) prompt += `${charactersInfo}`;
         if (style) prompt += `故事風格：${style}。`;
+        if (narrative) prompt += `敘事視角：${narrative}。`;
+        if (pacing) prompt += `故事節奏：${pacing}。`;
+        if (emotionalTone) prompt += `情感基調：${emotionalTone}。`;
+        if (worldComplexity) prompt += `世界觀複雜度：${worldComplexity}。`;
+        if (rating) prompt += `內容分級：${rating}。`;
+        if (ending) prompt += `結局傾向：${ending}。`;
+        if (selectedElements.length > 0) prompt += `特殊元素：${selectedElements.join('、')}。`;
         if (chapters) prompt += `故事分為 ${chapters} 章節。`;
         if (length) prompt += `總篇幅約 ${length} 字。`;
         if (notes) prompt += `其他說明：${notes}。`;
@@ -2384,6 +2821,8 @@
 5. 故事要有起承轉合，情節完整
 6. 禁止出現「故事大綱」「章節列表」「故事簡介」「人物設定」等規劃性內容
 7. 禁止使用條列式說明，要用敘事文體
+8. 嚴格遵守指定的敘事視角、故事節奏、情感基調
+9. 確保特殊元素自然融入故事中
 
 現在開始撰寫小說正文：`;
 
