@@ -3822,6 +3822,97 @@
       });
       
       // 下載選項點擊事件
+      // 優化 TXT 格式，讓手機閱讀更舒適
+      function optimizeTxtForMobile(text) {
+        const MAX_LINE_WIDTH = 25; // 每行最大字數（適合手機螢幕）
+        
+        let result = '';
+        const paragraphs = text.split(/\n/);
+        
+        for (let i = 0; i < paragraphs.length; i++) {
+          const para = paragraphs[i];
+          const trimmed = para.trim();
+          
+          // 空行保留
+          if (trimmed === '') {
+            result += '\n';
+            continue;
+          }
+          
+          // 檢測是否為標題行（## 或 ### 開頭，或「第X章」等）
+          const isTitle = /^#{1,3}\s/.test(trimmed) || 
+                          /^第[一二三四五六七八九十百千萬零壹貳參肆伍陸柒捌玖拾佰仟\d]+[章節回卷部集篇]/.test(trimmed) ||
+                          /^[序楔終尾番外]/.test(trimmed) ||
+                          /^[-—=]{3,}$/.test(trimmed);
+          
+          if (isTitle) {
+            // 標題：移除 markdown 符號，前後加空行
+            let titleText = trimmed.replace(/^#{1,3}\s*/, '');
+            
+            // 加入分隔線裝飾
+            if (/^第[一二三四五六七八九十百千萬零壹貳參肆伍陸柒捌玖拾佰仟\d]+[章節回卷部集篇]/.test(titleText) ||
+                /^[序楔終尾番外]/.test(titleText)) {
+              result += '\n';
+              result += '═'.repeat(20) + '\n';
+              result += '\n';
+              result += '　　' + titleText + '\n';
+              result += '\n';
+              result += '═'.repeat(20) + '\n';
+            } else {
+              // 主標題
+              result += '\n';
+              result += '★ ' + titleText + ' ★\n';
+            }
+            result += '\n';
+            continue;
+          }
+          
+          // 普通段落：自動換行
+          // 先處理首行縮排
+          let content = trimmed;
+          let lines = [];
+          let currentLine = '　　'; // 首行縮排（兩個全形空格）
+          
+          for (let j = 0; j < content.length; j++) {
+            const char = content[j];
+            currentLine += char;
+            
+            // 檢查是否需要換行
+            // 計算實際寬度（中文字算1，英文字母/數字算0.5）
+            const lineWidth = [...currentLine].reduce((sum, c) => {
+              return sum + (/[\u4e00-\u9fff\u3000-\u303f\uff00-\uffef]/.test(c) ? 1 : 0.5);
+            }, 0);
+            
+            if (lineWidth >= MAX_LINE_WIDTH) {
+              // 嘗試在標點符號處斷行
+              const lastPunctuationIndex = currentLine.search(/[，。！？；：、」』）】…—～\s][^，。！？；：、」』）】…—～\s]*$/);
+              
+              if (lastPunctuationIndex > currentLine.length * 0.5) {
+                // 在標點後斷行
+                lines.push(currentLine.substring(0, lastPunctuationIndex + 1));
+                currentLine = currentLine.substring(lastPunctuationIndex + 1);
+              } else {
+                // 直接斷行
+                lines.push(currentLine);
+                currentLine = '';
+              }
+            }
+          }
+          
+          // 加入最後一行
+          if (currentLine) {
+            lines.push(currentLine);
+          }
+          
+          result += lines.join('\n') + '\n\n';
+        }
+        
+        // 清理多餘空行（超過2個連續空行變成2個）
+        result = result.replace(/\n{4,}/g, '\n\n\n');
+        
+        return result.trim();
+      }
+
       downloadMenu.querySelectorAll('button').forEach(btn => {
         btn.addEventListener('click', (e) => {
           e.stopPropagation();
@@ -3830,9 +3921,10 @@
           const format = btn.dataset.format;
           
           if (format === 'txt') {
-            // 下載 TXT 純文字
+            // 下載優化後的 TXT
+            const optimizedTxt = optimizeTxtForMobile(latestStory);
             const filename = generateFilename('txt');
-            downloadFile(filename, latestStory, 'text/plain');
+            downloadFile(filename, optimizedTxt, 'text/plain');
             showStatus('success', `📄 已下載 ${filename}`);
           } else if (format === 'html') {
             // 下載 HTML 手機閱讀版
