@@ -1032,52 +1032,12 @@
             <label for="theme">主題</label>
             <select id="theme">
               <option value="">請選擇主題</option>
-              <option value="奇幻冒險">奇幻冒險</option>
-              <option value="未來科幻">未來科幻</option>
-              <option value="浪漫愛情">浪漫愛情</option>
-              <option value="懸疑推理">懸疑推理</option>
-              <option value="歷史傳奇">歷史傳奇</option>
-              <option value="青春成長">青春成長</option>
-              <option value="冒險史詩">冒險史詩</option>
-              <option value="玄幻修真">玄幻修真</option>
-              <option value="現代都市">現代都市</option>
-              <option value="魔法學院">魔法學院</option>
-              <option value="恐怖驚悚">恐怖驚悚</option>
-              <option value="喜劇逗趣">喜劇逗趣</option>
-              <option value="現實主義">現實主義</option>
-              <option value="懷舊故事">懷舊故事</option>
-              <option value="神秘奇案">神秘奇案</option>
-              <option value="動物寓言">動物寓言</option>
-              <option value="社會批判">社會批判</option>
-              <option value="魔幻現實">魔幻現實</option>
-              <option value="古裝武俠">古裝武俠</option>
-              <option value="時空穿越">時空穿越</option>
             </select>
           </div>
           <div class="input-group">
             <label for="setting">背景設定</label>
             <select id="setting">
               <option value="">請選擇背景</option>
-              <option value="虛構的中世紀王國">虛構的中世紀王國</option>
-              <option value="21世紀的臺灣都市">21世紀的臺灣都市</option>
-              <option value="遙遠的太空殖民地">遙遠的太空殖民地</option>
-              <option value="虛擬實境世界">虛擬實境世界</option>
-              <option value="古代皇宮">古代皇宮</option>
-              <option value="末日後的荒土">末日後的荒土</option>
-              <option value="近未來的高科技城市">近未來的高科技城市</option>
-              <option value="魔法學院">魔法學院</option>
-              <option value="蒸汽龐克城市">蒸汽龐克城市</option>
-              <option value="深海王國">深海王國</option>
-              <option value="繁華的銀河商場">繁華的銀河商場</option>
-              <option value="隱藏於雲端的城堡">隱藏於雲端的城堡</option>
-              <option value="古老的山林村落">古老的山林村落</option>
-              <option value="雪山上的修道院">雪山上的修道院</option>
-              <option value="熱帶雨林深處">熱帶雨林深處</option>
-              <option value="巨型迷宮都市">巨型迷宮都市</option>
-              <option value="殖民海盜船">殖民海盜船</option>
-              <option value="宇宙戰艦上">宇宙戰艦上</option>
-              <option value="明朝宮廷">明朝宮廷</option>
-              <option value="平行宇宙">平行宇宙</option>
             </select>
           </div>
           <div class="input-group">
@@ -1094,26 +1054,6 @@
             <label for="style">故事風格</label>
             <select id="style">
               <option value="">請選擇風格</option>
-              <option value="詩意">詩意</option>
-              <option value="幽默">幽默</option>
-              <option value="黑暗">黑暗</option>
-              <option value="勵志">勵志</option>
-              <option value="浪漫">浪漫</option>
-              <option value="刺激">刺激</option>
-              <option value="溫馨">溫馨</option>
-              <option value="懸疑">懸疑</option>
-              <option value="熱血">熱血</option>
-              <option value="魔幻">魔幻</option>
-              <option value="古典華麗">古典華麗</option>
-              <option value="荒誕">荒誕</option>
-              <option value="現實主義">現實主義</option>
-              <option value="輕鬆寫意">輕鬆寫意</option>
-              <option value="酷炫科技">酷炫科技</option>
-              <option value="優雅浪漫">優雅浪漫</option>
-              <option value="大河戲劇">大河戲劇</option>
-              <option value="黑色幽默">黑色幽默</option>
-              <option value="心理驚悚">心理驚悚</option>
-              <option value="流行網絡">流行網絡</option>
             </select>
           </div>
           <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px;">
@@ -1333,9 +1273,62 @@
       }
 
       // ==================== 隨機資料庫 ====================
-      const themes = ['奇幻冒險','未來科幻','浪漫愛情','懸疑推理','歷史傳奇','青春成長','冒險史詩','玄幻修真','現代都市','魔法學院','恐怖驚悚','喜劇逗趣','現實主義','懷舊故事','神秘奇案','動物寓言','社會批判','魔幻現實','古裝武俠','時空穿越'];
-      const settings = ['虛構的中世紀王國','21世紀的臺灣都市','遙遠的太空殖民地','虛擬實境世界','古代皇宮','末日後的荒土','近未來的高科技城市','魔法學院','蒸汽龐克城市','深海王國','繁華的銀河商場','隱藏於雲端的城堡','古老的山林村落','雪山上的修道院','熱帶雨林深處','巨型迷宮都市','殖民海盜船','宇宙戰艦上','明朝宮廷','平行宇宙'];
-      const stylesArr = ['詩意','幽默','黑暗','勵志','浪漫','刺激','溫馨','懸疑','熱血','魔幻','古典華麗','荒誕','現實主義','輕鬆寫意','酷炫科技','優雅浪漫','大河戲劇','黑色幽默','心理驚悚','流行網絡'];
+      const themes = [
+        // 奇幻類
+        '奇幻冒險','史詩奇幻','黑暗奇幻','都市奇幻','童話改編','神話傳說','精靈與矮人','龍與魔法','異世界轉生','勇者與魔王',
+        // 科幻類
+        '未來科幻','太空歌劇','賽博龐克','後啟示錄','人工智慧','時間旅行','外星文明','基因改造','虛擬實境','機甲戰爭',
+        // 愛情類
+        '浪漫愛情','禁忌之戀','青梅竹馬','辦公室戀情','豪門恩怨','跨越時空的愛','異族之戀','虐戀情深','甜蜜日常','婚後生活',
+        // 懸疑推理類
+        '懸疑推理','密室殺人','連環殺手','法庭攻防','警匪對決','間諜諜戰','犯罪心理','冷案重啟','復仇計畫','完美犯罪',
+        // 歷史類
+        '歷史傳奇','宮廷鬥爭','戰國風雲','三國演義','民國風華','古代商戰','江湖恩怨','帝王將相','亂世英雄','歷史穿越',
+        // 恐怖驚悚類
+        '恐怖驚悚','心理恐怖','靈異鬼怪','克蘇魯神話','都市怪談','詛咒傳說','鬼屋探險','末日生存','喪屍危機','邪教儀式',
+        // 武俠仙俠類
+        '古裝武俠','仙俠修真','玄幻修真','江湖俠客','門派爭鬥','劍與情仇','飛升成仙','妖魔鬼怪','道法自然','武林至尊',
+        // 現代類
+        '現代都市','職場風雲','娛樂圈','體育競技','電競熱血','創業奮鬥','校園青春','家庭倫理','社會寫實','網紅生活',
+        // 其他類型
+        '軍事戰爭','海洋冒險','西部拓荒','北歐維京','探險尋寶','動物視角','美食料理','醫療職人','法律正義','音樂夢想',
+        // 特殊題材
+        '末世廢土','異能覺醒','系統流','無限流','副本遊戲','直播求生','規則怪談','詭異遊戲','靈氣復甦','諸天萬界'
+      ];
+      
+      const settingsData = [
+        // 奇幻世界
+        '虛構的中世紀王國','精靈族的森林國度','矮人的地底城市','龍族盤據的火山島','魔法師的浮空塔','被詛咒的黑暗森林','神聖的光明神殿','亡靈橫行的荒原','海妖出沒的神秘海域','隱藏在迷霧中的仙境',
+        // 科幻世界
+        '21世紀的臺灣都市','遙遠的太空殖民地','虛擬實境世界','近未來的高科技城市','繁華的銀河商場','宇宙戰艦上','火星殖民基地','海底都市亞特蘭提斯','賽博龐克的霓虹都市','人工智慧統治的城市',
+        // 歷史場景
+        '古代皇宮','明朝宮廷','唐朝長安城','宋代繁華汴京','戰國時代的城堡','三國時期的戰場','清朝紫禁城','民國時期的上海灘','古羅馬競技場','埃及法老王宮',
+        // 現代場景
+        '繁華的現代大都會','寧靜的鄉村小鎮','神秘的私立學校','頂級的跨國企業','熱鬧的夜市街道','高級的百貨商場','陰暗的地下黑市','豪華的度假勝地','忙碌的醫院','嚴肅的法院',
+        // 特殊場景
+        '末日後的荒土','魔法學院','蒸汽龐克城市','深海王國','隱藏於雲端的城堡','古老的山林村落','雪山上的修道院','熱帶雨林深處','巨型迷宮都市','殖民海盜船',
+        // 異世界
+        '平行宇宙','異次元空間','夢境世界','靈界與冥府','天界與仙境','地獄深淵','時間裂縫之中','量子疊加的世界','遊戲副本空間','諸神的領域',
+        // 日常場景
+        '溫馨的咖啡廳','老舊的書店','神秘的古董店','熱鬧的遊樂園','安靜的圖書館','混亂的演唱會現場','緊張的考試現場','浪漫的海邊','壯麗的山頂','寧靜的寺廟',
+        // 特殊環境
+        '與世隔絕的孤島','永夜的極地','沙漠中的綠洲','漂浮在空中的島嶼','地下深處的洞穴','活火山口','冰封的古城','被遺忘的古文明遺跡','異形蟲巢','機械星球'
+      ];
+      
+      const stylesArr = [
+        // 情感基調
+        '詩意','幽默','黑暗','勵志','浪漫','溫馨','悲傷','熱血','冷酷','溫柔',
+        // 敘事風格
+        '懸疑','刺激','輕鬆','緊張','史詩','細膩','粗獷','華麗','簡約','寫實',
+        // 文學風格
+        '古典華麗','荒誕','現實主義','魔幻現實','意識流','黑色幽默','諷刺','批判','哲理','抒情',
+        // 氛圍風格
+        '心理驚悚','陰鬱壓抑','明亮歡快','神秘詭異','莊嚴肅穆','俏皮可愛','成熟穩重','青春活力','蒼涼悲壯','夢幻迷離',
+        // 節奏風格
+        '快節奏','慢熱','跌宕起伏','平鋪直敘','倒敘插敘','多線並進','單線深入','群像描寫','第一人稱','全知視角',
+        // 特色風格
+        '輕小說風','網文爽文','文藝清新','硬核寫實','軟科幻','硬科幻','新武俠','古言','現言','甜寵'
+      ];
       const chapterOpts = [5, 8, 10, 12, 15];
       const lengthOpts = [30000, 50000, 70000, 90000];
 
@@ -1627,9 +1620,39 @@
         el.addEventListener('change', saveSettingsToLocal);
         el.addEventListener('input', debounce(saveSettingsToLocal, 500));
       });
+      
+      // 動態生成下拉選單選項
+      function populateSelectOptions() {
+        // 主題選項
+        themes.forEach(theme => {
+          const option = document.createElement('option');
+          option.value = theme;
+          option.textContent = theme;
+          themeSelect.appendChild(option);
+        });
+        
+        // 背景設定選項
+        settingsData.forEach(setting => {
+          const option = document.createElement('option');
+          option.value = setting;
+          option.textContent = setting;
+          settingSelect.appendChild(option);
+        });
+        
+        // 風格選項
+        stylesArr.forEach(style => {
+          const option = document.createElement('option');
+          option.value = style;
+          option.textContent = style;
+          styleSelect.appendChild(option);
+        });
+      }
 
       // 初始化：載入設定或建立預設人物
       (function initSettings() {
+        // 先生成下拉選單選項
+        populateSelectOptions();
+        
         // 嘗試載入已儲存的設定
         const hasSettings = loadSettingsFromLocal();
         
@@ -1654,7 +1677,7 @@
 
       randomBtn.addEventListener('click', () => {
         themeSelect.value = pickRandom(themes);
-        settingSelect.value = pickRandom(settings);
+        settingSelect.value = pickRandom(settingsData);
         styleSelect.value = pickRandom(stylesArr);
         chaptersInput.value = pickRandom(chapterOpts);
         lengthInput.value = pickRandom(lengthOpts);
