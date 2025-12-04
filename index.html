@@ -331,7 +331,7 @@
       /* 人物設定區 */
       .character-row {
         display: grid;
-        grid-template-columns: 70px 75px repeat(6, 1fr) auto;
+        grid-template-columns: 70px 75px repeat(6, 1fr) auto auto;
         gap: 10px;
         margin-bottom: 14px;
         align-items: center;
@@ -367,10 +367,21 @@
         padding: 10px 14px;
         white-space: nowrap;
       }
+      
+      .char-remove-btn {
+        color: #999;
+        border-color: #ddd;
+      }
+      
+      .char-remove-btn:hover {
+        color: #e94560;
+        border-color: #e94560;
+        background: rgba(233, 69, 96, 0.1);
+      }
 
       @media (max-width: 1100px) {
         .character-row {
-          grid-template-columns: 70px 75px 1fr 1fr 1fr;
+          grid-template-columns: 70px 75px 1fr 1fr 1fr auto auto;
         }
         .character-row .char-weakness,
         .character-row .char-secret,
@@ -389,11 +400,17 @@
         .character-row .char-gender {
           width: 100%;
         }
+        .char-random-btn, .char-remove-btn {
+          justify-self: end;
+        }
       }
 
       @media (max-width: 500px) {
         .character-row {
           grid-template-columns: 1fr;
+        }
+        .character-row button {
+          width: 100%;
         }
       }
 
@@ -1343,6 +1360,7 @@
       function addCharacterRow(randomize = false) {
         const row = document.createElement('div');
         row.className = 'character-row';
+        updateCharacterIndices();
         const index = charactersContainer.children.length + 1;
         row.innerHTML = `
           <div class="char-index">人物 ${index}</div>
@@ -1358,9 +1376,31 @@
           <input type="text" class="char-secret" placeholder="秘密" />
           <input type="text" class="char-relation" placeholder="人際" />
           <button type="button" class="char-random-btn btn-outline btn-small">🎲</button>
+          <button type="button" class="char-remove-btn btn-outline btn-small" title="移除此人物">✕</button>
         `;
         const randBtn = row.querySelector('.char-random-btn');
-        randBtn.addEventListener('click', () => randomizeRow(row, false));
+        randBtn.addEventListener('click', () => {
+          randomizeRow(row, false);
+          saveSettingsToLocal();
+        });
+        
+        const removeBtn = row.querySelector('.char-remove-btn');
+        removeBtn.addEventListener('click', () => {
+          if (charactersContainer.children.length > 1) {
+            row.remove();
+            updateCharacterIndices();
+            saveSettingsToLocal();
+          } else {
+            alert('至少需要保留一位人物！');
+          }
+        });
+        
+        // 監聽輸入變更以自動儲存
+        row.querySelectorAll('input, select').forEach(el => {
+          el.addEventListener('change', saveSettingsToLocal);
+          el.addEventListener('input', debounce(saveSettingsToLocal, 500));
+        });
+        
         charactersContainer.appendChild(row);
         if (randomize) {
           // 新增人物時，先收集已有的名字避免重複
@@ -1373,6 +1413,23 @@
           });
           randomizeRow(row, false);
         }
+      }
+      
+      // 更新人物編號
+      function updateCharacterIndices() {
+        Array.from(charactersContainer.children).forEach((row, idx) => {
+          const indexEl = row.querySelector('.char-index');
+          if (indexEl) indexEl.textContent = `人物 ${idx + 1}`;
+        });
+      }
+      
+      // 防抖函數
+      function debounce(func, wait) {
+        let timeout;
+        return function(...args) {
+          clearTimeout(timeout);
+          timeout = setTimeout(() => func.apply(this, args), wait);
+        };
       }
 
       // 智能隨機選擇：避免重複（人名絕對不重複，其他盡量不重複）
@@ -1489,17 +1546,105 @@
         });
       }
 
+      // ==================== 本地儲存設定 ====================
+      function saveSettingsToLocal() {
+        try {
+          const settings = {
+            theme: themeSelect.value,
+            setting: settingSelect.value,
+            style: styleSelect.value,
+            chapters: chaptersInput.value,
+            length: lengthInput.value,
+            notes: notesInput.value,
+            characters: []
+          };
+          
+          Array.from(charactersContainer.children).forEach(row => {
+            settings.characters.push({
+              gender: row.querySelector('.char-gender').value,
+              name: row.querySelector('.char-name').value,
+              personality: row.querySelector('.char-personality').value,
+              goal: row.querySelector('.char-goal').value,
+              weakness: row.querySelector('.char-weakness').value,
+              secret: row.querySelector('.char-secret').value,
+              relation: row.querySelector('.char-relation').value
+            });
+          });
+          
+          localStorage.setItem('novelGeneratorSettings', JSON.stringify(settings));
+        } catch (e) {
+          console.warn('無法儲存設定：', e);
+        }
+      }
+      
+      function loadSettingsFromLocal() {
+        try {
+          const raw = localStorage.getItem('novelGeneratorSettings');
+          if (!raw) return false;
+          
+          const settings = JSON.parse(raw);
+          
+          // 載入基本設定
+          if (settings.theme) themeSelect.value = settings.theme;
+          if (settings.setting) settingSelect.value = settings.setting;
+          if (settings.style) styleSelect.value = settings.style;
+          if (settings.chapters) chaptersInput.value = settings.chapters;
+          if (settings.length) lengthInput.value = settings.length;
+          if (settings.notes) notesInput.value = settings.notes;
+          
+          // 載入人物設定
+          if (settings.characters && settings.characters.length > 0) {
+            // 清空現有人物
+            charactersContainer.innerHTML = '';
+            
+            settings.characters.forEach(char => {
+              addCharacterRow(false); // 不隨機
+              const row = charactersContainer.lastElementChild;
+              row.querySelector('.char-gender').value = char.gender || '不明';
+              row.querySelector('.char-name').value = char.name || '';
+              row.querySelector('.char-personality').value = char.personality || '';
+              row.querySelector('.char-goal').value = char.goal || '';
+              row.querySelector('.char-weakness').value = char.weakness || '';
+              row.querySelector('.char-secret').value = char.secret || '';
+              row.querySelector('.char-relation').value = char.relation || '';
+            });
+            return true;
+          }
+          return false;
+        } catch (e) {
+          console.warn('無法載入設定：', e);
+          return false;
+        }
+      }
+      
+      // 監聽基本設定的變更
+      [themeSelect, settingSelect, styleSelect, chaptersInput, lengthInput, notesInput].forEach(el => {
+        el.addEventListener('change', saveSettingsToLocal);
+        el.addEventListener('input', debounce(saveSettingsToLocal, 500));
+      });
+
       document.addEventListener('DOMContentLoaded', () => {
-        addCharacterRow(true);
-        addCharacterRow(true);
+        // 嘗試載入已儲存的設定
+        const hasSettings = loadSettingsFromLocal();
+        
+        // 如果沒有已儲存的設定，才建立預設人物
+        if (!hasSettings) {
+          addCharacterRow(true);
+          addCharacterRow(true);
+        }
+        
         renderBookmarks();
       });
 
       randomAllCharactersBtn.addEventListener('click', () => {
         randomizeAllCharacters();
+        saveSettingsToLocal();
       });
 
-      addCharacterBtn.addEventListener('click', () => addCharacterRow(true));
+      addCharacterBtn.addEventListener('click', () => {
+        addCharacterRow(true);
+        saveSettingsToLocal();
+      });
 
       randomBtn.addEventListener('click', () => {
         themeSelect.value = pickRandom(themes);
@@ -1508,6 +1653,7 @@
         chaptersInput.value = pickRandom(chapterOpts);
         lengthInput.value = pickRandom(lengthOpts);
         randomizeAllCharacters();
+        saveSettingsToLocal();
       });
 
       // ==================== 智能浮動章節導航 ====================
@@ -1818,7 +1964,20 @@
           return;
         }
         
-        prompt += '請以繁體中文撰寫長篇小說，結構完整，有起承轉合；若有指定章節，請標明章節標題。';
+        prompt += `
+
+【重要指示】請直接撰寫小說「正文內容」，不要只寫大綱、規劃、故事簡介或章節列表。
+
+要求：
+1. 直接開始寫故事正文，包含場景描寫、人物對話、心理活動、情節發展
+2. 每個章節都要有完整的故事內容（至少2000-3000字），不是簡短的摘要
+3. 章節標題格式：### 第X章：標題（或 ### 序章：標題）
+4. 使用繁體中文撰寫
+5. 故事要有起承轉合，情節完整
+6. 禁止出現「故事大綱」「章節列表」「故事簡介」「人物設定」等規劃性內容
+7. 禁止使用條列式說明，要用敘事文體
+
+現在開始撰寫小說正文：`;
 
         showStatus('loading', '故事生成中，請稍候...');
         generateBtn.disabled = true;
@@ -1883,7 +2042,20 @@
           return;
         }
 
-        const continuePrompt = latestStory + '\n\n請保持以上故事的主題、背景、人物與風格，繼續撰寫後續章節或故事內容，直到此章節結束或故事完結。';
+        const continuePrompt = latestStory + `
+
+【重要指示】請繼續撰寫小說「正文內容」。
+
+要求：
+1. 保持以上故事的主題、背景、人物與風格
+2. 直接繼續寫故事正文，包含場景描寫、人物對話、心理活動、情節發展
+3. 每個章節都要有完整的故事內容（至少2000-3000字）
+4. 如果上一章尚未結束，請先完成該章節
+5. 章節標題格式：### 第X章：標題
+6. 禁止出現大綱、規劃、故事簡介等內容
+7. 禁止使用條列式說明，要用敘事文體
+
+繼續撰寫小說正文：`;
         
         showStatus('loading', '續篇生成中...');
         continueBtn.disabled = true;
