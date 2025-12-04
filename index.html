@@ -331,7 +331,7 @@
       /* 人物設定區 */
       .character-row {
         display: grid;
-        grid-template-columns: 70px 75px repeat(6, 1fr) auto auto;
+        grid-template-columns: 70px 75px 75px repeat(6, 1fr) auto auto;
         gap: 10px;
         margin-bottom: 14px;
         align-items: center;
@@ -359,7 +359,8 @@
         font-size: 0.9rem;
       }
 
-      .character-row .char-gender {
+      .character-row .char-gender,
+      .character-row .char-age {
         padding: 10px 8px;
       }
 
@@ -379,9 +380,9 @@
         background: rgba(233, 69, 96, 0.1);
       }
 
-      @media (max-width: 1100px) {
+      @media (max-width: 1200px) {
         .character-row {
-          grid-template-columns: 70px 75px 1fr 1fr 1fr auto auto;
+          grid-template-columns: 70px 75px 75px 1fr 1fr 1fr auto auto;
         }
         .character-row .char-weakness,
         .character-row .char-secret,
@@ -397,7 +398,8 @@
         .char-index {
           grid-column: 1 / -1;
         }
-        .character-row .char-gender {
+        .character-row .char-gender,
+        .character-row .char-age {
           width: 100%;
         }
         .char-random-btn, .char-remove-btn {
@@ -1362,6 +1364,7 @@
             <option value="女">女</option>
             <option value="不明">不明</option>
           </select>
+          <input type="number" class="char-age" placeholder="年齡" min="1" max="9999" style="flex: 0 0 70px; min-width: 70px;" />
           <input type="text" class="char-name" placeholder="姓名" />
           <input type="text" class="char-personality" placeholder="個性" />
           <input type="text" class="char-goal" placeholder="目標" />
@@ -1521,6 +1524,27 @@
         row.querySelector('.char-weakness').value = pickRandomUnique(weaknessOptions, usedWeaknesses, true);
         row.querySelector('.char-secret').value = pickRandomUnique(secretOptions, usedSecrets, true);
         row.querySelector('.char-relation').value = pickRandomUnique(relationOptions, usedRelations, true);
+        
+        // 年齡隨機（根據故事類型可能有不同範圍，這裡用通用範圍）
+        const ageRanges = [
+          { min: 6, max: 12, weight: 1 },    // 兒童
+          { min: 13, max: 17, weight: 2 },   // 青少年
+          { min: 18, max: 25, weight: 4 },   // 青年
+          { min: 26, max: 35, weight: 3 },   // 壯年
+          { min: 36, max: 50, weight: 2 },   // 中年
+          { min: 51, max: 70, weight: 1 },   // 老年
+        ];
+        const totalWeight = ageRanges.reduce((sum, r) => sum + r.weight, 0);
+        let rand = Math.random() * totalWeight;
+        let selectedRange = ageRanges[0];
+        for (const range of ageRanges) {
+          rand -= range.weight;
+          if (rand <= 0) {
+            selectedRange = range;
+            break;
+          }
+        }
+        row.querySelector('.char-age').value = Math.floor(Math.random() * (selectedRange.max - selectedRange.min + 1)) + selectedRange.min;
       }
 
       // 全部人物隨機化
@@ -1555,6 +1579,7 @@
           Array.from(charactersContainer.children).forEach(row => {
             settings.characters.push({
               gender: row.querySelector('.char-gender').value,
+              age: row.querySelector('.char-age').value,
               name: row.querySelector('.char-name').value,
               personality: row.querySelector('.char-personality').value,
               goal: row.querySelector('.char-goal').value,
@@ -1596,6 +1621,7 @@
               const row = charactersContainer.lastElementChild;
               if (row) {
                 row.querySelector('.char-gender').value = char.gender || '不明';
+                row.querySelector('.char-age').value = char.age || '';
                 row.querySelector('.char-name').value = char.name || '';
                 row.querySelector('.char-personality').value = char.personality || '';
                 row.querySelector('.char-goal').value = char.goal || '';
@@ -1953,6 +1979,7 @@
         characterRows.forEach((row, idx) => {
           const fields = [];
           const gender = row.querySelector('.char-gender').value;
+          const age = row.querySelector('.char-age').value.trim();
           const name = row.querySelector('.char-name').value.trim();
           const personality = row.querySelector('.char-personality').value.trim();
           const goal = row.querySelector('.char-goal').value.trim();
@@ -1961,6 +1988,7 @@
           const relation = row.querySelector('.char-relation').value.trim();
           if (name) fields.push(name);
           if (gender && gender !== '不明') fields.push(`性別：${gender}`);
+          if (age) fields.push(`年齡：${age}歲`);
           if (personality) fields.push(`個性：${personality}`);
           if (goal) fields.push(`目標：${goal}`);
           if (weakness) fields.push(`弱點：${weakness}`);
