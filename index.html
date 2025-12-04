@@ -349,6 +349,71 @@
         margin-top: 10px;
       }
 
+      /* 下載下拉選單 */
+      .download-dropdown {
+        position: relative;
+        display: inline-block;
+      }
+      
+      .download-menu {
+        display: none;
+        position: absolute;
+        top: 100%;
+        left: 0;
+        margin-top: 6px;
+        background: white;
+        border: 1px solid var(--border);
+        border-radius: 12px;
+        box-shadow: 0 8px 24px rgba(0, 0, 0, 0.15);
+        z-index: 100;
+        min-width: 200px;
+        overflow: hidden;
+        animation: dropdownFade 0.2s ease;
+      }
+      
+      @keyframes dropdownFade {
+        from {
+          opacity: 0;
+          transform: translateY(-8px);
+        }
+        to {
+          opacity: 1;
+          transform: translateY(0);
+        }
+      }
+      
+      .download-dropdown.open .download-menu {
+        display: block;
+      }
+      
+      .download-menu button {
+        display: block;
+        width: 100%;
+        padding: 14px 18px;
+        background: none;
+        border: none;
+        text-align: left;
+        font-size: 0.95rem;
+        color: var(--text);
+        cursor: pointer;
+        transition: all 0.2s ease;
+        font-family: inherit;
+      }
+      
+      .download-menu button:hover {
+        background: linear-gradient(135deg, rgba(233, 69, 96, 0.08), rgba(244, 162, 97, 0.08));
+        color: var(--accent);
+      }
+      
+      .download-menu button:first-child {
+        border-bottom: 1px solid var(--border);
+      }
+      
+      .download-menu button:disabled {
+        opacity: 0.5;
+        cursor: not-allowed;
+      }
+
       /* 人物設定區 */
       .character-row {
         display: grid;
@@ -1463,7 +1528,16 @@
           <button id="randomBtn" type="button" class="btn-gold">🎲 隨機填充</button>
           <button id="generateBtn" type="button" class="btn-primary">✨ 開始生成</button>
           <button id="continueBtn" type="button" class="btn-secondary" disabled>➤ 繼續生成</button>
-          <button id="downloadBtn" type="button" class="btn-outline" disabled>⬇ 下載小說</button>
+          
+          <!-- 下載選單 -->
+          <div class="download-dropdown">
+            <button id="downloadBtn" type="button" class="btn-outline" disabled>⬇ 下載小說 ▾</button>
+            <div class="download-menu" id="downloadMenu">
+              <button type="button" data-format="txt">📄 TXT 純文字檔</button>
+              <button type="button" data-format="html">📱 HTML 手機閱讀版</button>
+            </div>
+          </div>
+          
           <button id="speakBtn" type="button" class="btn-outline" disabled>🔊 朗讀文章</button>
         </div>
 
@@ -3148,16 +3222,16 @@
       });
 
       // ==================== 下載功能 ====================
-      function downloadFile(filename, text) {
+      function downloadFile(filename, text, mimeType = 'text/plain') {
         const link = document.createElement('a');
-        link.setAttribute('href', 'data:text/plain;charset=utf-8,' + encodeURIComponent(text));
+        link.setAttribute('href', `data:${mimeType};charset=utf-8,` + encodeURIComponent(text));
         link.setAttribute('download', filename);
         document.body.appendChild(link);
         link.click();
         document.body.removeChild(link);
       }
 
-      function generateFilename() {
+      function generateFilename(extension = 'txt') {
         // 取得主題
         const theme = themeSelect.value || '';
         
@@ -3200,13 +3274,576 @@
         // 移除不適合檔名的字元
         filename = filename.replace(/[\\/:*?"<>|]/g, '_');
         
-        return filename + '.txt';
+        return filename + '.' + extension;
       }
 
-      downloadBtn.addEventListener('click', () => {
-        if (!latestStory) return;
-        const filename = generateFilename();
-        downloadFile(filename, latestStory);
+      // 生成手機閱讀版 HTML（完全離線可用）
+      function generateMobileHTML(text) {
+        // 提取標題
+        let title = '小說閱讀';
+        const titleMatch = text.match(/##\s*([^\n#]+)/);
+        if (titleMatch) {
+          title = titleMatch[1].trim();
+        }
+        
+        // 處理文字內容
+        // 1. 將 ### 標題轉為 HTML 標籤
+        // 2. 將段落轉為 <p> 標籤
+        // 3. 保留空行作為段落分隔
+        
+        let processedContent = text
+          // 章節標題 (### 第X章：標題)
+          .replace(/^###\s*(.+)$/gm, '<h2 class="chapter-title">$1</h2>')
+          // 主標題 (## 標題)
+          .replace(/^##\s*(.+)$/gm, '<h1 class="main-title">$1</h1>')
+          // 分隔線
+          .replace(/^[-—]{3,}$/gm, '<hr class="divider">')
+          // 粗體
+          .replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>')
+          // 斜體
+          .replace(/\*(.+?)\*/g, '<em>$1</em>');
+        
+        // 將連續文字轉為段落
+        const lines = processedContent.split('\n');
+        let htmlContent = '';
+        let currentParagraph = '';
+        
+        for (const line of lines) {
+          const trimmed = line.trim();
+          
+          if (trimmed === '') {
+            // 空行：結束當前段落
+            if (currentParagraph) {
+              htmlContent += `<p>${currentParagraph}</p>\n`;
+              currentParagraph = '';
+            }
+          } else if (trimmed.startsWith('<h1') || trimmed.startsWith('<h2') || trimmed.startsWith('<hr')) {
+            // 已處理的 HTML 標籤：先結束當前段落，再添加標籤
+            if (currentParagraph) {
+              htmlContent += `<p>${currentParagraph}</p>\n`;
+              currentParagraph = '';
+            }
+            htmlContent += trimmed + '\n';
+          } else {
+            // 普通文字：累加到當前段落
+            currentParagraph += (currentParagraph ? '' : '') + trimmed;
+          }
+        }
+        
+        // 處理最後一個段落
+        if (currentParagraph) {
+          htmlContent += `<p>${currentParagraph}</p>\n`;
+        }
+        
+        // 計算字數
+        const wordCount = text.replace(/[\\s\\n#*_\\-]/g, '').length;
+        const wordCountDisplay = wordCount >= 10000 
+          ? (wordCount / 10000).toFixed(1) + ' 萬字'
+          : wordCount >= 1000 
+            ? (wordCount / 1000).toFixed(1) + ' 千字'
+            : wordCount + ' 字';
+        
+        // 生成完整的離線 HTML
+        return `<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=3.0, user-scalable=yes">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="default">
+  <meta name="theme-color" content="#faf8f5">
+  <title>${title}</title>
+  <style>
+    /* ===== 基礎重置 ===== */
+    * {
+      box-sizing: border-box;
+      -webkit-tap-highlight-color: transparent;
+    }
+    
+    /* ===== CSS 變數（支援深色模式）===== */
+    :root {
+      --bg: #faf8f5;
+      --bg-card: #ffffff;
+      --text: #2c2c2c;
+      --text-light: #666666;
+      --accent: #d4a574;
+      --border: #e8e4e0;
+      --shadow: rgba(0, 0, 0, 0.06);
+    }
+    
+    @media (prefers-color-scheme: dark) {
+      :root {
+        --bg: #1a1a1a;
+        --bg-card: #242424;
+        --text: #e8e4e0;
+        --text-light: #999999;
+        --accent: #d4a574;
+        --border: #333333;
+        --shadow: rgba(0, 0, 0, 0.3);
+      }
+    }
+    
+    /* ===== 主體樣式 ===== */
+    html {
+      scroll-behavior: smooth;
+    }
+    
+    body {
+      margin: 0;
+      padding: 0;
+      background: var(--bg);
+      color: var(--text);
+      font-family: 
+        "Noto Serif TC", 
+        "Source Han Serif TC", 
+        "PingFang TC", 
+        "Microsoft JhengHei", 
+        "微軟正黑體",
+        "Apple LiGothic",
+        serif;
+      font-size: 18px;
+      line-height: 1.9;
+      -webkit-font-smoothing: antialiased;
+      -moz-osx-font-smoothing: grayscale;
+    }
+    
+    /* ===== 頂部資訊欄 ===== */
+    .header {
+      position: sticky;
+      top: 0;
+      background: var(--bg-card);
+      border-bottom: 1px solid var(--border);
+      padding: 12px 20px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      z-index: 100;
+      box-shadow: 0 2px 8px var(--shadow);
+    }
+    
+    .header-title {
+      font-size: 14px;
+      color: var(--text-light);
+      margin: 0;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      max-width: 60%;
+    }
+    
+    .header-info {
+      font-size: 12px;
+      color: var(--text-light);
+    }
+    
+    /* ===== 控制面板 ===== */
+    .controls {
+      position: fixed;
+      bottom: 20px;
+      right: 20px;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      z-index: 100;
+    }
+    
+    .control-btn {
+      width: 48px;
+      height: 48px;
+      border-radius: 50%;
+      border: none;
+      background: var(--bg-card);
+      color: var(--text);
+      font-size: 20px;
+      cursor: pointer;
+      box-shadow: 0 4px 12px var(--shadow);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: transform 0.2s, box-shadow 0.2s;
+    }
+    
+    .control-btn:active {
+      transform: scale(0.95);
+    }
+    
+    /* ===== 設定面板 ===== */
+    .settings-panel {
+      display: none;
+      position: fixed;
+      bottom: 80px;
+      right: 20px;
+      background: var(--bg-card);
+      border-radius: 16px;
+      padding: 20px;
+      box-shadow: 0 8px 32px var(--shadow);
+      z-index: 101;
+      min-width: 200px;
+    }
+    
+    .settings-panel.show {
+      display: block;
+      animation: slideUp 0.3s ease;
+    }
+    
+    @keyframes slideUp {
+      from {
+        opacity: 0;
+        transform: translateY(20px);
+      }
+      to {
+        opacity: 1;
+        transform: translateY(0);
+      }
+    }
+    
+    .setting-item {
+      margin-bottom: 16px;
+    }
+    
+    .setting-item:last-child {
+      margin-bottom: 0;
+    }
+    
+    .setting-label {
+      display: block;
+      font-size: 13px;
+      color: var(--text-light);
+      margin-bottom: 8px;
+    }
+    
+    .setting-buttons {
+      display: flex;
+      gap: 8px;
+    }
+    
+    .setting-btn {
+      flex: 1;
+      padding: 10px 12px;
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      background: var(--bg);
+      color: var(--text);
+      font-size: 14px;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+    
+    .setting-btn.active {
+      background: var(--accent);
+      color: white;
+      border-color: var(--accent);
+    }
+    
+    /* ===== 內容區域 ===== */
+    .content {
+      max-width: 700px;
+      margin: 0 auto;
+      padding: 30px 24px 100px;
+    }
+    
+    /* ===== 標題樣式 ===== */
+    .main-title {
+      font-size: 1.6em;
+      font-weight: 700;
+      text-align: center;
+      margin: 0 0 30px 0;
+      padding-bottom: 20px;
+      border-bottom: 2px solid var(--accent);
+      color: var(--text);
+      line-height: 1.4;
+    }
+    
+    .chapter-title {
+      font-size: 1.25em;
+      font-weight: 600;
+      margin: 50px 0 25px 0;
+      padding: 15px 0;
+      color: var(--text);
+      border-left: 4px solid var(--accent);
+      padding-left: 16px;
+      background: linear-gradient(90deg, var(--bg-card), transparent);
+    }
+    
+    /* ===== 段落樣式 ===== */
+    p {
+      margin: 0 0 1.5em 0;
+      text-align: justify;
+      text-indent: 2em;
+      word-wrap: break-word;
+      overflow-wrap: break-word;
+    }
+    
+    /* ===== 分隔線 ===== */
+    .divider {
+      border: none;
+      height: 1px;
+      background: linear-gradient(90deg, transparent, var(--border), transparent);
+      margin: 40px 0;
+    }
+    
+    /* ===== 強調樣式 ===== */
+    strong {
+      color: var(--accent);
+      font-weight: 600;
+    }
+    
+    em {
+      font-style: italic;
+      color: var(--text-light);
+    }
+    
+    /* ===== 回到頂部按鈕 ===== */
+    .back-to-top {
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity 0.3s;
+    }
+    
+    .back-to-top.show {
+      opacity: 1;
+      pointer-events: auto;
+    }
+    
+    /* ===== 字體大小變化 ===== */
+    body.font-small {
+      font-size: 16px;
+    }
+    
+    body.font-medium {
+      font-size: 18px;
+    }
+    
+    body.font-large {
+      font-size: 21px;
+    }
+    
+    body.font-xlarge {
+      font-size: 24px;
+    }
+    
+    /* ===== 行距變化 ===== */
+    body.line-compact {
+      line-height: 1.6;
+    }
+    
+    body.line-normal {
+      line-height: 1.9;
+    }
+    
+    body.line-loose {
+      line-height: 2.2;
+    }
+    
+    /* ===== 響應式調整 ===== */
+    @media (max-width: 480px) {
+      body {
+        font-size: 17px;
+      }
+      
+      .content {
+        padding: 20px 18px 100px;
+      }
+      
+      .main-title {
+        font-size: 1.4em;
+      }
+      
+      .chapter-title {
+        font-size: 1.15em;
+      }
+    }
+    
+    /* ===== 閱讀進度條 ===== */
+    .progress-bar {
+      position: fixed;
+      top: 0;
+      left: 0;
+      height: 3px;
+      background: var(--accent);
+      width: 0%;
+      z-index: 1000;
+      transition: width 0.1s;
+    }
+  </style>
+</head>
+<body class="font-medium line-normal">
+  <!-- 閱讀進度條 -->
+  <div class="progress-bar" id="progressBar"></div>
+  
+  <!-- 頂部資訊欄 -->
+  <header class="header">
+    <h1 class="header-title">${title}</h1>
+    <span class="header-info">${wordCountDisplay}</span>
+  </header>
+  
+  <!-- 主要內容 -->
+  <main class="content">
+    ${htmlContent}
+  </main>
+  
+  <!-- 控制按鈕 -->
+  <div class="controls">
+    <button class="control-btn back-to-top" id="backToTop" title="回到頂部">↑</button>
+    <button class="control-btn" id="settingsBtn" title="閱讀設定">⚙</button>
+  </div>
+  
+  <!-- 設定面板 -->
+  <div class="settings-panel" id="settingsPanel">
+    <div class="setting-item">
+      <span class="setting-label">字體大小</span>
+      <div class="setting-buttons">
+        <button class="setting-btn" data-font="small">小</button>
+        <button class="setting-btn active" data-font="medium">中</button>
+        <button class="setting-btn" data-font="large">大</button>
+        <button class="setting-btn" data-font="xlarge">特大</button>
+      </div>
+    </div>
+    <div class="setting-item">
+      <span class="setting-label">行距</span>
+      <div class="setting-buttons">
+        <button class="setting-btn" data-line="compact">緊湊</button>
+        <button class="setting-btn active" data-line="normal">標準</button>
+        <button class="setting-btn" data-line="loose">寬鬆</button>
+      </div>
+    </div>
+  </div>
+  
+  <script>
+    // 閱讀進度
+    const progressBar = document.getElementById('progressBar');
+    const backToTop = document.getElementById('backToTop');
+    
+    window.addEventListener('scroll', () => {
+      const scrollTop = window.scrollY;
+      const docHeight = document.documentElement.scrollHeight - window.innerHeight;
+      const progress = (scrollTop / docHeight) * 100;
+      progressBar.style.width = progress + '%';
+      
+      // 顯示/隱藏回到頂部按鈕
+      if (scrollTop > 500) {
+        backToTop.classList.add('show');
+      } else {
+        backToTop.classList.remove('show');
+      }
+    });
+    
+    // 回到頂部
+    backToTop.addEventListener('click', () => {
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    });
+    
+    // 設定面板
+    const settingsBtn = document.getElementById('settingsBtn');
+    const settingsPanel = document.getElementById('settingsPanel');
+    
+    settingsBtn.addEventListener('click', () => {
+      settingsPanel.classList.toggle('show');
+    });
+    
+    // 點擊外部關閉設定面板
+    document.addEventListener('click', (e) => {
+      if (!settingsPanel.contains(e.target) && e.target !== settingsBtn) {
+        settingsPanel.classList.remove('show');
+      }
+    });
+    
+    // 字體大小設定
+    document.querySelectorAll('[data-font]').forEach(btn => {
+      btn.addEventListener('click', () => {
+        document.querySelectorAll('[data-font]').forEach(b => b.classList.remove('active'));
+        btn.classList.add('active');
+        
+        document.body.classList.remove('font-small', 'font-medium', 'font-large', 'font-xlarge');
+        document.body.classList.add('font-' + btn.dataset.font);
+        
+        // 儲存設定
+        localStorage.setItem('reader-font', btn.dataset.font);
+      });
+    });
+    
+    // 行距設定
+    document.querySelectorAll('[data-line]').forEach(btn => {
+      btn.addEventListener('click', () => {
+        document.querySelectorAll('[data-line]').forEach(b => b.classList.remove('active'));
+        btn.classList.add('active');
+        
+        document.body.classList.remove('line-compact', 'line-normal', 'line-loose');
+        document.body.classList.add('line-' + btn.dataset.line);
+        
+        // 儲存設定
+        localStorage.setItem('reader-line', btn.dataset.line);
+      });
+    });
+    
+    // 載入已儲存的設定
+    const savedFont = localStorage.getItem('reader-font');
+    const savedLine = localStorage.getItem('reader-line');
+    
+    if (savedFont) {
+      document.querySelectorAll('[data-font]').forEach(b => b.classList.remove('active'));
+      const fontBtn = document.querySelector('[data-font="' + savedFont + '"]');
+      if (fontBtn) {
+        fontBtn.classList.add('active');
+        document.body.classList.remove('font-small', 'font-medium', 'font-large', 'font-xlarge');
+        document.body.classList.add('font-' + savedFont);
+      }
+    }
+    
+    if (savedLine) {
+      document.querySelectorAll('[data-line]').forEach(b => b.classList.remove('active'));
+      const lineBtn = document.querySelector('[data-line="' + savedLine + '"]');
+      if (lineBtn) {
+        lineBtn.classList.add('active');
+        document.body.classList.remove('line-compact', 'line-normal', 'line-loose');
+        document.body.classList.add('line-' + savedLine);
+      }
+    }
+  </script>
+</body>
+</html>`;
+      }
+
+      // 下載下拉選單控制
+      const downloadDropdown = document.querySelector('.download-dropdown');
+      const downloadMenu = document.getElementById('downloadMenu');
+      
+      downloadBtn.addEventListener('click', (e) => {
+        if (downloadBtn.disabled) return;
+        e.stopPropagation();
+        downloadDropdown.classList.toggle('open');
+      });
+      
+      // 點擊外部關閉選單
+      document.addEventListener('click', (e) => {
+        if (!downloadDropdown.contains(e.target)) {
+          downloadDropdown.classList.remove('open');
+        }
+      });
+      
+      // 下載選項點擊事件
+      downloadMenu.querySelectorAll('button').forEach(btn => {
+        btn.addEventListener('click', (e) => {
+          e.stopPropagation();
+          if (!latestStory) return;
+          
+          const format = btn.dataset.format;
+          
+          if (format === 'txt') {
+            // 下載 TXT 純文字
+            const filename = generateFilename('txt');
+            downloadFile(filename, latestStory, 'text/plain');
+            showStatus('success', `📄 已下載 ${filename}`);
+          } else if (format === 'html') {
+            // 下載 HTML 手機閱讀版
+            const htmlContent = generateMobileHTML(latestStory);
+            const filename = generateFilename('html');
+            downloadFile(filename, htmlContent, 'text/html');
+            showStatus('success', `📱 已下載 ${filename}（手機閱讀版）`);
+          }
+          
+          downloadDropdown.classList.remove('open');
+        });
       });
 
       // ==================== 書籤功能 (大幅優化) ====================
