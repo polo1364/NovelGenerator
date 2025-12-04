@@ -1135,6 +1135,62 @@
         color: var(--accent);
       }
 
+      /* 段落範圍選擇器 */
+      .range-selector {
+        display: flex;
+        align-items: center;
+        gap: 6px;
+        flex-wrap: wrap;
+      }
+
+      .segment-input {
+        width: 60px !important;
+        min-width: 60px !important;
+        flex: none !important;
+        text-align: center;
+        padding: 6px 8px !important;
+        font-size: 0.9rem;
+      }
+
+      .range-selector span {
+        color: var(--text-light);
+        font-size: 0.9rem;
+      }
+
+      .range-selector .btn-small {
+        padding: 6px 10px;
+        font-size: 0.8rem;
+        margin-left: 8px;
+      }
+
+      .segment-info {
+        font-size: 0.85rem;
+        color: var(--text-light);
+        margin-top: 6px;
+        margin-bottom: 10px;
+      }
+
+      .speech-extra-buttons {
+        margin-top: 14px;
+        padding-top: 14px;
+        border-top: 1px dashed var(--border);
+      }
+
+      .btn-full {
+        width: 100%;
+        justify-content: center;
+      }
+
+      @media (max-width: 500px) {
+        .range-selector {
+          font-size: 0.85rem;
+        }
+        .segment-input {
+          width: 50px !important;
+          min-width: 50px !important;
+        }
+      }
+
       /* 特殊元素多選格子 */
       .special-elements-grid {
         display: grid;
@@ -1580,6 +1636,18 @@
                 <option value="mysterious">🌙 神秘懸疑</option>
               </select>
             </div>
+            <div class="speech-row">
+              <label>朗讀範圍：</label>
+              <div class="range-selector">
+                <span>從第</span>
+                <input type="number" id="startSegment" min="1" value="1" class="segment-input" />
+                <span>段 到第</span>
+                <input type="number" id="endSegment" min="1" value="1" class="segment-input" />
+                <span>段</span>
+                <button id="readAllBtn" class="btn-small btn-outline" title="朗讀全部">全部</button>
+              </div>
+            </div>
+            <div id="segmentInfo" class="segment-info">共 0 段</div>
             <div class="speech-buttons">
               <button id="playPauseBtn" class="btn-primary">▶️ 開始朗讀</button>
               <button id="stopSpeechBtn" class="btn-outline">⏹️ 停止</button>
@@ -1590,6 +1658,9 @@
                 <div id="speechProgressFill" class="speech-progress-fill"></div>
               </div>
               <span id="speechProgressText">準備就緒</span>
+            </div>
+            <div class="speech-extra-buttons">
+              <button id="copyAllBtn" class="btn-outline btn-full">📋 複製全文（可貼到其他 App 朗讀）</button>
             </div>
           </div>
         </div>
@@ -4233,44 +4304,115 @@
         } catch (e) {}
       }
 
-      // 載入語音列表
+      // 載入語音列表（只顯示中文語音）
       function loadVoices() {
         availableVoices = speechSynth.getVoices();
         voiceSelect.innerHTML = '';
         
-        // 優先顯示中文語音
-        const zhVoices = availableVoices.filter(v => v.lang.includes('zh') || v.lang.includes('TW') || v.lang.includes('CN'));
-        const otherVoices = availableVoices.filter(v => !v.lang.includes('zh') && !v.lang.includes('TW') && !v.lang.includes('CN'));
+        // 只篩選中文語音
+        const zhVoices = availableVoices.filter(v => 
+          v.lang.includes('zh') || 
+          v.lang.includes('TW') || 
+          v.lang.includes('CN') ||
+          v.lang.includes('HK') ||
+          v.name.includes('中文') ||
+          v.name.includes('Chinese') ||
+          v.name.includes('Mandarin') ||
+          v.name.includes('Cantonese')
+        );
         
-        if (zhVoices.length > 0) {
-          const zhGroup = document.createElement('optgroup');
-          zhGroup.label = '中文語音';
-          zhVoices.forEach((voice, i) => {
+        // 按語言分類
+        const twVoices = zhVoices.filter(v => v.lang.includes('TW') || v.lang.includes('zh-Hant') || v.name.includes('台'));
+        const cnVoices = zhVoices.filter(v => (v.lang.includes('CN') || v.lang.includes('zh-Hans') || v.lang === 'zh') && !twVoices.includes(v));
+        const hkVoices = zhVoices.filter(v => v.lang.includes('HK') || v.name.includes('粵') || v.name.includes('Cantonese'));
+        const otherZhVoices = zhVoices.filter(v => !twVoices.includes(v) && !cnVoices.includes(v) && !hkVoices.includes(v));
+        
+        // 簡化語音名稱顯示
+        function formatVoiceName(voice) {
+          let name = voice.name;
+          // 移除常見的冗長前綴
+          name = name.replace(/Microsoft /g, '');
+          name = name.replace(/Google /g, '');
+          name = name.replace(/Apple /g, '');
+          name = name.replace(/ Online \(Natural\)/g, '');
+          name = name.replace(/ - Chinese \(.*\)/g, '');
+          
+          // 添加語言標記
+          if (voice.lang.includes('TW') || voice.lang.includes('zh-Hant')) {
+            return `🇹🇼 ${name}`;
+          } else if (voice.lang.includes('CN') || voice.lang.includes('zh-Hans') || voice.lang === 'zh') {
+            return `🇨🇳 ${name}`;
+          } else if (voice.lang.includes('HK')) {
+            return `🇭🇰 ${name}`;
+          }
+          return name;
+        }
+        
+        // 繁體中文（台灣）
+        if (twVoices.length > 0) {
+          const group = document.createElement('optgroup');
+          group.label = '🇹🇼 繁體中文（台灣）';
+          twVoices.forEach((voice, i) => {
             const option = document.createElement('option');
             option.value = voice.name;
-            option.textContent = `${voice.name} (${voice.lang})`;
+            option.textContent = formatVoiceName(voice);
             if (i === 0) option.selected = true;
-            zhGroup.appendChild(option);
+            group.appendChild(option);
           });
-          voiceSelect.appendChild(zhGroup);
+          voiceSelect.appendChild(group);
         }
         
-        if (otherVoices.length > 0) {
-          const otherGroup = document.createElement('optgroup');
-          otherGroup.label = '其他語音';
-          otherVoices.slice(0, 10).forEach(voice => {
+        // 簡體中文（中國）
+        if (cnVoices.length > 0) {
+          const group = document.createElement('optgroup');
+          group.label = '🇨🇳 簡體中文（中國）';
+          cnVoices.forEach(voice => {
             const option = document.createElement('option');
             option.value = voice.name;
-            option.textContent = `${voice.name} (${voice.lang})`;
-            otherGroup.appendChild(option);
+            option.textContent = formatVoiceName(voice);
+            group.appendChild(option);
           });
-          voiceSelect.appendChild(otherGroup);
+          voiceSelect.appendChild(group);
         }
         
-        if (availableVoices.length === 0) {
+        // 粵語（香港）
+        if (hkVoices.length > 0) {
+          const group = document.createElement('optgroup');
+          group.label = '🇭🇰 粵語（香港）';
+          hkVoices.forEach(voice => {
+            const option = document.createElement('option');
+            option.value = voice.name;
+            option.textContent = formatVoiceName(voice);
+            group.appendChild(option);
+          });
+          voiceSelect.appendChild(group);
+        }
+        
+        // 其他中文
+        if (otherZhVoices.length > 0) {
+          const group = document.createElement('optgroup');
+          group.label = '🌏 其他中文';
+          otherZhVoices.forEach(voice => {
+            const option = document.createElement('option');
+            option.value = voice.name;
+            option.textContent = formatVoiceName(voice);
+            group.appendChild(option);
+          });
+          voiceSelect.appendChild(group);
+        }
+        
+        // 如果完全沒有中文語音
+        if (zhVoices.length === 0) {
           const option = document.createElement('option');
-          option.textContent = '載入中...';
+          option.textContent = '⚠️ 未找到中文語音';
+          option.disabled = true;
           voiceSelect.appendChild(option);
+          
+          // 顯示提示
+          const hint = document.createElement('option');
+          hint.textContent = '請在系統設定中安裝中文語音';
+          hint.disabled = true;
+          voiceSelect.appendChild(hint);
         }
       }
 
@@ -4417,6 +4559,25 @@
         speechSynth.speak(utterance);
       }
 
+      // 更新段落範圍輸入的最大值
+      function updateSegmentInputs() {
+        const text = resultDiv.textContent || latestStory || '';
+        const segments = splitTextToSegments(text);
+        const total = segments.length;
+        
+        const startInput = document.getElementById('startSegment');
+        const endInput = document.getElementById('endSegment');
+        const segmentInfo = document.getElementById('segmentInfo');
+        
+        startInput.max = total || 1;
+        endInput.max = total || 1;
+        endInput.value = total || 1;
+        
+        segmentInfo.textContent = `共 ${total} 段`;
+        
+        return segments;
+      }
+
       // 開始/暫停朗讀
       function toggleSpeech() {
         if (!latestStory) {
@@ -4440,18 +4601,38 @@
         } else {
           // 開始新朗讀
           const text = resultDiv.textContent || latestStory;
-          speechSegments = splitTextToSegments(text);
+          const allSegments = splitTextToSegments(text);
+          
+          if (allSegments.length === 0) {
+            showStatus('error', '沒有可朗讀的內容');
+            return;
+          }
+          
+          // 獲取段落範圍
+          const startInput = document.getElementById('startSegment');
+          const endInput = document.getElementById('endSegment');
+          let startIdx = parseInt(startInput.value) - 1 || 0;
+          let endIdx = parseInt(endInput.value) || allSegments.length;
+          
+          // 驗證範圍
+          startIdx = Math.max(0, Math.min(startIdx, allSegments.length - 1));
+          endIdx = Math.max(startIdx + 1, Math.min(endIdx, allSegments.length));
+          
+          // 只選取指定範圍的段落
+          speechSegments = allSegments.slice(startIdx, endIdx);
           
           if (speechSegments.length === 0) {
             showStatus('error', '沒有可朗讀的內容');
             return;
           }
           
-          // 檢查是否有儲存的進度
+          // 檢查是否有儲存的進度（只在朗讀全部時檢查）
           const savedProgress = loadSpeechProgress();
           let startIndex = 0;
           
-          if (savedProgress && savedProgress.segmentIndex > 0 && savedProgress.segmentIndex < speechSegments.length) {
+          const isReadingAll = startIdx === 0 && endIdx === allSegments.length;
+          
+          if (isReadingAll && savedProgress && savedProgress.segmentIndex > 0 && savedProgress.segmentIndex < speechSegments.length) {
             // 詢問是否從上次位置繼續
             const resumeFromSaved = confirm(`發現上次朗讀進度（第 ${savedProgress.segmentIndex + 1}/${speechSegments.length} 段）\n\n點擊「確定」從上次位置繼續\n點擊「取消」從頭開始`);
             
@@ -4477,6 +4658,12 @@
           isSpeaking = true;
           isPaused = false;
           playPauseBtn.textContent = '⏸️ 暫停';
+          
+          // 顯示朗讀範圍
+          if (!isReadingAll) {
+            speechProgressText.textContent = `朗讀範圍：第 ${startIdx + 1} - ${endIdx} 段`;
+          }
+          
           speakSegment(startIndex);
         }
       }
@@ -4499,12 +4686,48 @@
         clearSpeechProgress();
         currentSegmentIndex = 0;
         speechProgressText.textContent = '已重置，準備從頭開始';
+        
+        // 重置段落範圍
+        const startInput = document.getElementById('startSegment');
+        startInput.value = 1;
+        updateSegmentInputs();
+      }
+
+      // 複製全文
+      function copyAllText() {
+        const text = resultDiv.textContent || latestStory || '';
+        if (!text) {
+          showStatus('error', '沒有可複製的內容');
+          return;
+        }
+        
+        navigator.clipboard.writeText(text).then(() => {
+          showStatus('success', '📋 已複製全文！可貼到其他 App 進行朗讀');
+        }).catch(err => {
+          // 備用方案：使用 textarea
+          const textarea = document.createElement('textarea');
+          textarea.value = text;
+          textarea.style.position = 'fixed';
+          textarea.style.opacity = '0';
+          document.body.appendChild(textarea);
+          textarea.select();
+          try {
+            document.execCommand('copy');
+            showStatus('success', '📋 已複製全文！');
+          } catch (e) {
+            showStatus('error', '複製失敗，請手動選取複製');
+          }
+          document.body.removeChild(textarea);
+        });
       }
 
       // 事件綁定
       speakBtn.addEventListener('click', () => {
         speechPanel.style.display = 'block';
         speechPanel.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        
+        // 更新段落資訊
+        updateSegmentInputs();
         
         // 檢查是否有儲存的進度，顯示提示
         const savedProgress = loadSpeechProgress();
@@ -4521,6 +4744,34 @@
       playPauseBtn.addEventListener('click', toggleSpeech);
       stopSpeechBtn.addEventListener('click', stopSpeech);
       resetSpeechBtn.addEventListener('click', resetSpeech);
+      
+      // 複製全文按鈕
+      document.getElementById('copyAllBtn').addEventListener('click', copyAllText);
+      
+      // 朗讀全部按鈕
+      document.getElementById('readAllBtn').addEventListener('click', () => {
+        const startInput = document.getElementById('startSegment');
+        const endInput = document.getElementById('endSegment');
+        startInput.value = 1;
+        updateSegmentInputs();
+      });
+      
+      // 段落輸入驗證
+      document.getElementById('startSegment').addEventListener('change', function() {
+        const endInput = document.getElementById('endSegment');
+        if (parseInt(this.value) > parseInt(endInput.value)) {
+          endInput.value = this.value;
+        }
+        if (parseInt(this.value) < 1) this.value = 1;
+      });
+      
+      document.getElementById('endSegment').addEventListener('change', function() {
+        const startInput = document.getElementById('startSegment');
+        if (parseInt(this.value) < parseInt(startInput.value)) {
+          this.value = startInput.value;
+        }
+        if (parseInt(this.value) < 1) this.value = 1;
+      });
 
       speechRate.addEventListener('input', () => {
         rateValue.textContent = speechRate.value + 'x';
