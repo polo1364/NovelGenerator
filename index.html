@@ -4383,17 +4383,17 @@
           .map(row => row.querySelector('.char-name').value.trim())
           .filter(name => name !== '');
         
-        // 收集所有設定用於提醒
-        const theme = themeSelect.value.trim();
-        const setting = settingInput.value.trim();
-        const style = styleSelect.value.trim();
-        const narrative = narrativeSelect.value.trim();
-        const era = eraSelect.value.trim();
-        const pacing = pacingSelect.value.trim();
-        const emotionalTone = emotionalToneSelect.value.trim();
-        const worldComplexity = worldComplexitySelect.value.trim();
-        const rating = ratingSelect.value.trim();
-        const ending = endingSelect.value.trim();
+        // 收集所有設定用於提醒（使用已存在的元素引用）
+        const currentTheme = themeSelect.value.trim();
+        const currentSetting = settingSelect.value.trim();
+        const currentStyle = styleSelect.value.trim();
+        const currentNarrative = narrativeSelect.value.trim();
+        const currentEra = eraSelect.value.trim();
+        const currentPacing = pacingSelect.value.trim();
+        const currentEmotionalTone = emotionalToneSelect.value.trim();
+        const currentWorldComplexity = worldComplexitySelect.value.trim();
+        const currentRating = ratingSelect.value.trim();
+        const currentEnding = endingSelect.value.trim();
         
         // 收集特殊元素
         const selectedElements = [];
@@ -4406,14 +4406,14 @@
         let settingsReminder = '\n\n【必須遵守的設定提醒】\n';
         let hasSettings = false;
         
-        if (theme) { settingsReminder += `• 主題：${theme}\n`; hasSettings = true; }
-        if (setting) { settingsReminder += `• 背景：${setting}\n`; hasSettings = true; }
-        if (style) { settingsReminder += `• 風格：${style}\n`; hasSettings = true; }
-        if (narrative) { settingsReminder += `• 視角：${narrative}\n`; hasSettings = true; }
-        if (pacing) { settingsReminder += `• 節奏：${pacing}\n`; hasSettings = true; }
-        if (emotionalTone) { settingsReminder += `• 基調：${emotionalTone}\n`; hasSettings = true; }
-        if (rating) { settingsReminder += `• 分級：${rating}\n`; hasSettings = true; }
-        if (ending) { settingsReminder += `• 結局傾向：${ending}\n`; hasSettings = true; }
+        if (currentTheme) { settingsReminder += `• 主題：${currentTheme}\n`; hasSettings = true; }
+        if (currentSetting) { settingsReminder += `• 背景：${currentSetting}\n`; hasSettings = true; }
+        if (currentStyle) { settingsReminder += `• 風格：${currentStyle}\n`; hasSettings = true; }
+        if (currentNarrative) { settingsReminder += `• 視角：${currentNarrative}\n`; hasSettings = true; }
+        if (currentPacing) { settingsReminder += `• 節奏：${currentPacing}\n`; hasSettings = true; }
+        if (currentEmotionalTone) { settingsReminder += `• 基調：${currentEmotionalTone}\n`; hasSettings = true; }
+        if (currentRating) { settingsReminder += `• 分級：${currentRating}\n`; hasSettings = true; }
+        if (currentEnding) { settingsReminder += `• 結局傾向：${currentEnding}\n`; hasSettings = true; }
         if (selectedElements.length > 0) { settingsReminder += `• 特殊元素：${selectedElements.join('、')}\n`; hasSettings = true; }
         if (characterNames.length > 0) { settingsReminder += `• 登場人物：${characterNames.join('、')}（全部必須持續出現）\n`; hasSettings = true; }
         
