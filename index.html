@@ -1087,6 +1087,291 @@
         transition: width 0.1s ease;
       }
 
+      /* 浮動書籤導航 */
+      .bookmark-nav-container {
+        position: fixed;
+        top: 140px;
+        right: 20px;
+        z-index: 998;
+      }
+
+      .bookmark-nav-toggle {
+        width: 50px;
+        height: 50px;
+        border-radius: 50%;
+        background: linear-gradient(135deg, var(--gold) 0%, #f4a261 100%);
+        color: #fff;
+        border: none;
+        box-shadow: 0 4px 15px rgba(244, 162, 97, 0.4);
+        cursor: pointer;
+        font-size: 1.2rem;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        transition: all 0.3s ease;
+        position: relative;
+      }
+
+      .bookmark-nav-toggle:hover {
+        transform: scale(1.1);
+        box-shadow: 0 6px 20px rgba(244, 162, 97, 0.5);
+      }
+
+      .bookmark-nav-toggle .badge {
+        position: absolute;
+        top: -5px;
+        right: -5px;
+        background: var(--accent);
+        color: #fff;
+        font-size: 0.7rem;
+        padding: 2px 6px;
+        border-radius: 10px;
+        font-weight: 600;
+      }
+
+      .bookmark-nav-panel {
+        position: absolute;
+        top: 0;
+        right: 60px;
+        background: var(--card-bg);
+        border-radius: 16px;
+        box-shadow: 0 10px 40px rgba(0, 0, 0, 0.15);
+        padding: 16px;
+        width: 320px;
+        max-height: 70vh;
+        overflow: hidden;
+        display: flex;
+        flex-direction: column;
+        opacity: 0;
+        visibility: hidden;
+        transform: translateX(20px);
+        transition: all 0.3s ease;
+      }
+
+      .bookmark-nav-panel.open {
+        opacity: 1;
+        visibility: visible;
+        transform: translateX(0);
+      }
+
+      .bookmark-nav-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 12px;
+        padding-bottom: 12px;
+        border-bottom: 1px solid var(--border);
+      }
+
+      .bookmark-nav-title {
+        font-weight: 600;
+        color: var(--gold);
+        font-size: 0.95rem;
+      }
+
+      .bookmark-nav-close {
+        background: none;
+        border: none;
+        color: var(--text-light);
+        cursor: pointer;
+        padding: 4px;
+        font-size: 1.2rem;
+        line-height: 1;
+      }
+
+      .bookmark-nav-close:hover {
+        color: var(--accent);
+      }
+
+      .bookmark-nav-toolbar {
+        display: flex;
+        gap: 8px;
+        margin-bottom: 10px;
+      }
+
+      .bookmark-nav-search {
+        flex: 1;
+        padding: 8px 12px;
+        border: 1px solid var(--border);
+        border-radius: 8px;
+        font-size: 0.85rem;
+      }
+
+      .bookmark-nav-search:focus {
+        border-color: var(--gold);
+        outline: none;
+      }
+
+      .bookmark-nav-actions {
+        display: flex;
+        gap: 4px;
+      }
+
+      .btn-icon {
+        width: 34px;
+        height: 34px;
+        padding: 0;
+        border: 1px solid var(--border);
+        border-radius: 8px;
+        background: white;
+        cursor: pointer;
+        font-size: 1rem;
+        transition: all 0.2s;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+      }
+
+      .btn-icon:hover {
+        border-color: var(--gold);
+        background: rgba(244, 162, 97, 0.1);
+      }
+
+      .bookmark-nav-sort {
+        margin-bottom: 10px;
+      }
+
+      .bookmark-sort-select {
+        width: 100%;
+        padding: 6px 10px;
+        border: 1px solid var(--border);
+        border-radius: 6px;
+        font-size: 0.85rem;
+        background: white;
+      }
+
+      .bookmark-nav-list {
+        flex: 1;
+        overflow-y: auto;
+        list-style: none;
+        padding: 0;
+        margin: 0;
+        display: flex;
+        flex-direction: column;
+        gap: 8px;
+        max-height: calc(70vh - 200px);
+      }
+
+      .bookmark-nav-list::-webkit-scrollbar {
+        width: 4px;
+      }
+
+      .bookmark-nav-list::-webkit-scrollbar-thumb {
+        background: var(--border);
+        border-radius: 2px;
+      }
+
+      .bookmark-nav-list li {
+        background: #f8f9fa;
+        border: 1px solid var(--border);
+        border-radius: 10px;
+        padding: 12px;
+        cursor: pointer;
+        transition: all 0.2s;
+      }
+
+      .bookmark-nav-list li:hover {
+        border-color: var(--gold);
+        background: rgba(244, 162, 97, 0.05);
+        transform: translateX(4px);
+      }
+
+      .bookmark-nav-list .bookmark-item-title {
+        font-weight: 600;
+        font-size: 0.9rem;
+        color: var(--text);
+        margin-bottom: 4px;
+        display: -webkit-box;
+        -webkit-line-clamp: 1;
+        -webkit-box-orient: vertical;
+        overflow: hidden;
+      }
+
+      .bookmark-nav-list .bookmark-item-meta {
+        font-size: 0.75rem;
+        color: var(--text-light);
+        display: flex;
+        gap: 8px;
+        margin-bottom: 6px;
+      }
+
+      .bookmark-nav-list .bookmark-item-preview {
+        font-size: 0.8rem;
+        color: var(--text-light);
+        display: -webkit-box;
+        -webkit-line-clamp: 2;
+        -webkit-box-orient: vertical;
+        overflow: hidden;
+        line-height: 1.4;
+      }
+
+      .bookmark-nav-list .bookmark-item-actions {
+        display: flex;
+        gap: 6px;
+        margin-top: 8px;
+        padding-top: 8px;
+        border-top: 1px dashed var(--border);
+      }
+
+      .bookmark-nav-list .bookmark-item-actions button {
+        flex: 1;
+        padding: 4px 8px;
+        font-size: 0.75rem;
+        border: 1px solid var(--border);
+        border-radius: 4px;
+        background: white;
+        cursor: pointer;
+        transition: all 0.2s;
+      }
+
+      .bookmark-nav-list .bookmark-item-actions button:hover {
+        border-color: var(--gold);
+        background: rgba(244, 162, 97, 0.1);
+      }
+
+      .bookmark-nav-list .bookmark-item-actions button.delete-btn:hover {
+        border-color: var(--accent);
+        background: rgba(233, 69, 96, 0.1);
+        color: var(--accent);
+      }
+
+      .bookmark-nav-empty {
+        text-align: center;
+        padding: 30px 20px;
+        color: var(--text-light);
+      }
+
+      .bookmark-nav-empty span {
+        font-size: 3rem;
+        display: block;
+        margin-bottom: 10px;
+      }
+
+      .bookmark-nav-empty p {
+        margin: 4px 0;
+      }
+
+      .bookmark-nav-empty .hint {
+        font-size: 0.8rem;
+        opacity: 0.7;
+      }
+
+      @media (max-width: 768px) {
+        .bookmark-nav-container {
+          top: auto;
+          bottom: 80px;
+          right: 16px;
+        }
+
+        .bookmark-nav-panel {
+          right: 0;
+          top: auto;
+          bottom: 60px;
+          width: calc(100vw - 32px);
+          max-width: 350px;
+        }
+      }
+
       @media (max-width: 768px) {
         .chapter-nav-container {
           top: auto;
@@ -1401,12 +1686,93 @@
         }
       }
 
+      /* 特殊元素工具列 */
+      .special-elements-toolbar {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        margin-bottom: 12px;
+        flex-wrap: wrap;
+      }
+      
+      .element-search {
+        flex: 1;
+        min-width: 150px;
+        max-width: 250px;
+        padding: 8px 12px;
+        border: 2px solid var(--border);
+        border-radius: 8px;
+        font-size: 0.9rem;
+      }
+      
+      .element-search:focus {
+        border-color: var(--accent);
+        outline: none;
+      }
+      
+      .selected-count {
+        font-size: 0.85rem;
+        color: var(--accent);
+        font-weight: 600;
+        padding: 4px 10px;
+        background: rgba(233, 69, 96, 0.1);
+        border-radius: 12px;
+      }
+      
+      /* 分類標籤 */
+      .element-category-tabs {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 8px;
+        margin-bottom: 14px;
+        padding-bottom: 12px;
+        border-bottom: 1px solid var(--border);
+      }
+      
+      .category-tab {
+        padding: 6px 14px;
+        border: 2px solid var(--border);
+        border-radius: 20px;
+        background: white;
+        cursor: pointer;
+        font-size: 0.85rem;
+        transition: all 0.2s;
+        display: flex;
+        align-items: center;
+        gap: 4px;
+      }
+      
+      .category-tab:hover {
+        border-color: var(--accent);
+        background: rgba(233, 69, 96, 0.05);
+      }
+      
+      .category-tab.active {
+        border-color: var(--accent);
+        background: var(--accent);
+        color: white;
+      }
+      
+      .category-tab .tab-count {
+        font-size: 0.75rem;
+        background: rgba(0,0,0,0.1);
+        padding: 1px 6px;
+        border-radius: 10px;
+      }
+      
+      .category-tab.active .tab-count {
+        background: rgba(255,255,255,0.3);
+      }
+      
       /* 特殊元素多選格子 */
       .special-elements-grid {
         display: grid;
-        grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+        grid-template-columns: repeat(auto-fill, minmax(130px, 1fr));
         gap: 10px;
         margin-top: 8px;
+        max-height: 320px;
+        overflow-y: auto;
+        padding: 4px;
       }
 
       .special-element-item {
@@ -1776,6 +2142,12 @@
           <!-- 特殊元素多選 -->
           <div class="input-group" style="margin-top: 16px;">
             <label>特殊元素（可多選）</label>
+            <div class="special-elements-toolbar">
+              <input type="text" id="elementSearch" placeholder="🔍 搜尋元素..." class="element-search" />
+              <button type="button" id="clearElementsBtn" class="btn-small btn-outline">清除選擇</button>
+              <span id="selectedCount" class="selected-count">已選 0 項</span>
+            </div>
+            <div id="elementCategoryTabs" class="element-category-tabs"></div>
             <div id="specialElementsContainer" class="special-elements-grid"></div>
           </div>
         </div>
@@ -1929,37 +2301,53 @@
         </div>
       </div>
 
+      <!-- 浮動書籤導航 -->
+      <div id="bookmarkNavContainer" class="bookmark-nav-container">
+        <button id="bookmarkNavToggle" class="bookmark-nav-toggle" title="我的書籤">
+          🔖
+          <span id="bookmarkBadge" class="badge">0</span>
+        </button>
+        <div id="bookmarkNavPanel" class="bookmark-nav-panel">
+          <div class="bookmark-nav-header">
+            <span class="bookmark-nav-title">🔖 我的書籤</span>
+            <button id="bookmarkNavClose" class="bookmark-nav-close">✕</button>
+          </div>
+          
+          <!-- 書籤工具列 -->
+          <div class="bookmark-nav-toolbar">
+            <input type="text" id="bookmarkSearch" placeholder="🔍 搜尋..." class="bookmark-nav-search" />
+            <div class="bookmark-nav-actions">
+              <button id="addBookmarkBtn" type="button" class="btn-icon" title="儲存目前故事">💾</button>
+              <button id="exportBookmarksBtn" type="button" class="btn-icon" title="匯出全部">📤</button>
+              <button id="importBookmarksBtn" type="button" class="btn-icon" title="匯入">📥</button>
+            </div>
+          </div>
+          
+          <!-- 排序選項 -->
+          <div class="bookmark-nav-sort">
+            <select id="bookmarkSort" class="bookmark-sort-select">
+              <option value="newest">最新優先</option>
+              <option value="oldest">最舊優先</option>
+              <option value="name">名稱排序</option>
+              <option value="length">長度排序</option>
+            </select>
+          </div>
+          
+          <!-- 書籤列表 -->
+          <ul id="bookmarkList" class="bookmark-nav-list"></ul>
+          
+          <!-- 空狀態 -->
+          <div id="bookmarkEmpty" class="bookmark-nav-empty">
+            <span>📚</span>
+            <p>尚無書籤</p>
+            <p class="hint">點擊 💾 儲存目前故事</p>
+          </div>
+        </div>
+      </div>
+
       <!-- 閱讀進度條 -->
       <div id="readingProgress" class="reading-progress" style="width: 0%;"></div>
 
-      <!-- 書籤區 - 全新設計 -->
-      <div class="bookmark-card">
-        <div class="bookmark-header">
-          <h2 class="bookmark-title">
-            我的書籤
-            <span id="bookmarkCount" class="bookmark-count">0 篇</span>
-          </h2>
-          <div class="bookmark-actions">
-            <button id="addBookmarkBtn" type="button" class="btn-small">💾 儲存目前故事</button>
-            <button id="exportBookmarksBtn" type="button" class="btn-small">📤 匯出全部</button>
-            <button id="importBookmarksBtn" type="button" class="btn-small">📥 匯入</button>
-          </div>
-        </div>
-
-        <div class="bookmark-toolbar">
-          <div class="bookmark-search">
-            <input type="text" id="bookmarkSearch" placeholder="搜尋書籤..." />
-          </div>
-          <select id="bookmarkSort" class="bookmark-sort">
-            <option value="newest">最新優先</option>
-            <option value="oldest">最舊優先</option>
-            <option value="name">名稱排序</option>
-            <option value="length">長度排序</option>
-          </select>
-        </div>
-
-        <ul id="bookmarkList" class="bookmark-list"></ul>
-      </div>
     </div>
 
     <!-- 編輯書籤彈窗 -->
@@ -2095,7 +2483,6 @@
       const bookmarkSearch = document.getElementById('bookmarkSearch');
       const bookmarkSort = document.getElementById('bookmarkSort');
       const bookmarkList = document.getElementById('bookmarkList');
-      const bookmarkCount = document.getElementById('bookmarkCount');
 
       // 朗讀元素
       const speakBtn = document.getElementById('speakBtn');
@@ -2498,39 +2885,276 @@
         { value: '多結局', label: '🔀 多結局暗示 - 可能走向不同分支' }
       ];
 
-      // 特殊元素
-      const specialElements = [
-        { id: 'system', icon: '📊', label: '系統/面板' },
-        { id: 'transmigration', icon: '🔄', label: '穿越/重生' },
-        { id: 'goldenFinger', icon: '✨', label: '金手指/外掛' },
-        { id: 'harem', icon: '👥', label: '後宮/逆後宮' },
-        { id: 'invincible', icon: '💪', label: '無敵流' },
-        { id: 'farming', icon: '🌾', label: '種田/經營' },
-        { id: 'food', icon: '🍜', label: '美食描寫' },
-        { id: 'pet', icon: '🐾', label: '寵物/靈獸' },
-        { id: 'faction', icon: '⚔️', label: '陣營對立' },
-        { id: 'competition', icon: '🏆', label: '比賽/競技' },
-        { id: 'revenge', icon: '🗡️', label: '復仇主線' },
-        { id: 'puzzle', icon: '🧩', label: '解謎/探險' },
-        { id: 'romance', icon: '💕', label: '戀愛線' },
-        { id: 'mystery', icon: '🔮', label: '神秘力量' },
-        { id: 'kingdom', icon: '👑', label: '王國建設' },
-        { id: 'upgrade', icon: '📈', label: '升級打怪' },
-        { id: 'dungeon', icon: '🏰', label: '副本/迷宮' },
-        { id: 'survival', icon: '🏕️', label: '生存挑戰' },
-        { id: 'conspiracy', icon: '🕸️', label: '陰謀論' },
-        { id: 'family', icon: '👨‍👩‍👧', label: '家族興衰' },
-        { id: 'school', icon: '🏫', label: '學院/門派' },
-        { id: 'military', icon: '🎖️', label: '軍事戰爭' },
-        { id: 'politics', icon: '🏛️', label: '權謀政治' },
-        { id: 'technology', icon: '🤖', label: '科技元素' },
-        { id: 'magic', icon: '🪄', label: '魔法體系' },
-        { id: 'martial', icon: '🥋', label: '武功修煉' },
-        { id: 'trade', icon: '💰', label: '商戰經商' },
-        { id: 'heist', icon: '🎭', label: '盜賊/詐騙' },
-        { id: 'apocalypse', icon: '☠️', label: '末日危機' },
-        { id: 'timeLoop', icon: '⏰', label: '時間輪迴' }
+      // 特殊元素（分類）
+      const specialElementCategories = [
+        {
+          name: '系統機制',
+          icon: '⚙️',
+          items: [
+            { id: 'system', icon: '📊', label: '系統/面板' },
+            { id: 'goldenFinger', icon: '✨', label: '金手指/外掛' },
+            { id: 'upgrade', icon: '📈', label: '升級打怪' },
+            { id: 'skill', icon: '🎯', label: '技能樹' },
+            { id: 'inventory', icon: '🎒', label: '隨身空間' },
+            { id: 'shop', icon: '🛒', label: '系統商店' },
+            { id: 'mission', icon: '📋', label: '任務系統' },
+            { id: 'lottery', icon: '🎰', label: '抽獎/轉盤' },
+            { id: 'achievement', icon: '🏅', label: '成就系統' },
+            { id: 'title', icon: '🎖️', label: '稱號系統' },
+            { id: 'attribute', icon: '📉', label: '屬性面板' },
+            { id: 'level', icon: '⬆️', label: '等級制度' },
+            { id: 'exp', icon: '💠', label: '經驗值' },
+            { id: 'points', icon: '🔵', label: '點數分配' },
+            { id: 'mall', icon: '🏬', label: '積分商城' },
+            { id: 'daily', icon: '📅', label: '每日簽到' },
+          ]
+        },
+        {
+          name: '穿越重生',
+          icon: '🔄',
+          items: [
+            { id: 'transmigration', icon: '🔄', label: '穿越異世界' },
+            { id: 'rebirth', icon: '🌅', label: '重生回溯' },
+            { id: 'timeLoop', icon: '⏰', label: '時間輪迴' },
+            { id: 'gameWorld', icon: '🎮', label: '穿越遊戲' },
+            { id: 'bookWorld', icon: '📖', label: '穿書/穿劇' },
+            { id: 'soulSwap', icon: '👻', label: '靈魂互換' },
+            { id: 'regression', icon: '⏪', label: '回檔重來' },
+            { id: 'parallel', icon: '🌐', label: '平行世界' },
+            { id: 'dream', icon: '💭', label: '夢境穿越' },
+            { id: 'death', icon: '💀', label: '死後轉生' },
+            { id: 'summon', icon: '🌀', label: '被召喚' },
+            { id: 'possession', icon: '👤', label: '奪舍附身' },
+            { id: 'infant', icon: '👒', label: '胎穿/幼年' },
+            { id: 'npc', icon: '🤖', label: '穿成NPC' },
+            { id: 'mob', icon: '👾', label: '穿成炮灰' },
+            { id: 'future', icon: '🚀', label: '未來穿越' },
+          ]
+        },
+        {
+          name: '感情線',
+          icon: '💕',
+          items: [
+            { id: 'romance', icon: '💕', label: '戀愛線' },
+            { id: 'harem', icon: '👥', label: '後宮/逆後宮' },
+            { id: 'slowBurn', icon: '🔥', label: '慢熱戀愛' },
+            { id: 'enemies', icon: '⚔️💕', label: '歡喜冤家' },
+            { id: 'arranged', icon: '💍', label: '契約婚姻' },
+            { id: 'unrequited', icon: '💔', label: '暗戀/單戀' },
+            { id: 'reunion', icon: '🤝', label: '破鏡重圓' },
+            { id: 'forbidden', icon: '🚫💕', label: '禁忌之戀' },
+            { id: 'childhood', icon: '💒', label: '青梅竹馬' },
+            { id: 'firstLove', icon: '🌸', label: '初戀情懷' },
+            { id: 'jealousy', icon: '😤', label: '吃醋情節' },
+            { id: 'love-hate', icon: '💢💕', label: '愛恨糾葛' },
+            { id: 'secret-love', icon: '🤫💕', label: '隱婚/秘戀' },
+            { id: 'redemption-love', icon: '🕊️💕', label: '救贖之戀' },
+            { id: 'triangle', icon: '🔺', label: '三角戀' },
+            { id: 'double', icon: '👫👫', label: '雙CP線' },
+          ]
+        },
+        {
+          name: '主角類型',
+          icon: '🦸',
+          items: [
+            { id: 'invincible', icon: '💪', label: '無敵流' },
+            { id: 'underdog', icon: '🐕', label: '廢柴逆襲' },
+            { id: 'villain', icon: '😈', label: '反派主角' },
+            { id: 'healer', icon: '💚', label: '輔助/奶媽' },
+            { id: 'strategist', icon: '🧠', label: '智謀型' },
+            { id: 'salted', icon: '🧂', label: '鹹魚躺平' },
+            { id: 'lucky', icon: '🍀', label: '歐皇運氣' },
+            { id: 'hardworking', icon: '💦', label: '努力型' },
+            { id: 'cold', icon: '🧊', label: '高冷禁慾' },
+            { id: 'sunny', icon: '☀️', label: '陽光開朗' },
+            { id: 'dark', icon: '🌑', label: '黑化主角' },
+            { id: 'dual', icon: '🎭', label: '雙重人格' },
+            { id: 'genius', icon: '🧒', label: '天才少年' },
+            { id: 'veteran', icon: '👴', label: '老謀深算' },
+            { id: 'naive', icon: '😇', label: '天真單純' },
+            { id: 'schemer', icon: '🦊', label: '腹黑心機' },
+          ]
+        },
+        {
+          name: '劇情元素',
+          icon: '📜',
+          items: [
+            { id: 'revenge', icon: '🗡️', label: '復仇主線' },
+            { id: 'conspiracy', icon: '🕸️', label: '陰謀詭計' },
+            { id: 'puzzle', icon: '🧩', label: '解謎探險' },
+            { id: 'mystery', icon: '🔮', label: '神秘力量' },
+            { id: 'prophecy', icon: '📜', label: '預言/天命' },
+            { id: 'secret', icon: '🤫', label: '身世之謎' },
+            { id: 'betrayal', icon: '🗡️', label: '背叛反轉' },
+            { id: 'redemption', icon: '🕊️', label: '救贖' },
+            { id: 'faceSlap', icon: '👋', label: '打臉爽文' },
+            { id: 'comeback', icon: '🔙', label: '絕地反擊' },
+            { id: 'inheritance', icon: '📿', label: '遺跡傳承' },
+            { id: 'treasure', icon: '💎', label: '尋寶奪寶' },
+            { id: 'escape', icon: '🏃', label: '逃亡追殺' },
+            { id: 'rescue', icon: '🆘', label: '營救任務' },
+            { id: 'trial', icon: '⚖️', label: '試煉考驗' },
+            { id: 'awakening', icon: '👁️', label: '覺醒劇情' },
+          ]
+        },
+        {
+          name: '世界觀',
+          icon: '🌍',
+          items: [
+            { id: 'magic', icon: '🪄', label: '魔法體系' },
+            { id: 'martial', icon: '🥋', label: '武功修煉' },
+            { id: 'cultivation', icon: '☯️', label: '仙俠修真' },
+            { id: 'technology', icon: '🤖', label: '科技未來' },
+            { id: 'steampunk', icon: '⚙️', label: '蒸汽龐克' },
+            { id: 'apocalypse', icon: '☠️', label: '末日廢土' },
+            { id: 'multiverse', icon: '🌌', label: '多元宇宙' },
+            { id: 'virtual', icon: '🥽', label: '虛擬實境' },
+            { id: 'western', icon: '🏰', label: '西方奇幻' },
+            { id: 'eastern', icon: '🏯', label: '東方玄幻' },
+            { id: 'urban', icon: '🌃', label: '都市異能' },
+            { id: 'prehistoric', icon: '🦕', label: '洪荒遠古' },
+            { id: 'myth', icon: '⚡', label: '神話體系' },
+            { id: 'demon', icon: '👹', label: '妖魔鬼怪' },
+            { id: 'mecha', icon: '🤖', label: '機甲科幻' },
+            { id: 'hybrid', icon: '🔀', label: '混合世界觀' },
+          ]
+        },
+        {
+          name: '場景設定',
+          icon: '🏛️',
+          items: [
+            { id: 'school', icon: '🏫', label: '學院/門派' },
+            { id: 'dungeon', icon: '🏰', label: '副本/迷宮' },
+            { id: 'kingdom', icon: '👑', label: '王國建設' },
+            { id: 'tower', icon: '🗼', label: '爬塔/登頂' },
+            { id: 'guild', icon: '🏠', label: '公會經營' },
+            { id: 'arena', icon: '🏟️', label: '競技場' },
+            { id: 'auction', icon: '🔨', label: '拍賣會' },
+            { id: 'secretRealm', icon: '🌀', label: '秘境探索' },
+            { id: 'palace', icon: '🏯', label: '皇宮後宮' },
+            { id: 'sect', icon: '⛩️', label: '宗門大派' },
+            { id: 'city', icon: '🌆', label: '都市叢林' },
+            { id: 'village', icon: '🏘️', label: '鄉村小鎮' },
+            { id: 'forest', icon: '🌲', label: '森林荒野' },
+            { id: 'ocean', icon: '🌊', label: '海洋冒險' },
+            { id: 'sky', icon: '☁️', label: '天空浮島' },
+            { id: 'underground', icon: '🕳️', label: '地下世界' },
+          ]
+        },
+        {
+          name: '生活元素',
+          icon: '🏡',
+          items: [
+            { id: 'farming', icon: '🌾', label: '種田/經營' },
+            { id: 'food', icon: '🍜', label: '美食描寫' },
+            { id: 'pet', icon: '🐾', label: '寵物/靈獸' },
+            { id: 'craft', icon: '🔨', label: '鍛造/煉丹' },
+            { id: 'healing', icon: '🌿', label: '治癒日常' },
+            { id: 'travel', icon: '🗺️', label: '旅行冒險' },
+            { id: 'collection', icon: '📦', label: '收集癖' },
+            { id: 'decoration', icon: '🏠', label: '裝飾佈置' },
+            { id: 'music', icon: '🎵', label: '音樂藝術' },
+            { id: 'fashion', icon: '👗', label: '服裝設計' },
+            { id: 'medicine', icon: '💊', label: '醫術醫道' },
+            { id: 'teaching', icon: '📚', label: '教書育人' },
+            { id: 'fishing', icon: '🎣', label: '釣魚養殖' },
+            { id: 'garden', icon: '🌷', label: '園藝花卉' },
+            { id: 'tea', icon: '🍵', label: '茶道雅事' },
+            { id: 'writing', icon: '✍️', label: '著書立傳' },
+          ]
+        },
+        {
+          name: '競爭對抗',
+          icon: '⚔️',
+          items: [
+            { id: 'faction', icon: '⚔️', label: '陣營對立' },
+            { id: 'competition', icon: '🏆', label: '比賽競技' },
+            { id: 'military', icon: '🎖️', label: '軍事戰爭' },
+            { id: 'politics', icon: '🏛️', label: '權謀政治' },
+            { id: 'family', icon: '👨‍👩‍👧', label: '家族興衰' },
+            { id: 'trade', icon: '💰', label: '商戰經商' },
+            { id: 'heist', icon: '🎭', label: '盜賊詐騙' },
+            { id: 'survival', icon: '🏕️', label: '生存淘汰' },
+            { id: 'ranking', icon: '📊', label: '排行榜戰' },
+            { id: 'territory', icon: '🗺️', label: '地盤爭奪' },
+            { id: 'resources', icon: '⛏️', label: '資源掠奪' },
+            { id: 'throne', icon: '👑', label: '奪嫡爭位' },
+            { id: 'exam', icon: '📝', label: '考試科舉' },
+            { id: 'spy', icon: '🕵️', label: '間諜潛伏' },
+            { id: 'assassination', icon: '🗡️', label: '刺殺暗殺' },
+            { id: 'rebellion', icon: '✊', label: '起義造反' },
+          ]
+        },
+        {
+          name: '特殊能力',
+          icon: '🌟',
+          items: [
+            { id: 'eye', icon: '👁️', label: '特殊眼睛' },
+            { id: 'bloodline', icon: '🩸', label: '血脈覺醒' },
+            { id: 'contract', icon: '📜', label: '契約召喚' },
+            { id: 'transformation', icon: '🦋', label: '變身/化形' },
+            { id: 'mind', icon: '🧠', label: '讀心/心靈' },
+            { id: 'element', icon: '🔥💧', label: '元素操控' },
+            { id: 'time', icon: '⏳', label: '時間能力' },
+            { id: 'space', icon: '🌀', label: '空間能力' },
+            { id: 'gravity', icon: '🌍', label: '重力操控' },
+            { id: 'illusion', icon: '🎪', label: '幻術/幻象' },
+            { id: 'poison', icon: '☠️', label: '毒術用毒' },
+            { id: 'necro', icon: '💀', label: '亡靈死靈' },
+            { id: 'holy', icon: '😇', label: '神聖光明' },
+            { id: 'dark', icon: '🌑', label: '黑暗力量' },
+            { id: 'beast', icon: '🐺', label: '獸化野性' },
+            { id: 'copy', icon: '📋', label: '複製能力' },
+          ]
+        },
+        {
+          name: '身份職業',
+          icon: '👔',
+          items: [
+            { id: 'prince', icon: '🤴', label: '王子公主' },
+            { id: 'assassin', icon: '🗡️', label: '殺手刺客' },
+            { id: 'merchant', icon: '💼', label: '商人富豪' },
+            { id: 'knight', icon: '⚔️', label: '騎士勇者' },
+            { id: 'mage', icon: '🧙', label: '法師魔法師' },
+            { id: 'thief', icon: '🦹', label: '盜賊俠盜' },
+            { id: 'priest', icon: '⛪', label: '神官祭司' },
+            { id: 'hunter', icon: '🏹', label: '獵人獵魔' },
+            { id: 'chef', icon: '👨‍🍳', label: '廚師美食家' },
+            { id: 'doctor', icon: '👨‍⚕️', label: '醫生藥師' },
+            { id: 'teacher', icon: '👨‍🏫', label: '老師導師' },
+            { id: 'emperor', icon: '👑', label: '帝王皇帝' },
+            { id: 'slave', icon: '⛓️', label: '奴隸囚徒' },
+            { id: 'orphan', icon: '🥺', label: '孤兒棄子' },
+            { id: 'noble', icon: '🎩', label: '貴族世家' },
+            { id: 'commoner', icon: '👤', label: '平民百姓' },
+          ]
+        },
+        {
+          name: '特殊設定',
+          icon: '🎲',
+          items: [
+            { id: 'nonHuman', icon: '🧝', label: '非人種族' },
+            { id: 'immortal', icon: '♾️', label: '不死永生' },
+            { id: 'reincarnator', icon: '🔁', label: '多周目' },
+            { id: 'reader', icon: '📖', label: '原著黨' },
+            { id: 'cannon', icon: '💥', label: '炮灰求生' },
+            { id: 'sickly', icon: '🤒', label: '病弱體質' },
+            { id: 'amnesia', icon: '❓', label: '失憶設定' },
+            { id: 'mute', icon: '🤐', label: '啞巴/失聲' },
+            { id: 'blind', icon: '👓', label: '盲人設定' },
+            { id: 'curse', icon: '🔮', label: '詛咒纏身' },
+            { id: 'seal', icon: '🔒', label: '封印解封' },
+            { id: 'clone', icon: '👥', label: '分身/複製體' },
+            { id: 'ai', icon: '🤖', label: 'AI/人工智慧' },
+            { id: 'hybrid', icon: '🧬', label: '混血/雜交' },
+            { id: 'gender', icon: '⚧️', label: '性轉設定' },
+            { id: 'age', icon: '👶👴', label: '年齡變化' },
+          ]
+        }
       ];
+      
+      // 扁平化用於相容舊程式碼
+      const specialElements = specialElementCategories.flatMap(cat => cat.items);
 
       function pickRandom(arr) {
         return arr[Math.floor(Math.random() * arr.length)];
@@ -2952,25 +3576,124 @@
           endingSelect.appendChild(option);
         });
 
-        // 特殊元素多選
-        specialElements.forEach(item => {
-          const div = document.createElement('div');
-          div.className = 'special-element-item';
-          div.dataset.id = item.id;
-          div.innerHTML = `
-            <input type="checkbox" id="element-${item.id}" />
-            <span class="checkbox-custom"></span>
-            <span class="element-icon">${item.icon}</span>
-            <span class="element-label">${item.label}</span>
-          `;
-          div.addEventListener('click', () => {
-            div.classList.toggle('selected');
-            const checkbox = div.querySelector('input[type="checkbox"]');
-            checkbox.checked = !checkbox.checked;
-            saveSettingsToLocal();
+        // 特殊元素多選（分類版）
+        const categoryTabs = document.getElementById('elementCategoryTabs');
+        const elementSearch = document.getElementById('elementSearch');
+        const clearElementsBtn = document.getElementById('clearElementsBtn');
+        const selectedCountSpan = document.getElementById('selectedCount');
+        let currentCategory = 'all';
+        
+        // 更新已選數量
+        function updateSelectedCount() {
+          const count = specialElementsContainer.querySelectorAll('.special-element-item.selected').length;
+          selectedCountSpan.textContent = `已選 ${count} 項`;
+        }
+        
+        // 渲染分類標籤
+        function renderCategoryTabs() {
+          categoryTabs.innerHTML = '';
+          
+          // 全部標籤
+          const allTab = document.createElement('button');
+          allTab.type = 'button';
+          allTab.className = 'category-tab active';
+          allTab.dataset.category = 'all';
+          allTab.innerHTML = `<span>📋</span> 全部 <span class="tab-count">${specialElements.length}</span>`;
+          allTab.addEventListener('click', () => selectCategory('all'));
+          categoryTabs.appendChild(allTab);
+          
+          // 各分類標籤
+          specialElementCategories.forEach(cat => {
+            const tab = document.createElement('button');
+            tab.type = 'button';
+            tab.className = 'category-tab';
+            tab.dataset.category = cat.name;
+            tab.innerHTML = `<span>${cat.icon}</span> ${cat.name} <span class="tab-count">${cat.items.length}</span>`;
+            tab.addEventListener('click', () => selectCategory(cat.name));
+            categoryTabs.appendChild(tab);
           });
-          specialElementsContainer.appendChild(div);
+        }
+        
+        // 選擇分類
+        function selectCategory(category) {
+          currentCategory = category;
+          
+          // 更新標籤樣式
+          categoryTabs.querySelectorAll('.category-tab').forEach(tab => {
+            tab.classList.toggle('active', tab.dataset.category === category);
+          });
+          
+          // 過濾顯示
+          filterElements();
+        }
+        
+        // 過濾元素（根據分類和搜尋）
+        function filterElements() {
+          const searchText = elementSearch.value.toLowerCase().trim();
+          
+          specialElementsContainer.querySelectorAll('.special-element-item').forEach(item => {
+            const itemId = item.dataset.id;
+            const itemLabel = item.querySelector('.element-label').textContent.toLowerCase();
+            
+            // 檢查分類
+            let inCategory = currentCategory === 'all';
+            if (!inCategory) {
+              const cat = specialElementCategories.find(c => c.name === currentCategory);
+              if (cat) {
+                inCategory = cat.items.some(i => i.id === itemId);
+              }
+            }
+            
+            // 檢查搜尋
+            const matchSearch = !searchText || itemLabel.includes(searchText);
+            
+            // 顯示/隱藏
+            item.style.display = (inCategory && matchSearch) ? '' : 'none';
+          });
+        }
+        
+        // 渲染所有元素
+        function renderAllElements() {
+          specialElementsContainer.innerHTML = '';
+          
+          specialElements.forEach(item => {
+            const div = document.createElement('div');
+            div.className = 'special-element-item';
+            div.dataset.id = item.id;
+            div.innerHTML = `
+              <input type="checkbox" id="element-${item.id}" />
+              <span class="checkbox-custom"></span>
+              <span class="element-icon">${item.icon}</span>
+              <span class="element-label">${item.label}</span>
+            `;
+            div.addEventListener('click', () => {
+              div.classList.toggle('selected');
+              const checkbox = div.querySelector('input[type="checkbox"]');
+              checkbox.checked = !checkbox.checked;
+              updateSelectedCount();
+              saveSettingsToLocal();
+            });
+            specialElementsContainer.appendChild(div);
+          });
+        }
+        
+        // 清除所有選擇
+        clearElementsBtn.addEventListener('click', () => {
+          specialElementsContainer.querySelectorAll('.special-element-item.selected').forEach(item => {
+            item.classList.remove('selected');
+            item.querySelector('input[type="checkbox"]').checked = false;
+          });
+          updateSelectedCount();
+          saveSettingsToLocal();
         });
+        
+        // 搜尋事件
+        elementSearch.addEventListener('input', filterElements);
+        
+        // 初始化
+        renderCategoryTabs();
+        renderAllElements();
+        updateSelectedCount();
       }
 
       // 初始化：載入設定或建立預設人物
@@ -3042,6 +3765,9 @@
       chapterNavToggle.addEventListener('click', () => {
         isPanelOpen = !isPanelOpen;
         chapterNavPanel.classList.toggle('open', isPanelOpen);
+        // 關閉書籤面板
+        bookmarkNavPanel.classList.remove('open');
+        isBookmarkPanelOpen = false;
       });
 
       chapterNavClose.addEventListener('click', () => {
@@ -3049,15 +3775,61 @@
         chapterNavPanel.classList.remove('open');
       });
 
+      // ==================== 浮動書籤導航 ====================
+      const bookmarkNavContainer = document.getElementById('bookmarkNavContainer');
+      const bookmarkNavToggle = document.getElementById('bookmarkNavToggle');
+      const bookmarkNavPanel = document.getElementById('bookmarkNavPanel');
+      const bookmarkNavClose = document.getElementById('bookmarkNavClose');
+      const bookmarkBadge = document.getElementById('bookmarkBadge');
+      const bookmarkEmpty = document.getElementById('bookmarkEmpty');
+      let isBookmarkPanelOpen = false;
+
+      // 切換書籤面板
+      bookmarkNavToggle.addEventListener('click', () => {
+        isBookmarkPanelOpen = !isBookmarkPanelOpen;
+        bookmarkNavPanel.classList.toggle('open', isBookmarkPanelOpen);
+        // 關閉章節面板
+        chapterNavPanel.classList.remove('open');
+        isPanelOpen = false;
+      });
+
+      bookmarkNavClose.addEventListener('click', () => {
+        isBookmarkPanelOpen = false;
+        bookmarkNavPanel.classList.remove('open');
+      });
+
       // 點擊面板外部關閉
       document.addEventListener('click', (e) => {
+        // 關閉章節面板
         if (isPanelOpen && 
             !chapterNavPanel.contains(e.target) && 
             !chapterNavToggle.contains(e.target)) {
           isPanelOpen = false;
           chapterNavPanel.classList.remove('open');
         }
+        // 關閉書籤面板
+        if (isBookmarkPanelOpen && 
+            !bookmarkNavPanel.contains(e.target) && 
+            !bookmarkNavToggle.contains(e.target)) {
+          isBookmarkPanelOpen = false;
+          bookmarkNavPanel.classList.remove('open');
+        }
       });
+
+      // 更新書籤徽章數量
+      function updateBookmarkBadge() {
+        const count = bookmarksCache.length;
+        bookmarkBadge.textContent = count;
+        bookmarkBadge.style.display = count > 0 ? 'block' : 'none';
+        
+        // 更新空狀態顯示
+        if (bookmarkEmpty) {
+          bookmarkEmpty.style.display = count === 0 ? 'block' : 'none';
+        }
+        if (bookmarkList) {
+          bookmarkList.style.display = count > 0 ? 'flex' : 'none';
+        }
+      }
 
       // 閱讀進度追蹤
       window.addEventListener('scroll', () => {
@@ -3312,6 +4084,9 @@
         
         const characterRows = Array.from(charactersContainer.querySelectorAll('.character-row'));
         let charactersInfo = '';
+        let characterNames = [];
+        let characterCount = 0;
+        
         characterRows.forEach((row, idx) => {
           const fields = [];
           const gender = row.querySelector('.char-gender').value;
@@ -3322,15 +4097,21 @@
           const weakness = row.querySelector('.char-weakness').value.trim();
           const secret = row.querySelector('.char-secret').value.trim();
           const relation = row.querySelector('.char-relation').value.trim();
-          if (name) fields.push(name);
+          if (name) {
+            fields.push(`【${name}】`);
+            characterNames.push(name);
+          }
           if (gender && gender !== '不明') fields.push(`性別：${gender}`);
           if (age) fields.push(`年齡：${age}歲`);
           if (personality) fields.push(`個性：${personality}`);
           if (goal) fields.push(`目標：${goal}`);
           if (weakness) fields.push(`弱點：${weakness}`);
           if (secret) fields.push(`秘密：${secret}`);
-          if (relation) fields.push(`人際：${relation}`);
-          if (fields.length > 0) charactersInfo += `人物${idx + 1}：${fields.join('，')}。\n`;
+          if (relation) fields.push(`人際關係：${relation}`);
+          if (fields.length > 0) {
+            charactersInfo += `角色${idx + 1}：${fields.join('，')}。\n`;
+            characterCount++;
+          }
         });
         
         const style = styleSelect.value.trim();
@@ -3358,42 +4139,115 @@
           showStatus('error', '請輸入 API 金鑰');
           return;
         }
-
-        let prompt = '';
-        if (theme) prompt += `主題：${theme}。`;
-        if (setting) prompt += `背景設定：${setting}。`;
-        if (era) prompt += `時代背景：${era}。`;
-        if (charactersInfo) prompt += `${charactersInfo}`;
-        if (style) prompt += `故事風格：${style}。`;
-        if (narrative) prompt += `敘事視角：${narrative}。`;
-        if (pacing) prompt += `故事節奏：${pacing}。`;
-        if (emotionalTone) prompt += `情感基調：${emotionalTone}。`;
-        if (worldComplexity) prompt += `世界觀複雜度：${worldComplexity}。`;
-        if (rating) prompt += `內容分級：${rating}。`;
-        if (ending) prompt += `結局傾向：${ending}。`;
-        if (selectedElements.length > 0) prompt += `特殊元素：${selectedElements.join('、')}。`;
-        if (chapters) prompt += `故事分為 ${chapters} 章節。`;
-        if (length) prompt += `總篇幅約 ${length} 字。`;
-        if (notes) prompt += `其他說明：${notes}。`;
         
         if (!theme && !setting && !charactersInfo && !style && !chapters && !length && !notes) {
           showStatus('error', '請至少填寫一項設定或使用隨機填充');
           return;
         }
+
+        // 構建結構化的 prompt
+        let prompt = '【小說創作設定】\n\n';
+        
+        // ===== 基本設定區 =====
+        let basicSettings = [];
+        if (theme) basicSettings.push(`主題：${theme}`);
+        if (setting) basicSettings.push(`背景設定：${setting}`);
+        if (era) basicSettings.push(`時代背景：${era}`);
+        if (style) basicSettings.push(`故事風格：${style}`);
+        
+        if (basicSettings.length > 0) {
+          prompt += `【基本設定】\n${basicSettings.join('\n')}\n\n`;
+        }
+        
+        // ===== 人物設定區 =====
+        if (charactersInfo) {
+          prompt += `【主要登場人物（共${characterCount}位，★全部必須出現★）】\n${charactersInfo}`;
+          if (characterNames.length > 0) {
+            prompt += `⚠️ 重要：以上所有角色（${characterNames.join('、')}）都必須在故事中登場並有實際戲份！\n`;
+          }
+          prompt += '\n';
+        }
+        
+        // ===== 寫作風格設定區 =====
+        let styleSettings = [];
+        if (narrative) styleSettings.push(`敘事視角：${narrative}`);
+        if (pacing) styleSettings.push(`故事節奏：${pacing}`);
+        if (emotionalTone) styleSettings.push(`情感基調：${emotionalTone}`);
+        if (worldComplexity) styleSettings.push(`世界觀複雜度：${worldComplexity}`);
+        if (rating) styleSettings.push(`內容分級：${rating}`);
+        if (ending) styleSettings.push(`結局傾向：${ending}`);
+        
+        if (styleSettings.length > 0) {
+          prompt += `【寫作風格設定（★必須嚴格遵守★）】\n${styleSettings.join('\n')}\n\n`;
+        }
+        
+        // ===== 特殊元素區 =====
+        if (selectedElements.length > 0) {
+          prompt += `【特殊元素（★必須融入故事★）】\n${selectedElements.join('、')}\n\n`;
+        }
+        
+        // ===== 篇幅設定區 =====
+        let lengthSettings = [];
+        if (chapters) lengthSettings.push(`章節數：${chapters} 章`);
+        if (length) lengthSettings.push(`總字數：約 ${length} 字`);
+        
+        if (lengthSettings.length > 0) {
+          prompt += `【篇幅設定】\n${lengthSettings.join('\n')}\n\n`;
+        }
+        
+        // ===== 補充說明區 =====
+        if (notes) {
+          prompt += `【補充說明】\n${notes}\n\n`;
+        }
+        
+        // ===== 生成設定清單（用於最後的強調） =====
+        let settingsList = [];
+        if (theme) settingsList.push(`主題「${theme}」`);
+        if (setting) settingsList.push(`背景「${setting}」`);
+        if (era) settingsList.push(`時代「${era}」`);
+        if (style) settingsList.push(`風格「${style}」`);
+        if (narrative) settingsList.push(`視角「${narrative}」`);
+        if (pacing) settingsList.push(`節奏「${pacing}」`);
+        if (emotionalTone) settingsList.push(`基調「${emotionalTone}」`);
+        if (worldComplexity) settingsList.push(`世界觀「${worldComplexity}」`);
+        if (rating) settingsList.push(`分級「${rating}」`);
+        if (ending) settingsList.push(`結局「${ending}」`);
         
         // 章節完結提示
         let chapterEndingHint = '';
         if (chapters) {
           chapterEndingHint = `
-10. 故事總共 ${chapters} 章，第 ${chapters} 章必須是【完結篇】，要妥善收尾所有劇情線
-11. 在最後一章結束後，加上「（全文完）」或「─ 完 ─」標記`;
+12. 故事總共 ${chapters} 章，第 ${chapters} 章必須是【完結篇】，要妥善收尾所有劇情線
+13. 在最後一章結束後，加上「（全文完）」或「─ 完 ─」標記`;
+        }
+        
+        // 人物登場強調
+        let characterReminder = '';
+        if (characterCount > 0) {
+          characterReminder = `
+11. ★★★【極重要】故事中必須讓所有 ${characterCount} 位設定角色都登場${characterNames.length > 0 ? `（${characterNames.join('、')}）` : ''}，每位角色都要有台詞或行動，不可遺漏任何一位`;
+        }
+        
+        // 設定遵守強調
+        let settingsReminder = '';
+        if (settingsList.length > 0) {
+          settingsReminder = `
+10. ★★★【必須遵守所有設定】${settingsList.join('、')}`;
+        }
+        
+        // 特殊元素強調
+        let elementsReminder = '';
+        if (selectedElements.length > 0) {
+          elementsReminder = `
+9. 必須將特殊元素「${selectedElements.join('、')}」自然融入故事情節中`;
         }
         
         prompt += `
+═══════════════════════════════════════
+【重要指示】請直接撰寫小說「正文內容」，嚴格按照以上所有設定進行創作。
+═══════════════════════════════════════
 
-【重要指示】請直接撰寫小說「正文內容」，不要只寫大綱、規劃、故事簡介或章節列表。
-
-要求：
+寫作要求：
 1. 直接開始寫故事正文，包含場景描寫、人物對話、心理活動、情節發展
 2. 每個章節都要有完整的故事內容（至少2000-3000字），不是簡短的摘要
 3. 章節標題格式：### 第X章：標題（或 ### 序章：標題）
@@ -3401,8 +4255,7 @@
 5. 故事要有起承轉合，情節完整
 6. 禁止出現「故事大綱」「章節列表」「故事簡介」「人物設定」等規劃性內容
 7. 禁止使用條列式說明，要用敘事文體
-8. 嚴格遵守指定的敘事視角、故事節奏、情感基調
-9. 確保特殊元素自然融入故事中${chapterEndingHint}
+8. 嚴格遵守指定的敘事視角、故事節奏、情感基調、內容分級${elementsReminder}${settingsReminder}${characterReminder}${chapterEndingHint}
 
 現在開始撰寫小說正文：`;
 
@@ -3524,18 +4377,69 @@
           }
         }
 
-        const continuePrompt = latestStory + `
+        // 收集人物名字用於提醒
+        const characterRows = Array.from(charactersContainer.querySelectorAll('.character-row'));
+        const characterNames = characterRows
+          .map(row => row.querySelector('.char-name').value.trim())
+          .filter(name => name !== '');
+        
+        // 收集所有設定用於提醒
+        const theme = themeSelect.value.trim();
+        const setting = settingInput.value.trim();
+        const style = styleSelect.value.trim();
+        const narrative = narrativeSelect.value.trim();
+        const era = eraSelect.value.trim();
+        const pacing = pacingSelect.value.trim();
+        const emotionalTone = emotionalToneSelect.value.trim();
+        const worldComplexity = worldComplexitySelect.value.trim();
+        const rating = ratingSelect.value.trim();
+        const ending = endingSelect.value.trim();
+        
+        // 收集特殊元素
+        const selectedElements = [];
+        specialElementsContainer.querySelectorAll('.special-element-item.selected').forEach(item => {
+          const label = item.querySelector('.element-label').textContent;
+          selectedElements.push(label);
+        });
+        
+        // 構建設定提醒
+        let settingsReminder = '\n\n【必須遵守的設定提醒】\n';
+        let hasSettings = false;
+        
+        if (theme) { settingsReminder += `• 主題：${theme}\n`; hasSettings = true; }
+        if (setting) { settingsReminder += `• 背景：${setting}\n`; hasSettings = true; }
+        if (style) { settingsReminder += `• 風格：${style}\n`; hasSettings = true; }
+        if (narrative) { settingsReminder += `• 視角：${narrative}\n`; hasSettings = true; }
+        if (pacing) { settingsReminder += `• 節奏：${pacing}\n`; hasSettings = true; }
+        if (emotionalTone) { settingsReminder += `• 基調：${emotionalTone}\n`; hasSettings = true; }
+        if (rating) { settingsReminder += `• 分級：${rating}\n`; hasSettings = true; }
+        if (ending) { settingsReminder += `• 結局傾向：${ending}\n`; hasSettings = true; }
+        if (selectedElements.length > 0) { settingsReminder += `• 特殊元素：${selectedElements.join('、')}\n`; hasSettings = true; }
+        if (characterNames.length > 0) { settingsReminder += `• 登場人物：${characterNames.join('、')}（全部必須持續出現）\n`; hasSettings = true; }
+        
+        if (!hasSettings) settingsReminder = '';
+        
+        let characterReminder = '';
+        if (characterNames.length > 1) {
+          characterReminder = `
+9. ★★★ 確保所有主要角色（${characterNames.join('、')}）在後續劇情中持續發揮作用，不可遺漏任何一位`;
+        }
 
-【重要指示】請繼續撰寫小說「正文內容」。
+        const continuePrompt = latestStory + settingsReminder + `
+
+═══════════════════════════════════════
+【重要指示】請繼續撰寫小說「正文內容」，嚴格遵守以上所有設定。
+═══════════════════════════════════════
 
 要求：
-1. 保持以上故事的主題、背景、人物與風格
+1. 保持以上故事的主題、背景、人物與風格，不可偏離設定
 2. 直接繼續寫故事正文，包含場景描寫、人物對話、心理活動、情節發展
 3. 每個章節都要有完整的故事內容（至少2000-3000字）
 4. 如果上一章尚未結束，請先完成該章節
 5. 章節標題格式：### 第X章：標題
 6. 禁止出現大綱、規劃、故事簡介等內容
-7. 禁止使用條列式說明，要用敘事文體${remainingChaptersHint}
+7. 禁止使用條列式說明，要用敘事文體
+8. 嚴格遵守指定的敘事視角、故事節奏、情感基調、內容分級${characterReminder}${remainingChaptersHint}
 
 繼續撰寫小說正文：`;
         
@@ -4579,56 +5483,50 @@
         const allBookmarks = loadBookmarks();
         const bookmarks = getFilteredAndSortedBookmarks();
         
-        bookmarkCount.textContent = `${allBookmarks.length} 篇`;
+        // 更新徽章
+        updateBookmarkBadge();
+        
         bookmarkList.innerHTML = '';
 
         if (bookmarks.length === 0) {
-          bookmarkList.innerHTML = `
-            <li class="bookmark-empty">
-              <div class="bookmark-empty-icon">📚</div>
-              <div>${allBookmarks.length === 0 ? '還沒有書籤，生成故事後點擊「儲存目前故事」' : '找不到符合條件的書籤'}</div>
-            </li>
-          `;
+          // 空狀態由 bookmarkEmpty 元素顯示
           return;
         }
 
         bookmarks.forEach(bm => {
           const li = document.createElement('li');
-          li.className = 'bookmark-item';
           li.innerHTML = `
-            <div class="bookmark-item-icon">📖</div>
-            <div class="bookmark-item-content">
-              <div class="bookmark-item-title">${bm.title || '未命名書籤'}</div>
-              <div class="bookmark-item-meta">
-                <span>📅 ${formatDate(bm.id)}</span>
-                <span>📝 ${formatWordCount(bm.content || '')}</span>
-                ${bm.tags && bm.tags.length > 0 ? `<span>🏷️ ${bm.tags.slice(0,3).join(', ')}</span>` : ''}
-              </div>
+            <div class="bookmark-item-title">${bm.title || '未命名書籤'}</div>
+            <div class="bookmark-item-meta">
+              <span>📅 ${formatDate(bm.id)}</span>
+              <span>📝 ${formatWordCount(bm.content || '')}</span>
             </div>
+            <div class="bookmark-item-preview">${(bm.content || '').substring(0, 80).replace(/\n/g, ' ')}...</div>
             <div class="bookmark-item-actions">
-              <button type="button" class="btn-load" data-action="load">載入</button>
-              <button type="button" data-action="edit">編輯</button>
-              <button type="button" data-action="delete">刪除</button>
+              <button type="button" data-action="load">📖 載入</button>
+              <button type="button" data-action="edit">✏️ 編輯</button>
+              <button type="button" class="delete-btn" data-action="delete">🗑️</button>
             </div>
           `;
 
+          // 點擊整個項目載入（除了按鈕區域）
+          li.addEventListener('click', (e) => {
+            // 檢查是否點擊了按鈕或按鈕區域
+            if (e.target.closest('button') || e.target.closest('.bookmark-item-actions')) return;
+            loadBookmarkContent(bm);
+          });
+
           // 載入
-          li.querySelector('[data-action="load"]').addEventListener('click', () => {
-            latestStory = bm.content;
-            resultDiv.textContent = latestStory;
-            downloadBtn.disabled = !latestStory;
-            continueBtn.disabled = !latestStory;
-            speakBtn.disabled = !latestStory;
-            try {
-              localStorage.setItem('savedStory', latestStory);
-            } catch (e) {}
-            showStatus('success', '書籤已載入');
-            parseAndShowChapters(latestStory);
-            document.querySelector('.card').scrollIntoView({ behavior: 'smooth' });
+          li.querySelector('[data-action="load"]').addEventListener('click', (e) => {
+            e.stopPropagation();
+            e.preventDefault();
+            loadBookmarkContent(bm);
           });
 
           // 編輯
-          li.querySelector('[data-action="edit"]').addEventListener('click', () => {
+          li.querySelector('[data-action="edit"]').addEventListener('click', (e) => {
+            e.stopPropagation();
+            e.preventDefault();
             editingBookmarkId = bm.id;
             editBookmarkTitle.value = bm.title || '';
             editBookmarkTags.value = (bm.tags || []).join(', ');
@@ -4637,7 +5535,9 @@
           });
 
           // 刪除
-          li.querySelector('[data-action="delete"]').addEventListener('click', () => {
+          li.querySelector('[data-action="delete"]').addEventListener('click', (e) => {
+            e.stopPropagation();
+            e.preventDefault();
             if (confirm('確定要刪除此書籤嗎？')) {
               const list = loadBookmarks().filter(b => b.id !== bm.id);
               saveBookmarks(list);
@@ -4648,6 +5548,27 @@
 
           bookmarkList.appendChild(li);
         });
+      }
+      
+      // 載入書籤內容
+      function loadBookmarkContent(bm) {
+        latestStory = bm.content;
+        resultDiv.textContent = latestStory;
+        downloadBtn.disabled = !latestStory;
+        continueBtn.disabled = !latestStory;
+        speakBtn.disabled = !latestStory;
+        try {
+          localStorage.setItem('savedStory', latestStory);
+        } catch (e) {}
+        showStatus('success', `已載入：${bm.title || '書籤'}`);
+        parseAndShowChapters(latestStory);
+        
+        // 關閉書籤面板
+        isBookmarkPanelOpen = false;
+        bookmarkNavPanel.classList.remove('open');
+        
+        // 捲動到結果區
+        resultDiv.scrollIntoView({ behavior: 'smooth', block: 'start' });
       }
 
       // 新增書籤
