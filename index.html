@@ -416,8 +416,8 @@
 
       /* 人物設定區 */
       .character-row {
-        display: grid;
-        grid-template-columns: 70px 75px 75px repeat(6, 1fr) auto auto;
+        display: flex;
+        flex-wrap: wrap;
         gap: 10px;
         margin-bottom: 14px;
         align-items: center;
@@ -437,6 +437,8 @@
         font-weight: 600;
         color: var(--accent);
         font-size: 0.9rem;
+        width: 55px;
+        flex-shrink: 0;
       }
 
       .character-row input,
@@ -445,14 +447,34 @@
         font-size: 0.9rem;
       }
 
-      .character-row .char-gender,
+      .character-row .char-gender {
+        width: 75px;
+        flex-shrink: 0;
+      }
+      
       .character-row .char-age {
-        padding: 10px 8px;
+        width: 70px;
+        flex-shrink: 0;
+      }
+      
+      .character-row .char-name {
+        width: 90px;
+        flex-shrink: 0;
+      }
+      
+      .character-row .char-personality,
+      .character-row .char-goal,
+      .character-row .char-weakness,
+      .character-row .char-secret,
+      .character-row .char-relation {
+        flex: 1;
+        min-width: 110px;
       }
 
       .character-row button {
         padding: 10px 14px;
         white-space: nowrap;
+        flex-shrink: 0;
       }
       
       .char-remove-btn {
@@ -483,39 +505,75 @@
         color: #aaa;
       }
 
+      /* 響應式 - 人物設定 */
       @media (max-width: 1200px) {
-        .character-row {
-          grid-template-columns: 70px 75px 75px 1fr 1fr 1fr auto auto;
-        }
+        .character-row .char-personality,
+        .character-row .char-goal,
         .character-row .char-weakness,
         .character-row .char-secret,
         .character-row .char-relation {
-          grid-column: span 1;
+          min-width: 100px;
         }
       }
 
-      @media (max-width: 768px) {
+      @media (max-width: 900px) {
         .character-row {
-          grid-template-columns: 1fr 1fr;
+          padding: 14px;
         }
         .char-index {
-          grid-column: 1 / -1;
-        }
-        .character-row .char-gender,
-        .character-row .char-age {
           width: 100%;
+          padding-bottom: 8px;
+          margin-bottom: 4px;
+          border-bottom: 1px dashed var(--border);
         }
-        .char-random-btn, .char-remove-btn {
-          justify-self: end;
+        .character-row .char-personality,
+        .character-row .char-goal,
+        .character-row .char-weakness,
+        .character-row .char-secret,
+        .character-row .char-relation {
+          min-width: calc(33% - 10px);
+          flex: 1 1 calc(33% - 10px);
         }
       }
 
-      @media (max-width: 500px) {
+      @media (max-width: 600px) {
         .character-row {
-          grid-template-columns: 1fr;
+          padding: 12px;
+          gap: 8px;
+        }
+        .character-row .char-gender {
+          width: 70px;
+        }
+        .character-row .char-age {
+          width: 65px;
+        }
+        .character-row .char-name {
+          flex: 1;
+          min-width: 80px;
+        }
+        .character-row .char-personality,
+        .character-row .char-goal,
+        .character-row .char-weakness,
+        .character-row .char-secret,
+        .character-row .char-relation {
+          min-width: calc(50% - 5px);
+          flex: 1 1 calc(50% - 5px);
+        }
+      }
+
+      @media (max-width: 450px) {
+        .character-row .char-personality,
+        .character-row .char-goal,
+        .character-row .char-weakness,
+        .character-row .char-secret,
+        .character-row .char-relation {
+          min-width: 100%;
+          flex: 1 1 100%;
         }
         .character-row button {
-          width: 100%;
+          flex: 1;
+        }
+      }
         }
       }
 
