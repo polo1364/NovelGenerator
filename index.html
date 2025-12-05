@@ -4078,7 +4078,9 @@
         try {
           const raw = localStorage.getItem('bookmarks');
           if (!raw) return [];
-          return JSON.parse(raw);
+          const parsed = JSON.parse(raw);
+          console.log('載入書籤數量：', parsed.length);
+          return parsed;
         } catch (e) {
           console.warn('無法讀取書籤：', e);
           return [];
@@ -4087,9 +4089,14 @@
 
       function saveBookmarks(bookmarks) {
         try {
-          localStorage.setItem('bookmarks', JSON.stringify(bookmarks));
+          const json = JSON.stringify(bookmarks);
+          localStorage.setItem('bookmarks', json);
+          console.log('儲存書籤成功，數量：', bookmarks.length);
+          return true;
         } catch (e) {
+          console.error('書籤儲存失敗：', e);
           showStatus('error', '書籤儲存失敗，可能已達儲存上限');
+          return false;
         }
       }
 
@@ -4299,7 +4306,10 @@
         const reader = new FileReader();
         reader.onload = (event) => {
           try {
+            console.log('開始匯入書籤...');
             const imported = JSON.parse(event.target.result);
+            console.log('解析 JSON 成功，書籤數量：', imported.length);
+            
             if (!Array.isArray(imported)) throw new Error('格式錯誤：不是陣列');
             
             if (imported.length === 0) {
@@ -4308,6 +4318,7 @@
             }
             
             const existing = loadBookmarks();
+            console.log('現有書籤數量：', existing.length);
             const existingIds = new Set(existing.map(b => b.id));
             let added = 0;
             let skipped = 0;
@@ -4331,19 +4342,30 @@
               }
             });
             
+            console.log('新增：', added, '跳過：', skipped);
+            
             if (added > 0) {
-              saveBookmarks(existing);
-              renderBookmarks();
+              const saveSuccess = saveBookmarks(existing);
               
-              if (skipped > 0) {
-                showStatus('success', `已匯入 ${added} 筆書籤（${skipped} 筆重複已跳過）`);
+              if (saveSuccess) {
+                // 驗證儲存結果
+                const verification = loadBookmarks();
+                console.log('驗證儲存結果，數量：', verification.length);
+                
+                renderBookmarks();
+                
+                if (skipped > 0) {
+                  showStatus('success', `已匯入 ${added} 筆書籤（${skipped} 筆重複已跳過）`);
+                } else {
+                  showStatus('success', `已匯入 ${added} 筆書籤`);
+                }
               } else {
-                showStatus('success', `已匯入 ${added} 筆書籤`);
+                showStatus('error', '匯入失敗：無法儲存到本地');
               }
             } else if (skipped > 0) {
               showStatus('warning', `所有 ${skipped} 筆書籤都已存在，沒有新增`);
             } else {
-              showStatus('error', '匯入失敗：檔案中沒有有效的書籤');
+              showStatus('error', '匯入失敗：檔案中沒有有效的書籤（需要有 content 欄位）');
             }
             
             // 強制重新渲染
