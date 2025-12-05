@@ -1243,6 +1243,153 @@
         width: 100%;
         justify-content: center;
       }
+      
+      /* 語速/音調微調按鈕 */
+      .speed-control {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        flex: 1;
+      }
+      
+      .speed-control input[type="range"] {
+        flex: 1;
+      }
+      
+      .speed-btn {
+        width: 32px;
+        height: 32px;
+        padding: 0;
+        border: 1px solid var(--border);
+        border-radius: 6px;
+        background: white;
+        cursor: pointer;
+        font-size: 1.1rem;
+        font-weight: bold;
+        color: var(--text);
+        transition: all 0.2s;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+      }
+      
+      .speed-btn:hover {
+        border-color: var(--accent);
+        color: var(--accent);
+        background: rgba(233, 69, 96, 0.05);
+      }
+      
+      .speed-value {
+        min-width: 45px;
+        text-align: right;
+        font-weight: 600;
+        color: var(--accent);
+      }
+      
+      /* 段落跳轉按鈕 */
+      .speech-nav-buttons {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 12px;
+        margin-top: 12px;
+        padding: 10px;
+        background: rgba(233, 69, 96, 0.03);
+        border-radius: 10px;
+      }
+      
+      .speech-nav-buttons button {
+        padding: 8px 14px;
+        font-size: 0.9rem;
+      }
+      
+      .segment-display {
+        font-size: 1rem;
+        font-weight: 600;
+        color: var(--accent);
+        min-width: 70px;
+        text-align: center;
+      }
+      
+      /* 進度條可點擊 */
+      .speech-progress-bar {
+        cursor: pointer;
+        position: relative;
+      }
+      
+      .speech-progress-bar:hover {
+        opacity: 0.9;
+      }
+      
+      .speech-progress-bar:hover::after {
+        content: '點擊跳轉';
+        position: absolute;
+        top: -25px;
+        left: 50%;
+        transform: translateX(-50%);
+        font-size: 0.75rem;
+        color: var(--text-light);
+        background: white;
+        padding: 2px 8px;
+        border-radius: 4px;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+      }
+      
+      /* 選項區 */
+      .speech-options {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 16px;
+        margin-top: 14px;
+        padding: 12px;
+        background: rgba(0, 0, 0, 0.02);
+        border-radius: 8px;
+      }
+      
+      .checkbox-label {
+        display: flex;
+        align-items: center;
+        gap: 6px;
+        cursor: pointer;
+        font-size: 0.9rem;
+        color: var(--text);
+      }
+      
+      .checkbox-label input[type="checkbox"] {
+        width: 16px;
+        height: 16px;
+        accent-color: var(--accent);
+      }
+      
+      /* 高亮目前朗讀的段落 */
+      .speaking-segment {
+        background: linear-gradient(90deg, rgba(233, 69, 96, 0.12) 0%, rgba(233, 69, 96, 0.05) 100%);
+        border-left: 4px solid var(--accent);
+        padding: 12px 16px;
+        margin: 8px -16px;
+        border-radius: 0 8px 8px 0;
+        position: relative;
+        animation: pulse-highlight 2s ease-in-out infinite;
+      }
+      
+      @keyframes pulse-highlight {
+        0%, 100% { background: linear-gradient(90deg, rgba(233, 69, 96, 0.12) 0%, rgba(233, 69, 96, 0.05) 100%); }
+        50% { background: linear-gradient(90deg, rgba(233, 69, 96, 0.18) 0%, rgba(233, 69, 96, 0.08) 100%); }
+      }
+      
+      .speaking-segment::before {
+        content: '🔊';
+        position: absolute;
+        left: -30px;
+        top: 50%;
+        transform: translateY(-50%);
+        font-size: 1rem;
+      }
+      
+      /* 輸出區域需要 relative 定位 */
+      .output {
+        position: relative;
+      }
 
       @media (max-width: 500px) {
         .range-selector {
@@ -1679,13 +1826,21 @@
             </div>
             <div class="speech-row">
               <label>語速：</label>
-              <input type="range" id="speechRate" min="0.5" max="2" step="0.1" value="1" />
-              <span id="rateValue">1.0x</span>
+              <div class="speed-control">
+                <button class="speed-btn" data-speed="-0.25">−</button>
+                <input type="range" id="speechRate" min="0.25" max="3" step="0.05" value="1" />
+                <button class="speed-btn" data-speed="+0.25">+</button>
+                <span id="rateValue" class="speed-value">1.0x</span>
+              </div>
             </div>
             <div class="speech-row">
               <label>音調：</label>
-              <input type="range" id="speechPitch" min="0.5" max="2" step="0.1" value="1" />
-              <span id="pitchValue">1.0</span>
+              <div class="speed-control">
+                <button class="speed-btn" data-pitch="-0.1">−</button>
+                <input type="range" id="speechPitch" min="0.5" max="2" step="0.05" value="1" />
+                <button class="speed-btn" data-pitch="+0.1">+</button>
+                <span id="pitchValue" class="speed-value">1.0</span>
+              </div>
             </div>
             <div class="speech-row">
               <label>情緒模式：</label>
@@ -1711,17 +1866,41 @@
               </div>
             </div>
             <div id="segmentInfo" class="segment-info">共 0 段</div>
+            
+            <!-- 主控制按鈕 -->
             <div class="speech-buttons">
               <button id="playPauseBtn" class="btn-primary">▶️ 開始朗讀</button>
               <button id="stopSpeechBtn" class="btn-outline">⏹️ 停止</button>
               <button id="resetSpeechBtn" class="btn-outline" title="清除進度，從頭開始">🔄 重置</button>
             </div>
+            
+            <!-- 段落跳轉控制 -->
+            <div class="speech-nav-buttons">
+              <button id="prevSegmentBtn" class="btn-outline" disabled title="上一段">⏮️ 上一段</button>
+              <span id="currentSegmentDisplay" class="segment-display">- / -</span>
+              <button id="nextSegmentBtn" class="btn-outline" disabled title="下一段">下一段 ⏭️</button>
+            </div>
+            
+            <!-- 進度條（可點擊跳轉） -->
             <div class="speech-progress">
-              <div class="speech-progress-bar">
+              <div class="speech-progress-bar" id="speechProgressBar" title="點擊跳轉到指定位置">
                 <div id="speechProgressFill" class="speech-progress-fill"></div>
               </div>
               <span id="speechProgressText">準備就緒</span>
             </div>
+            
+            <!-- 選項 -->
+            <div class="speech-options">
+              <label class="checkbox-label">
+                <input type="checkbox" id="autoScrollCheck" checked />
+                <span>自動捲動到目前段落</span>
+              </label>
+              <label class="checkbox-label">
+                <input type="checkbox" id="highlightCheck" checked />
+                <span>高亮顯示目前段落</span>
+              </label>
+            </div>
+            
             <div class="speech-extra-buttons">
               <button id="copyAllBtn" class="btn-outline btn-full">📋 複製全文（可貼到其他 App 朗讀）</button>
             </div>
@@ -4641,6 +4820,35 @@
       let speechSegments = [];
       let currentSegmentIndex = 0;
       let availableVoices = [];
+      let segmentRanges = []; // 儲存每個段落在原文中的位置
+
+      // 朗讀控制元素
+      const prevSegmentBtn = document.getElementById('prevSegmentBtn');
+      const nextSegmentBtn = document.getElementById('nextSegmentBtn');
+      const currentSegmentDisplay = document.getElementById('currentSegmentDisplay');
+      const speechProgressBar = document.getElementById('speechProgressBar');
+      const autoScrollCheck = document.getElementById('autoScrollCheck');
+      const highlightCheck = document.getElementById('highlightCheck');
+      
+      // Chrome bug workaround: 防止長時間朗讀自動暫停
+      let speechKeepAliveInterval = null;
+      
+      function startSpeechKeepAlive() {
+        if (speechKeepAliveInterval) return;
+        speechKeepAliveInterval = setInterval(() => {
+          if (isSpeaking && !isPaused && speechSynth.speaking) {
+            speechSynth.pause();
+            speechSynth.resume();
+          }
+        }, 10000); // 每 10 秒
+      }
+      
+      function stopSpeechKeepAlive() {
+        if (speechKeepAliveInterval) {
+          clearInterval(speechKeepAliveInterval);
+          speechKeepAliveInterval = null;
+        }
+      }
 
       // 儲存朗讀進度
       function saveSpeechProgress() {
@@ -4682,41 +4890,74 @@
         availableVoices = speechSynth.getVoices();
         voiceSelect.innerHTML = '';
         
-        // 只篩選中文語音
+        // 篩選中文語音（放寬條件）
         const zhVoices = availableVoices.filter(v => 
           v.lang.includes('zh') || 
           v.lang.includes('TW') || 
           v.lang.includes('CN') ||
           v.lang.includes('HK') ||
+          v.lang.includes('cmn') ||  // 普通話
+          v.lang.includes('yue') ||  // 粵語
+          v.lang.includes('wuu') ||  // 吳語
           v.name.includes('中文') ||
           v.name.includes('Chinese') ||
           v.name.includes('Mandarin') ||
-          v.name.includes('Cantonese')
+          v.name.includes('Cantonese') ||
+          v.name.includes('Taiwan') ||
+          v.name.includes('Hong Kong') ||
+          v.name.includes('Taiwanese') ||
+          v.name.toLowerCase().includes('xiaoxiao') ||
+          v.name.toLowerCase().includes('yunyang') ||
+          v.name.toLowerCase().includes('xiaoyi')
         );
         
+        // 取得所有非中文語音（備用）
+        const otherVoices = availableVoices.filter(v => !zhVoices.includes(v));
+        
         // 按語言分類
-        const twVoices = zhVoices.filter(v => v.lang.includes('TW') || v.lang.includes('zh-Hant') || v.name.includes('台'));
-        const cnVoices = zhVoices.filter(v => (v.lang.includes('CN') || v.lang.includes('zh-Hans') || v.lang === 'zh') && !twVoices.includes(v));
-        const hkVoices = zhVoices.filter(v => v.lang.includes('HK') || v.name.includes('粵') || v.name.includes('Cantonese'));
-        const otherZhVoices = zhVoices.filter(v => !twVoices.includes(v) && !cnVoices.includes(v) && !hkVoices.includes(v));
+        const twVoices = zhVoices.filter(v => 
+          v.lang.includes('TW') || 
+          v.lang.includes('zh-Hant') || 
+          v.name.includes('台') ||
+          v.name.includes('Taiwan')
+        );
+        const cnVoices = zhVoices.filter(v => 
+          (v.lang.includes('CN') || v.lang.includes('zh-Hans') || v.lang === 'zh' || v.lang.includes('cmn')) && 
+          !twVoices.includes(v)
+        );
+        const hkVoices = zhVoices.filter(v => 
+          v.lang.includes('HK') || 
+          v.lang.includes('yue') ||
+          v.name.includes('粵') || 
+          v.name.includes('Cantonese') ||
+          v.name.includes('Hong Kong')
+        );
+        const otherZhVoices = zhVoices.filter(v => 
+          !twVoices.includes(v) && !cnVoices.includes(v) && !hkVoices.includes(v)
+        );
         
         // 簡化語音名稱顯示
-        function formatVoiceName(voice) {
+        function formatVoiceName(voice, showLang = false) {
           let name = voice.name;
           // 移除常見的冗長前綴
-          name = name.replace(/Microsoft /g, '');
-          name = name.replace(/Google /g, '');
-          name = name.replace(/Apple /g, '');
-          name = name.replace(/ Online \(Natural\)/g, '');
-          name = name.replace(/ - Chinese \(.*\)/g, '');
+          name = name.replace(/Microsoft /gi, '');
+          name = name.replace(/Google /gi, '');
+          name = name.replace(/Apple /gi, '');
+          name = name.replace(/ Online \(Natural\)/gi, '');
+          name = name.replace(/ - Chinese \(.*\)/gi, '');
+          name = name.replace(/ - .*$/gi, ''); // 移除最後的語言標記
           
           // 添加語言標記
           if (voice.lang.includes('TW') || voice.lang.includes('zh-Hant')) {
             return `🇹🇼 ${name}`;
-          } else if (voice.lang.includes('CN') || voice.lang.includes('zh-Hans') || voice.lang === 'zh') {
-            return `🇨🇳 ${name}`;
-          } else if (voice.lang.includes('HK')) {
+          } else if (voice.lang.includes('HK') || voice.lang.includes('yue')) {
             return `🇭🇰 ${name}`;
+          } else if (voice.lang.includes('CN') || voice.lang.includes('zh-Hans') || voice.lang === 'zh' || voice.lang.includes('cmn')) {
+            return `🇨🇳 ${name}`;
+          }
+          
+          if (showLang) {
+            return `${name} (${voice.lang})`;
           }
           return name;
         }
@@ -4774,10 +5015,24 @@
           voiceSelect.appendChild(group);
         }
         
-        // 如果完全沒有中文語音
-        if (zhVoices.length === 0) {
+        // 如果完全沒有中文語音，顯示所有可用語音
+        if (zhVoices.length === 0 && otherVoices.length > 0) {
+          const group = document.createElement('optgroup');
+          group.label = '🌐 其他語音（無中文語音可用）';
+          otherVoices.slice(0, 20).forEach((voice, i) => { // 最多顯示 20 個
+            const option = document.createElement('option');
+            option.value = voice.name;
+            option.textContent = formatVoiceName(voice, true);
+            if (i === 0) option.selected = true;
+            group.appendChild(option);
+          });
+          voiceSelect.appendChild(group);
+        }
+        
+        // 如果完全沒有語音
+        if (availableVoices.length === 0) {
           const option = document.createElement('option');
-          option.textContent = '⚠️ 未找到中文語音';
+          option.textContent = '⚠️ 未找到任何語音';
           option.disabled = true;
           voiceSelect.appendChild(option);
           
@@ -4838,49 +5093,188 @@
         
         switch (emotion) {
           case 'sad':
-            return { rate: baseRate * 0.8, pitch: basePitch * 0.85, volume: 0.85, pause: 400 };
+            return { rate: baseRate * 0.8, pitch: basePitch * 0.85, volume: 0.85, pause: 500 };
           case 'excited':
-            return { rate: baseRate * 1.15, pitch: basePitch * 1.1, volume: 1.0, pause: 150 };
+            return { rate: baseRate * 1.15, pitch: basePitch * 1.1, volume: 1.0, pause: 200 };
           case 'mysterious':
-            return { rate: baseRate * 0.85, pitch: basePitch * 0.9, volume: 0.9, pause: 350 };
+            return { rate: baseRate * 0.85, pitch: basePitch * 0.9, volume: 0.9, pause: 450 };
           case 'gentle':
-            return { rate: baseRate * 0.9, pitch: basePitch * 1.05, volume: 0.85, pause: 250 };
+            return { rate: baseRate * 0.9, pitch: basePitch * 1.05, volume: 0.85, pause: 350 };
           case 'dramatic':
-            return { rate: baseRate * 1.0, pitch: basePitch * 1.0, volume: 1.0, pause: 300 };
+            return { rate: baseRate * 1.0, pitch: basePitch * 1.0, volume: 1.0, pause: 400 };
           case 'narration':
           default:
-            return { rate: baseRate, pitch: basePitch, volume: 0.95, pause: 200 };
+            return { rate: baseRate, pitch: basePitch, volume: 0.95, pause: 300 };
         }
       }
+      
+      // 處理文字以改善朗讀效果
+      function preprocessTextForSpeech(text) {
+        if (!text || text.trim().length === 0) return '';
+        
+        let processed = text.trim();
+        
+        // 移除 Markdown 標記
+        processed = processed.replace(/^#+\s*/gm, '');
+        processed = processed.replace(/\*+/g, '');
+        
+        // 移除所有不需要唸的符號
+        processed = processed.replace(/[「」『』【】〈〉《》（）()\[\]{}""'']/g, '');
+        processed = processed.replace(/[：:；;]/g, '，'); // 冒號分號轉逗號停頓
+        processed = processed.replace(/[⋯…]+/g, '，'); // 省略號轉停頓
+        processed = processed.replace(/[——–—−]+/g, '，'); // 破折號轉停頓
+        processed = processed.replace(/[～~]+/g, ''); // 移除波浪號
+        processed = processed.replace(/[★☆●○◆◇■□▲△▼▽※＊\*#＃@＠&＆]/g, ''); // 移除特殊符號
+        processed = processed.replace(/[─━┃│┄┅┆┇]+/g, ''); // 移除線條符號
+        
+        // 清理多餘的標點和空格
+        processed = processed.replace(/，+/g, '，');
+        processed = processed.replace(/。+/g, '。');
+        processed = processed.replace(/\s+/g, ' ');
+        processed = processed.trim();
+        
+        // 確保文字不為空
+        if (!processed || processed.length === 0) {
+          return '';
+        }
+        
+        return processed;
+      }
 
-      // 分割文字為段落（保持情緒連貫）
+      // 分割文字為段落（保持情緒連貫），同時記錄位置
       function splitTextToSegments(text) {
         // 按段落和句號分割
         const paragraphs = text.split(/\n\n+/);
         const segments = [];
+        segmentRanges = []; // 重置位置記錄
+        
+        let currentPos = 0;
         
         paragraphs.forEach(para => {
-          if (!para.trim()) return;
+          if (!para.trim()) {
+            currentPos += para.length + 2; // +2 for \n\n
+            return;
+          }
+          
+          const paraStart = text.indexOf(para, currentPos);
           
           // 較長段落再細分
           if (para.length > 200) {
             const sentences = para.split(/(?<=[。！？])/);
             let chunk = '';
+            let chunkStart = paraStart;
+            
             sentences.forEach(s => {
               if ((chunk + s).length > 150) {
-                if (chunk) segments.push(chunk.trim());
+                if (chunk) {
+                  segments.push(chunk.trim());
+                  segmentRanges.push({ start: chunkStart, end: chunkStart + chunk.length, text: chunk.trim() });
+                }
+                chunkStart = chunkStart + chunk.length;
                 chunk = s;
               } else {
                 chunk += s;
               }
             });
-            if (chunk) segments.push(chunk.trim());
+            if (chunk) {
+              segments.push(chunk.trim());
+              segmentRanges.push({ start: chunkStart, end: chunkStart + chunk.length, text: chunk.trim() });
+            }
           } else {
             segments.push(para.trim());
+            segmentRanges.push({ start: paraStart, end: paraStart + para.length, text: para.trim() });
           }
+          
+          currentPos = paraStart + para.length;
         });
         
         return segments.filter(s => s.length > 0);
+      }
+
+      // 高亮目前朗讀的段落
+      function highlightCurrentSegment(index) {
+        // 移除舊的高亮
+        clearHighlight();
+        
+        if (!highlightCheck || !highlightCheck.checked) return;
+        if (index < 0 || index >= speechSegments.length) return;
+        
+        const segmentText = speechSegments[index];
+        if (!segmentText) return;
+        
+        // 在 resultDiv 中找到對應的文字
+        const fullText = latestStory || '';
+        
+        // 找到這個段落在原文中的位置
+        // 由於段落可能重複，我們需要追蹤已經處理過的位置
+        let searchStart = 0;
+        for (let i = 0; i < index; i++) {
+          const prevSegment = speechSegments[i];
+          const foundPos = fullText.indexOf(prevSegment, searchStart);
+          if (foundPos !== -1) {
+            searchStart = foundPos + prevSegment.length;
+          }
+        }
+        
+        const segmentStart = fullText.indexOf(segmentText, searchStart);
+        if (segmentStart === -1) return;
+        
+        const beforeText = fullText.substring(0, segmentStart);
+        const afterText = fullText.substring(segmentStart + segmentText.length);
+        
+        // 使用 innerHTML 來高亮（需要轉義 HTML）
+        const escapeHtml = (text) => {
+          return text.replace(/&/g, '&amp;')
+                     .replace(/</g, '&lt;')
+                     .replace(/>/g, '&gt;')
+                     .replace(/\n/g, '<br>');
+        };
+        
+        resultDiv.innerHTML = escapeHtml(beforeText) + 
+          '<span class="speaking-segment" id="currentSpeakingSegment">' + escapeHtml(segmentText) + '</span>' + 
+          escapeHtml(afterText);
+        
+        // 自動捲動到高亮的段落
+        if (autoScrollCheck && autoScrollCheck.checked) {
+          // 使用 setTimeout 確保 DOM 已更新
+          setTimeout(() => {
+            const highlightedEl = document.getElementById('currentSpeakingSegment');
+            if (highlightedEl) {
+              // 計算元素位置並捲動
+              const rect = highlightedEl.getBoundingClientRect();
+              const viewportHeight = window.innerHeight;
+              
+              // 如果元素不在可視範圍內，才捲動
+              if (rect.top < 100 || rect.bottom > viewportHeight - 100) {
+                highlightedEl.scrollIntoView({ 
+                  behavior: 'smooth', 
+                  block: 'center' 
+                });
+              }
+            }
+          }, 50);
+        }
+      }
+      
+      // 清除高亮
+      function clearHighlight() {
+        const highlightedEl = document.getElementById('currentSpeakingSegment');
+        if (highlightedEl || resultDiv.innerHTML.includes('speaking-segment')) {
+          // 恢復純文字
+          resultDiv.textContent = latestStory || '';
+        }
+      }
+      
+      // 更新段落控制按鈕狀態
+      function updateNavButtons() {
+        prevSegmentBtn.disabled = !isSpeaking || currentSegmentIndex <= 0;
+        nextSegmentBtn.disabled = !isSpeaking || currentSegmentIndex >= speechSegments.length - 1;
+        
+        if (isSpeaking && speechSegments.length > 0) {
+          currentSegmentDisplay.textContent = `${currentSegmentIndex + 1} / ${speechSegments.length}`;
+        } else {
+          currentSegmentDisplay.textContent = '- / -';
+        }
       }
 
       // 朗讀單一段落
@@ -4889,47 +5283,103 @@
           // 朗讀完成
           stopSpeech();
           clearSpeechProgress();
+          clearHighlight();
           speechProgressText.textContent = '✅ 朗讀完成';
           return;
         }
         
         currentSegmentIndex = index;
         saveSpeechProgress(); // 儲存當前進度
+        updateNavButtons();
+        
+        // 高亮目前段落
+        highlightCurrentSegment(index);
         
         const text = speechSegments[index];
         const params = analyzeEmotion(text);
         
-        const utterance = new SpeechSynthesisUtterance(text);
+        // 前處理文字以改善朗讀效果
+        const processedText = preprocessTextForSpeech(text);
+        
+        // 如果處理後文字為空，跳到下一段
+        if (!processedText || processedText.trim().length === 0) {
+          if (isSpeaking && !isPaused) {
+            speakSegment(index + 1);
+          }
+          return;
+        }
         
         // 設定語音
         const selectedVoice = availableVoices.find(v => v.name === voiceSelect.value);
-        if (selectedVoice) utterance.voice = selectedVoice;
         
-        utterance.rate = params.rate;
-        utterance.pitch = params.pitch;
-        utterance.volume = params.volume;
+        // 🔧 修復首字被吃掉：先播放一個極短的「嗯」來預熱語音引擎
+        const warmupUtterance = new SpeechSynthesisUtterance('。');
+        if (selectedVoice) warmupUtterance.voice = selectedVoice;
+        warmupUtterance.rate = 2; // 最快速度
+        warmupUtterance.volume = 0.01; // 幾乎聽不到
         
-        utterance.onend = () => {
-          // 段落間停頓
-          setTimeout(() => {
-            if (isSpeaking && !isPaused) {
-              speakSegment(index + 1);
+        warmupUtterance.onend = () => {
+          // 預熱完成後，立即播放實際內容
+          const utterance = new SpeechSynthesisUtterance(processedText);
+          if (selectedVoice) utterance.voice = selectedVoice;
+          
+          utterance.rate = params.rate;
+          utterance.pitch = params.pitch;
+          utterance.volume = params.volume;
+          
+          utterance.onend = () => {
+            // 段落間停頓
+            setTimeout(() => {
+              if (isSpeaking && !isPaused) {
+                speakSegment(index + 1);
+              }
+            }, params.pause);
+          };
+          
+          utterance.onerror = (e) => {
+            // 忽略 interrupted 錯誤（使用者主動停止）
+            if (e.error === 'interrupted' || e.error === 'canceled') {
+              return;
             }
-          }, params.pause);
+            console.warn('朗讀警告：', e.error, '段落：', index);
+            // 嘗試繼續下一段
+            if (isSpeaking && !isPaused) {
+              setTimeout(() => speakSegment(index + 1), 100);
+            }
+          };
+          
+          currentUtterance = utterance;
+          speechSynth.speak(utterance);
         };
         
-        utterance.onerror = (e) => {
-          console.error('朗讀錯誤：', e);
-          if (isSpeaking) speakSegment(index + 1);
+        warmupUtterance.onerror = () => {
+          // 預熱失敗也繼續播放
+          const utterance = new SpeechSynthesisUtterance(processedText);
+          if (selectedVoice) utterance.voice = selectedVoice;
+          utterance.rate = params.rate;
+          utterance.pitch = params.pitch;
+          utterance.volume = params.volume;
+          
+          utterance.onend = () => {
+            setTimeout(() => {
+              if (isSpeaking && !isPaused) {
+                speakSegment(index + 1);
+              }
+            }, params.pause);
+          };
+          
+          currentUtterance = utterance;
+          speechSynth.speak(utterance);
         };
         
         // 更新進度
         const progress = ((index + 1) / speechSegments.length) * 100;
         speechProgressFill.style.width = progress + '%';
         speechProgressText.textContent = `正在朗讀 ${index + 1}/${speechSegments.length} 段...`;
+        currentSegmentDisplay.textContent = `${index + 1} / ${speechSegments.length}`;
         
-        currentUtterance = utterance;
-        speechSynth.speak(utterance);
+        // 開始預熱
+        speechSynth.speak(warmupUtterance);
       }
 
       // 更新段落範圍輸入的最大值
@@ -5031,6 +5481,7 @@
           isSpeaking = true;
           isPaused = false;
           playPauseBtn.textContent = '⏸️ 暫停';
+          startSpeechKeepAlive(); // 啟動 Chrome bug workaround
           
           // 顯示朗讀範圍
           if (!isReadingAll) {
@@ -5046,11 +5497,14 @@
         speechSynth.cancel();
         isSpeaking = false;
         isPaused = false;
+        stopSpeechKeepAlive(); // 停止 Chrome bug workaround
         saveSpeechProgress(); // 停止時也儲存進度
         currentSegmentIndex = 0;
         playPauseBtn.textContent = '▶️ 開始朗讀';
         speechProgressFill.style.width = '0%';
         speechProgressText.textContent = '準備就緒';
+        clearHighlight();
+        updateNavButtons();
       }
       
       // 重置朗讀（從頭開始）
@@ -5059,11 +5513,37 @@
         clearSpeechProgress();
         currentSegmentIndex = 0;
         speechProgressText.textContent = '已重置，準備從頭開始';
+        clearHighlight();
+        updateNavButtons();
         
         // 重置段落範圍
         const startInput = document.getElementById('startSegment');
         startInput.value = 1;
         updateSegmentInputs();
+      }
+      
+      // 跳到上一段
+      function prevSegment() {
+        if (!isSpeaking || currentSegmentIndex <= 0) return;
+        speechSynth.cancel();
+        isPaused = false;
+        speakSegment(currentSegmentIndex - 1);
+      }
+      
+      // 跳到下一段
+      function nextSegment() {
+        if (!isSpeaking || currentSegmentIndex >= speechSegments.length - 1) return;
+        speechSynth.cancel();
+        isPaused = false;
+        speakSegment(currentSegmentIndex + 1);
+      }
+      
+      // 跳轉到指定段落（透過進度條點擊）
+      function jumpToSegment(segmentIndex) {
+        if (!isSpeaking || segmentIndex < 0 || segmentIndex >= speechSegments.length) return;
+        speechSynth.cancel();
+        isPaused = false;
+        speakSegment(segmentIndex);
       }
 
       // 複製全文
@@ -5101,6 +5581,7 @@
         
         // 更新段落資訊
         updateSegmentInputs();
+        updateNavButtons();
         
         // 檢查是否有儲存的進度，顯示提示
         const savedProgress = loadSpeechProgress();
@@ -5117,6 +5598,44 @@
       playPauseBtn.addEventListener('click', toggleSpeech);
       stopSpeechBtn.addEventListener('click', stopSpeech);
       resetSpeechBtn.addEventListener('click', resetSpeech);
+      
+      // 上一段/下一段按鈕
+      prevSegmentBtn.addEventListener('click', prevSegment);
+      nextSegmentBtn.addEventListener('click', nextSegment);
+      
+      // 進度條點擊跳轉
+      speechProgressBar.addEventListener('click', (e) => {
+        if (!isSpeaking || speechSegments.length === 0) return;
+        
+        const rect = speechProgressBar.getBoundingClientRect();
+        const clickX = e.clientX - rect.left;
+        const percentage = clickX / rect.width;
+        const targetIndex = Math.floor(percentage * speechSegments.length);
+        
+        jumpToSegment(Math.max(0, Math.min(targetIndex, speechSegments.length - 1)));
+      });
+      
+      // 語速微調按鈕
+      document.querySelectorAll('.speed-btn[data-speed]').forEach(btn => {
+        btn.addEventListener('click', () => {
+          const delta = parseFloat(btn.dataset.speed);
+          let newValue = parseFloat(speechRate.value) + delta;
+          newValue = Math.max(0.25, Math.min(3, newValue));
+          speechRate.value = newValue.toFixed(2);
+          rateValue.textContent = newValue.toFixed(1) + 'x';
+        });
+      });
+      
+      // 音調微調按鈕
+      document.querySelectorAll('.speed-btn[data-pitch]').forEach(btn => {
+        btn.addEventListener('click', () => {
+          const delta = parseFloat(btn.dataset.pitch);
+          let newValue = parseFloat(speechPitch.value) + delta;
+          newValue = Math.max(0.5, Math.min(2, newValue));
+          speechPitch.value = newValue.toFixed(2);
+          pitchValue.textContent = newValue.toFixed(1);
+        });
+      });
       
       // 複製全文按鈕
       document.getElementById('copyAllBtn').addEventListener('click', copyAllText);
@@ -5147,11 +5666,11 @@
       });
 
       speechRate.addEventListener('input', () => {
-        rateValue.textContent = speechRate.value + 'x';
+        rateValue.textContent = parseFloat(speechRate.value).toFixed(1) + 'x';
       });
 
       speechPitch.addEventListener('input', () => {
-        pitchValue.textContent = speechPitch.value;
+        pitchValue.textContent = parseFloat(speechPitch.value).toFixed(1);
       });
 
       // 頁面離開時儲存進度
