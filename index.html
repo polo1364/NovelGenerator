@@ -551,6 +551,11 @@
         color: #721c24;
       }
 
+      .status.warning {
+        background: #fff3cd;
+        color: #856404;
+      }
+
       @keyframes shimmer {
         0% { background-position: -200% 0; }
         100% { background-position: 200% 0; }
@@ -1889,7 +1894,8 @@
         const icons = {
           loading: '⏳',
           success: '✅',
-          error: '❌'
+          error: '❌',
+          warning: '⚠️'
         };
         statusDiv.className = `status show ${type}`;
         statusDiv.querySelector('.status-icon').textContent = icons[type] || '';
@@ -4236,24 +4242,60 @@
         reader.onload = (event) => {
           try {
             const imported = JSON.parse(event.target.result);
-            if (!Array.isArray(imported)) throw new Error('格式錯誤');
+            if (!Array.isArray(imported)) throw new Error('格式錯誤：不是陣列');
+            
+            if (imported.length === 0) {
+              showStatus('error', '匯入失敗：檔案中沒有書籤');
+              return;
+            }
             
             const existing = loadBookmarks();
             const existingIds = new Set(existing.map(b => b.id));
             let added = 0;
+            let skipped = 0;
             
             imported.forEach(bm => {
-              if (bm.id && bm.content && !existingIds.has(bm.id)) {
-                existing.push(bm);
-                added++;
+              // 確保書籤有必要的欄位
+              if (bm.content) {
+                // 如果沒有 id，生成一個新的
+                if (!bm.id) {
+                  bm.id = Date.now() + Math.random();
+                }
+                
+                // 檢查是否已存在
+                if (!existingIds.has(bm.id)) {
+                  existing.push(bm);
+                  existingIds.add(bm.id);
+                  added++;
+                } else {
+                  skipped++;
+                }
               }
             });
             
-            saveBookmarks(existing);
-            renderBookmarks();
-            showStatus('success', `已匯入 ${added} 筆書籤`);
+            if (added > 0) {
+              saveBookmarks(existing);
+              renderBookmarks();
+              
+              if (skipped > 0) {
+                showStatus('success', `已匯入 ${added} 筆書籤（${skipped} 筆重複已跳過）`);
+              } else {
+                showStatus('success', `已匯入 ${added} 筆書籤`);
+              }
+            } else if (skipped > 0) {
+              showStatus('warning', `所有 ${skipped} 筆書籤都已存在，沒有新增`);
+            } else {
+              showStatus('error', '匯入失敗：檔案中沒有有效的書籤');
+            }
+            
+            // 強制重新渲染
+            setTimeout(() => {
+              renderBookmarks();
+            }, 100);
+            
           } catch (err) {
-            showStatus('error', '匯入失敗：檔案格式錯誤');
+            console.error('匯入錯誤：', err);
+            showStatus('error', '匯入失敗：' + (err.message || '檔案格式錯誤'));
           }
         };
         reader.readAsText(file);
