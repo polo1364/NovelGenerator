@@ -3202,6 +3202,14 @@
           return;
         }
         
+        // 章節完結提示
+        let chapterEndingHint = '';
+        if (chapters) {
+          chapterEndingHint = `
+10. 故事總共 ${chapters} 章，第 ${chapters} 章必須是【完結篇】，要妥善收尾所有劇情線
+11. 在最後一章結束後，加上「（全文完）」或「─ 完 ─」標記`;
+        }
+        
         prompt += `
 
 【重要指示】請直接撰寫小說「正文內容」，不要只寫大綱、規劃、故事簡介或章節列表。
@@ -3215,7 +3223,7 @@
 6. 禁止出現「故事大綱」「章節列表」「故事簡介」「人物設定」等規劃性內容
 7. 禁止使用條列式說明，要用敘事文體
 8. 嚴格遵守指定的敘事視角、故事節奏、情感基調
-9. 確保特殊元素自然融入故事中
+9. 確保特殊元素自然融入故事中${chapterEndingHint}
 
 現在開始撰寫小說正文：`;
 
@@ -3281,12 +3289,60 @@
           return;
         }
         
+        // 檢查是否已達到設定的章節數上限
+        const targetChapters = parseInt(chaptersInput.value) || 0;
+        if (targetChapters > 0) {
+          // 計算目前已有的章節數
+          const chapterPattern = /###?\s*第[一二三四五六七八九十百千萬零壹貳參肆伍陸柒捌玖拾佰仟\d]+[章節回卷部集篇]/g;
+          const currentChapters = (latestStory.match(chapterPattern) || []).length;
+          
+          if (currentChapters >= targetChapters) {
+            const confirmContinue = confirm(`目前已有 ${currentChapters} 章，已達到設定的 ${targetChapters} 章上限。\n\n確定要繼續生成更多章節嗎？`);
+            if (!confirmContinue) {
+              return;
+            }
+          }
+        }
+        
         const apiKey = apiKeyInput.value.trim();
         const model = modelSelect.value;
         
         if (!apiKey) {
           showStatus('error', '請輸入 API 金鑰');
           return;
+        }
+
+        // 計算還需要生成多少章，並決定是否需要結局
+        let remainingChaptersHint = '';
+        let isNearEnding = false;
+        let isFinalChapter = false;
+        
+        if (targetChapters > 0) {
+          const chapterPattern = /###?\s*第[一二三四五六七八九十百千萬零壹貳參肆伍陸柒捌玖拾佰仟\d]+[章節回卷部集篇]/g;
+          const currentChapters = (latestStory.match(chapterPattern) || []).length;
+          const remaining = targetChapters - currentChapters;
+          
+          if (remaining === 1) {
+            // 只剩最後一章
+            isFinalChapter = true;
+            remainingChaptersHint = `
+8. ⚠️【重要】這是最後一章（第 ${targetChapters} 章），必須完成故事結局
+9. 請收束所有伏筆和劇情線，給角色一個明確的結局
+10. 最後一章結尾請加上「（全文完）」或「（完結）」`;
+          } else if (remaining === 2) {
+            // 剩兩章，開始收尾
+            isNearEnding = true;
+            remainingChaptersHint = `
+8. 目標總章節數為 ${targetChapters} 章，目前已有 ${currentChapters} 章，還剩 ${remaining} 章
+9. 故事即將進入尾聲，請開始收束伏筆，為結局做準備`;
+          } else if (remaining > 0) {
+            remainingChaptersHint = `
+8. 目標總章節數為 ${targetChapters} 章，目前已有 ${currentChapters} 章，還剩 ${remaining} 章待撰寫`;
+          } else {
+            // 已超過設定章節數，但使用者選擇繼續
+            remainingChaptersHint = `
+8. 已超過原定的 ${targetChapters} 章，如果要結束故事，請撰寫結局並加上「（全文完）」`;
+          }
         }
 
         const continuePrompt = latestStory + `
@@ -3300,11 +3356,17 @@
 4. 如果上一章尚未結束，請先完成該章節
 5. 章節標題格式：### 第X章：標題
 6. 禁止出現大綱、規劃、故事簡介等內容
-7. 禁止使用條列式說明，要用敘事文體
+7. 禁止使用條列式說明，要用敘事文體${remainingChaptersHint}
 
 繼續撰寫小說正文：`;
         
-        showStatus('loading', '續篇生成中...');
+        if (isFinalChapter) {
+          showStatus('loading', '正在撰寫最終章與結局...');
+        } else if (isNearEnding) {
+          showStatus('loading', '續篇生成中（即將進入結局）...');
+        } else {
+          showStatus('loading', '續篇生成中...');
+        }
         continueBtn.disabled = true;
         generateBtn.disabled = true;
 
@@ -3338,7 +3400,39 @@
               } catch (e) {
                 showStatus('error', '故事內容過長，未能自動儲存');
               }
-              showStatus('success', '續篇完成！');
+              
+              // 檢查故事是否已完結
+              const isCompleted = /[（(](?:全文完|完結|全書完|終|The End)[）)]|【完】|—完—|～完～|（END）|─\s*完\s*─/i.test(latestStory);
+              
+              // 檢查是否已達到目標章節數
+              let storyCompleted = false;
+              if (targetChapters > 0) {
+                const chapterPattern = /###?\s*第[一二三四五六七八九十百千萬零壹貳參肆伍陸柒捌玖拾佰仟\d]+[章節回卷部集篇]/g;
+                const currentChapters = (latestStory.match(chapterPattern) || []).length;
+                
+                if (isCompleted) {
+                  showStatus('success', `🎉 故事完結！共 ${currentChapters} 章`);
+                  storyCompleted = true;
+                } else if (currentChapters >= targetChapters) {
+                  showStatus('success', `✅ 已達到設定的 ${targetChapters} 章（若需結局請再點一次繼續生成）`);
+                } else {
+                  showStatus('success', `續篇完成！目前 ${currentChapters}/${targetChapters} 章`);
+                }
+              } else {
+                if (isCompleted) {
+                  showStatus('success', '🎉 故事完結！');
+                  storyCompleted = true;
+                } else {
+                  showStatus('success', '續篇完成！');
+                }
+              }
+              
+              // 完結後禁用繼續生成按鈕
+              if (storyCompleted) {
+                continueBtn.disabled = true;
+                continueBtn.title = '故事已完結';
+              }
+              
               downloadBtn.disabled = false;
               speakBtn.disabled = false;
               parseAndShowChapters(latestStory);
@@ -3351,7 +3445,11 @@
         } catch (err) {
           showStatus('error', '請求失敗：' + err.message);
         } finally {
-          continueBtn.disabled = false;
+          // 如果故事未完結才重新啟用按鈕
+          const isCompleted = /[（(](?:全文完|完結|全書完|終|The End)[）)]|【完】|—完—|～完～|（END）|─\s*完\s*─/i.test(latestStory);
+          if (!isCompleted) {
+            continueBtn.disabled = false;
+          }
           generateBtn.disabled = false;
         }
       });
