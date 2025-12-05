@@ -2808,7 +2808,7 @@
           addCharacterRow(true);
         }
         
-        renderBookmarks();
+        // renderBookmarks 會在 initBookmarks 完成後自動呼叫
       })();
 
       randomAllCharactersBtn.addEventListener('click', () => {
@@ -4074,31 +4074,184 @@
       });
 
       // ==================== 書籤功能 (大幅優化) ====================
+      // ==================== IndexedDB 書籤儲存 ====================
+      const DB_NAME = 'NovelGeneratorDB';
+      const DB_VERSION = 1;
+      const STORE_NAME = 'bookmarks';
+      let db = null;
+
+      // 初始化 IndexedDB
+      function initDB() {
+        return new Promise((resolve, reject) => {
+          const request = indexedDB.open(DB_NAME, DB_VERSION);
+          
+          request.onerror = () => {
+            console.error('IndexedDB 開啟失敗，嘗試使用 localStorage');
+            resolve(false);
+          };
+          
+          request.onsuccess = (event) => {
+            db = event.target.result;
+            console.log('IndexedDB 初始化成功');
+            resolve(true);
+          };
+          
+          request.onupgradeneeded = (event) => {
+            const database = event.target.result;
+            if (!database.objectStoreNames.contains(STORE_NAME)) {
+              database.createObjectStore(STORE_NAME, { keyPath: 'id' });
+              console.log('建立書籤儲存區');
+            }
+          };
+        });
+      }
+
+      // 從 IndexedDB 載入所有書籤
+      function loadBookmarksFromDB() {
+        return new Promise((resolve) => {
+          if (!db) {
+            resolve([]);
+            return;
+          }
+          
+          const transaction = db.transaction([STORE_NAME], 'readonly');
+          const store = transaction.objectStore(STORE_NAME);
+          const request = store.getAll();
+          
+          request.onsuccess = () => {
+            console.log('從 IndexedDB 載入書籤數量：', request.result.length);
+            resolve(request.result || []);
+          };
+          
+          request.onerror = () => {
+            console.error('載入書籤失敗');
+            resolve([]);
+          };
+        });
+      }
+
+      // 儲存書籤到 IndexedDB
+      function saveBookmarksToDB(bookmarks) {
+        return new Promise((resolve) => {
+          if (!db) {
+            resolve(false);
+            return;
+          }
+          
+          const transaction = db.transaction([STORE_NAME], 'readwrite');
+          const store = transaction.objectStore(STORE_NAME);
+          
+          // 先清空再寫入
+          const clearRequest = store.clear();
+          
+          clearRequest.onsuccess = () => {
+            let addedCount = 0;
+            bookmarks.forEach(bm => {
+              const addRequest = store.add(bm);
+              addRequest.onsuccess = () => addedCount++;
+            });
+            
+            transaction.oncomplete = () => {
+              console.log(`IndexedDB 儲存完成，共 ${addedCount} 個書籤`);
+              resolve(true);
+            };
+            
+            transaction.onerror = () => {
+              console.error('IndexedDB 儲存失敗');
+              resolve(false);
+            };
+          };
+          
+          clearRequest.onerror = () => {
+            resolve(false);
+          };
+        });
+      }
+
+      // 相容層：優先使用 IndexedDB，備用 localStorage
+      let bookmarksCache = [];
+      let useIndexedDB = false;
+
       function loadBookmarks() {
+        return bookmarksCache;
+      }
+
+      function saveBookmarks(bookmarks) {
+        bookmarksCache = bookmarks;
+        
+        if (useIndexedDB && db) {
+          saveBookmarksToDB(bookmarks).then(success => {
+            if (!success) {
+              console.warn('IndexedDB 儲存失敗，嘗試 localStorage');
+              saveToLocalStorage(bookmarks);
+            }
+          });
+          return true;
+        } else {
+          return saveToLocalStorage(bookmarks);
+        }
+      }
+
+      function saveToLocalStorage(bookmarks) {
+        try {
+          const json = JSON.stringify(bookmarks);
+          const sizeInMB = (json.length / 1024 / 1024).toFixed(2);
+          console.log(`localStorage 儲存 ${bookmarks.length} 個書籤，大小: ${sizeInMB} MB`);
+          localStorage.setItem('bookmarks', json);
+          return true;
+        } catch (e) {
+          console.error('localStorage 儲存失敗：', e);
+          if (e.name === 'QuotaExceededError') {
+            showStatus('error', '書籤太大，超出瀏覽器儲存限制。建議定期匯出備份。');
+          }
+          return false;
+        }
+      }
+
+      function loadFromLocalStorage() {
         try {
           const raw = localStorage.getItem('bookmarks');
           if (!raw) return [];
-          const parsed = JSON.parse(raw);
-          console.log('載入書籤數量：', parsed.length);
-          return parsed;
+          return JSON.parse(raw);
         } catch (e) {
-          console.warn('無法讀取書籤：', e);
           return [];
         }
       }
 
-      function saveBookmarks(bookmarks) {
-        try {
-          const json = JSON.stringify(bookmarks);
-          localStorage.setItem('bookmarks', json);
-          console.log('儲存書籤成功，數量：', bookmarks.length);
-          return true;
-        } catch (e) {
-          console.error('書籤儲存失敗：', e);
-          showStatus('error', '書籤儲存失敗，可能已達儲存上限');
-          return false;
+      // 初始化書籤系統
+      async function initBookmarks() {
+        // 嘗試使用 IndexedDB
+        useIndexedDB = await initDB();
+        
+        if (useIndexedDB) {
+          // 從 IndexedDB 載入
+          bookmarksCache = await loadBookmarksFromDB();
+          
+          // 如果 IndexedDB 是空的，嘗試從 localStorage 遷移
+          if (bookmarksCache.length === 0) {
+            const localData = loadFromLocalStorage();
+            if (localData.length > 0) {
+              console.log('從 localStorage 遷移書籤到 IndexedDB...');
+              bookmarksCache = localData;
+              await saveBookmarksToDB(localData);
+              // 遷移成功後清除 localStorage
+              try {
+                localStorage.removeItem('bookmarks');
+                console.log('遷移完成，已清除 localStorage');
+              } catch (e) {}
+            }
+          }
+        } else {
+          // 退回使用 localStorage
+          bookmarksCache = loadFromLocalStorage();
         }
+        
+        console.log(`書籤系統初始化完成，使用 ${useIndexedDB ? 'IndexedDB' : 'localStorage'}，共 ${bookmarksCache.length} 個書籤`);
+        renderBookmarks();
       }
+
+      // 頁面載入時初始化
+      initBookmarks();
 
       function formatDate(timestamp) {
         const date = new Date(timestamp);
