@@ -5988,14 +5988,22 @@
           return;
         }
         
+        // 限制文字長度，Gemini TTS 有 token 限制
+        // 每段最多約 500 字，超過的會被截斷
+        const maxLength = 500;
+        let processedText = text;
+        if (text.length > maxLength) {
+          processedText = text.substring(0, maxLength);
+        }
+        
         try {
-          // 使用 Gemini 2.5 Flash 的 TTS 功能
+          // 使用 Gemini 2.5 Flash TTS
           const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-tts:generateContent?key=${apiKey}`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
               contents: [{
-                parts: [{ text: text }]
+                parts: [{ text: processedText }]
               }],
               generationConfig: {
                 response_modalities: ["AUDIO"],
@@ -6013,9 +6021,26 @@
           const data = await response.json();
           
           if (data.error) {
-            // 如果 TTS 模型不可用，嘗試用普通模型
+            const errorMsg = data.error.message || '';
+            // 配額超限時提示等待
+            if (errorMsg.includes('quota') || errorMsg.includes('429') || errorMsg.includes('rate')) {
+              const waitMatch = errorMsg.match(/retry in ([\d.]+)s/i);
+              const waitTime = waitMatch ? Math.ceil(parseFloat(waitMatch[1])) : 20;
+              showStatus('error', `⏳ API 配額限制，${waitTime} 秒後自動重試...`);
+              // 等待後重試
+              setTimeout(() => {
+                speakWithApi(text, onEnd);
+              }, waitTime * 1000);
+              return;
+            }
+            
             console.warn('Gemini TTS 錯誤：', data.error.message);
-            showStatus('error', 'API 語音暫不可用，請使用瀏覽器語音');
+            showStatus('error', 'API 語音錯誤，切換回瀏覽器語音');
+            // 自動切換回瀏覽器語音
+            useTtsApi = false;
+            ttsLocalBtn.classList.add('active');
+            ttsApiBtn.classList.remove('active');
+            loadVoices();
             if (onEnd) onEnd();
             return;
           }
@@ -6535,7 +6560,7 @@
         }
       }
 
-      // 朗讀單一段落 (改為一次性朗讀整個故事)
+      // 朗讀單一段落
       function speakSegment(index) {
         if (index >= speechSegments.length) {
           // 朗讀完成
@@ -6546,43 +6571,20 @@
           return;
         }
         
-        // 如果是第一段，合併所有段落並一次性朗讀
-        if (index === 0 && useTtsApi) {
-          console.log('[speakSegment] 開始一次性朗讀整個故事');
-          console.log('[speakSegment] 總段落數:', speechSegments.length);
-          
-          // 合併所有段落
-          const fullText = speechSegments
-            .map(seg => preprocessTextForSpeech(seg))
-            .filter(seg => seg && seg.trim().length > 0)
-            .join('\n\n');
-          
-          console.log('[speakSegment] 合併後的文本長度:', fullText.length);
-          
-          // 一次性朗讀整個故事
-          speakWithApi(fullText, () => {
-            console.log('[speakSegment] 整個故事朗讀完成');
-            stopSpeech();
-            clearSpeechProgress();
-            clearHighlight();
-            speechProgressText.textContent = '✅ 朗讀完成';
-          });
-          
-          // 更新進度顯示
-          speechProgressText.textContent = '正在朗讀整個故事...';
-          return;
-        }
-        
-        // 非 API 模式，保持原有的段落朗讀邏輯
         currentSegmentIndex = index;
-        saveSpeechProgress();
+        saveSpeechProgress(); // 儲存當前進度
         updateNavButtons();
+        
+        // 高亮目前段落
         highlightCurrentSegment(index);
         
         const text = speechSegments[index];
         const params = analyzeEmotion(text);
+        
+        // 前處理文字以改善朗讀效果
         const processedText = preprocessTextForSpeech(text);
         
+        // 如果處理後文字為空，跳到下一段
         if (!processedText || processedText.trim().length === 0) {
           if (isSpeaking && !isPaused) {
             speakSegment(index + 1);
@@ -6590,77 +6592,97 @@
           return;
         }
         
+        // 更新進度
         const progress = ((index + 1) / speechSegments.length) * 100;
         speechProgressFill.style.width = progress + '%';
         speechProgressText.textContent = `正在朗讀 ${index + 1}/${speechSegments.length} 段...`;
         currentSegmentDisplay.textContent = `${index + 1} / ${speechSegments.length}`;
         
-        // 使用瀏覽器內建語音
-        speakWithBrowser(processedText, params, index);
+        // 根據 TTS 引擎選擇
+        if (useTtsApi) {
+          // 使用 Google Cloud TTS API
+          speakWithApi(processedText, () => {
+            // 段落間停頓
+            setTimeout(() => {
+              if (isSpeaking && !isPaused) {
+                speakSegment(index + 1);
+              }
+            }, params.pause);
+          });
+        } else {
+          // 使用瀏覽器內建語音
+          speakWithBrowser(processedText, params, index);
+        }
       }
       
-      // 使用瀏覽器內建語音朗讀 (延遲法)
+      // 使用瀏覽器內建語音朗讀
       function speakWithBrowser(processedText, params, index) {
+        // 設定語音
         const selectedVoice = availableVoices.find(v => v.name === voiceSelect.value);
         
-        console.log('[speakWithBrowser] 開始朗讀段落', index + 1, '文本長度:', processedText.length);
-        console.log('[speakWithBrowser] 情緒參數:', params);
+        // 🔧 修復首字被吃掉：先播放一個極短的「嗯」來預熱語音引擎
+        const warmupUtterance = new SpeechSynthesisUtterance('。');
+        if (selectedVoice) warmupUtterance.voice = selectedVoice;
+        warmupUtterance.rate = 2; // 最快速度
+        warmupUtterance.volume = 0.01; // 幾乎聽不到
         
-        // 🔧 修復首字遺漏：使用延遲法
-        // 不修改文本，只在播放前延遲，讓引擎充分準備
-        
-        const utterance = new SpeechSynthesisUtterance(processedText);
-        if (selectedVoice) utterance.voice = selectedVoice;
-        
-        utterance.rate = params.rate;
-        utterance.pitch = params.pitch;
-        utterance.volume = params.volume;
-        
-        if (params.emphasis) {
-          utterance.volume = Math.min(1.0, params.volume * 1.1);
-        }
-        
-        utterance.onstart = () => {
-          console.log('[speakWithBrowser] 開始播放');
-        };
-        
-        utterance.onpause = () => {
-          console.log('[speakWithBrowser] 已暫停');
-        };
-        
-        utterance.onresume = () => {
-          console.log('[speakWithBrowser] 已繼續');
-        };
-        
-        utterance.onend = () => {
-          console.log('[speakWithBrowser] 段落播放完畢');
-          setTimeout(() => {
-            if (isSpeaking && !isPaused) {
-              speakSegment(index + 1);
+        warmupUtterance.onend = () => {
+          // 預熱完成後，立即播放實際內容
+          const utterance = new SpeechSynthesisUtterance(processedText);
+          if (selectedVoice) utterance.voice = selectedVoice;
+          
+          utterance.rate = params.rate;
+          utterance.pitch = params.pitch;
+          utterance.volume = params.volume;
+          
+          utterance.onend = () => {
+            // 段落間停頓
+            setTimeout(() => {
+              if (isSpeaking && !isPaused) {
+                speakSegment(index + 1);
+              }
+            }, params.pause);
+          };
+          
+          utterance.onerror = (e) => {
+            // 忽略 interrupted 錯誤（使用者主動停止）
+            if (e.error === 'interrupted' || e.error === 'canceled') {
+              return;
             }
-          }, params.pause);
-        };
-        
-        utterance.onerror = (e) => {
-          if (e.error === 'interrupted' || e.error === 'canceled') {
-            console.log('[speakWithBrowser] 朗讀被中止');
-            return;
-          }
-          console.warn('[speakWithBrowser] 朗讀警告：', e.error);
-          if (isSpeaking && !isPaused) {
-            setTimeout(() => speakSegment(index + 1), 100);
-          }
-        };
-        
-        currentUtterance = utterance;
-        
-        // 關鍵：延遲 50ms 後播放，讓引擎完全準備好
-        setTimeout(() => {
-          console.log('[speakWithBrowser] 延遲後開始播放');
+            console.warn('朗讀警告：', e.error, '段落：', index);
+            // 嘗試繼續下一段
+            if (isSpeaking && !isPaused) {
+              setTimeout(() => speakSegment(index + 1), 100);
+            }
+          };
+          
+          currentUtterance = utterance;
           speechSynth.speak(utterance);
-        }, 50);
+        };
+        
+        warmupUtterance.onerror = () => {
+          // 預熱失敗也繼續播放
+          const utterance = new SpeechSynthesisUtterance(processedText);
+          if (selectedVoice) utterance.voice = selectedVoice;
+          utterance.rate = params.rate;
+          utterance.pitch = params.pitch;
+          utterance.volume = params.volume;
+          
+          utterance.onend = () => {
+            setTimeout(() => {
+              if (isSpeaking && !isPaused) {
+                speakSegment(index + 1);
+              }
+            }, params.pause);
+          };
+          
+          currentUtterance = utterance;
+          speechSynth.speak(utterance);
+        };
+        
+        // 開始預熱
+        speechSynth.speak(warmupUtterance);
       }
-      
 
       // 更新段落範圍輸入的最大值
       function updateSegmentInputs() {
