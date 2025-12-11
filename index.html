@@ -6045,7 +6045,7 @@ You MUST draw these characters EXACTLY as established on page 1:
           }
         }
         
-        const prompt = `Create a ${numPanels}-panel comic/manga page.
+        const prompt = `Create a ${numPanels}-panel comic/manga page with CRYSTAL CLEAR TEXT.
 
 ${characterSheet}
 ${appearingCharacters}
@@ -6065,6 +6065,16 @@ Panel Layout:
 - Clear panel borders and consistent gutters
 - Varied panel sizes for visual interest
 
+【TEXT RENDERING - HIGHEST PRIORITY】
+- ALL text MUST be SHARP, CLEAR, and PERFECTLY READABLE
+- Use HIGH CONTRAST colors for text (black text on white bubbles)
+- Speech bubbles must have CLEAN WHITE backgrounds
+- Text size must be LARGE ENOUGH to read easily
+- Use BOLD, CLEAN fonts - no thin or decorative fonts
+- NO blurry, fuzzy, or distorted text allowed
+- Chinese characters must be correctly formed and legible
+- Keep dialogue SHORT and CONCISE for better readability
+
 ${isFirstPage ? `
 【FIRST PAGE INSTRUCTIONS】
 - This is PAGE 1 - establish ALL character designs clearly
@@ -6081,6 +6091,7 @@ ${isFirstPage ? `
 
 Content Requirements:
 - Include speech bubbles with CHINESE dialogue (Traditional Chinese)
+- Speech bubbles: white background, black outline, BLACK TEXT
 - Show character emotions and actions vividly
 - ${isLastPage ? 'This is the LAST page - provide story closure' : 'End with a hook leading to next page'}
 - Add speed lines, emotion effects, and detailed backgrounds
@@ -6088,7 +6099,8 @@ Content Requirements:
 Chapter: ${chapterTitle}
 Page: ${pageNum}
 ${characters.length > 0 ? `Total characters to maintain: ${characters.length}` : ''}
-${!isFirstPage ? '\n⚠️ CRITICAL: Characters MUST match page 1 EXACTLY! Same hair, eyes, clothes!' : ''}`;
+${!isFirstPage ? '\n⚠️ CRITICAL: Characters MUST match page 1 EXACTLY! Same hair, eyes, clothes!' : ''}
+⚠️ REMINDER: Text must be PERFECTLY CLEAR and READABLE!`;
 
         // 建立請求內容
         const requestParts = [];
@@ -6131,7 +6143,12 @@ ALL characters must look IDENTICAL to how they appear in this reference!
               parts: requestParts
             }],
             generationConfig: {
-              responseModalities: ["IMAGE", "TEXT"]
+              responseModalities: ["IMAGE", "TEXT"],
+              // 要求高解析度輸出
+              imageConfig: {
+                imageSize: "2K",        // 2K 解析度
+                aspectRatio: "3:4"      // 適合漫畫的比例
+              }
             }
           })
         });
