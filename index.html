@@ -3,14 +3,14 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>小說生成器 | AI 創作工坊</title>
+    <title>AI 小說 & 漫畫工坊 | AI 創作平台</title>
     
     <!-- PWA 支援 -->
-    <meta name="description" content="AI 小說生成器 - 離線可用的創作工具">
+    <meta name="description" content="AI 小說 & 漫畫工坊 - 一鍵生成小說並轉換成漫畫的創作工具">
     <meta name="theme-color" content="#1a1a2e">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-    <meta name="apple-mobile-web-app-title" content="小說生成器">
+    <meta name="apple-mobile-web-app-title" content="AI創作工坊">
     
     <!-- 離線字體備援 -->
     <style>
@@ -1927,75 +1927,319 @@
         color: #666;
       }
 
-      /* TTS 引擎切換 */
-      .tts-engine-toggle {
-        margin-bottom: 16px;
-        padding-bottom: 16px;
-        border-bottom: 1px dashed var(--border);
-      }
-
-      .toggle-options {
-        display: flex;
-        gap: 8px;
-        margin-bottom: 12px;
-      }
-
-      .toggle-btn {
-        flex: 1;
-        padding: 10px 16px;
-        border: 2px solid var(--border);
-        border-radius: 10px;
+      /* AI 漫畫面板 */
+      .image-panel {
         background: white;
-        font-size: 0.9rem;
-        cursor: pointer;
-        transition: all 0.2s;
+        border-radius: 16px;
+        box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
+        margin-top: 20px;
+        overflow: hidden;
+      }
+
+      .image-panel-header {
         display: flex;
+        justify-content: space-between;
         align-items: center;
-        justify-content: center;
+        padding: 16px 20px;
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        color: white;
+      }
+
+      .image-panel-title {
+        font-weight: 600;
+        font-size: 1.1rem;
+      }
+
+      .image-panel-close {
+        background: rgba(255, 255, 255, 0.2);
+        border: none;
+        color: white;
+        width: 28px;
+        height: 28px;
+        border-radius: 50%;
+        cursor: pointer;
+        font-size: 1rem;
+        transition: background 0.2s;
+      }
+
+      .image-panel-close:hover {
+        background: rgba(255, 255, 255, 0.3);
+      }
+
+      .image-panel-content {
+        padding: 20px;
+      }
+
+      .image-settings {
+        display: flex;
+        flex-direction: column;
+        gap: 16px;
+        margin-bottom: 20px;
+      }
+
+      .image-row {
+        display: flex;
+        flex-direction: column;
         gap: 6px;
       }
 
-      .toggle-btn:hover {
-        border-color: var(--accent);
-        background: rgba(233, 69, 96, 0.05);
+      .image-row label {
+        font-size: 0.9rem;
+        font-weight: 500;
+        color: #555;
       }
 
-      .toggle-btn.active {
-        border-color: var(--accent);
-        background: linear-gradient(135deg, var(--accent), #ff6b6b);
-        color: white;
-        box-shadow: 0 2px 8px rgba(233, 69, 96, 0.3);
-      }
-
-      .tts-api-settings {
-        background: rgba(233, 69, 96, 0.05);
-        border-radius: 10px;
-        padding: 12px;
-        margin-top: 8px;
-      }
-
-      .api-input-row {
-        display: flex;
-        gap: 8px;
-      }
-
-      .api-input-row input {
-        flex: 1;
-        padding: 8px 12px;
+      .image-row select,
+      .image-row textarea {
+        padding: 10px 14px;
         border: 1px solid var(--border);
-        border-radius: 6px;
-        font-size: 0.85rem;
+        border-radius: 8px;
+        font-size: 0.95rem;
+        transition: border-color 0.2s;
       }
 
-      .api-input-row input:focus {
-        border-color: var(--accent);
+      .image-row select:focus,
+      .image-row textarea:focus {
+        border-color: #667eea;
         outline: none;
       }
 
-      .api-hint {
+      .image-row textarea {
+        resize: vertical;
+        min-height: 80px;
+      }
+
+      .image-result {
+        margin-top: 20px;
+        text-align: center;
+      }
+
+      .image-loading {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: 12px;
+        padding: 40px;
+        color: #666;
+      }
+
+      .image-loading .spinner {
+        width: 40px;
+        height: 40px;
+        border: 3px solid #eee;
+        border-top-color: #667eea;
+        border-radius: 50%;
+        animation: spin 1s linear infinite;
+      }
+
+      .image-loading small {
+        color: #999;
+        font-size: 0.85rem;
+      }
+
+      @keyframes spin {
+        to { transform: rotate(360deg); }
+      }
+
+      .image-actions {
+        display: flex;
+        gap: 12px;
+        justify-content: center;
+        margin-top: 16px;
+        flex-wrap: wrap;
+      }
+
+      /* 漫畫進度條 */
+      .comic-progress-bar {
+        margin: 15px 0;
+        padding: 15px;
+        background: #f8f9fa;
+        border-radius: 8px;
+      }
+
+      .comic-progress-bar .progress-info {
+        display: flex;
+        justify-content: space-between;
+        margin-bottom: 8px;
+        font-size: 0.9rem;
+        color: #555;
+      }
+
+      .comic-progress-bar .progress-track {
+        height: 8px;
+        background: #e0e0e0;
+        border-radius: 4px;
+        overflow: hidden;
+      }
+
+      .comic-progress-bar .progress-fill {
+        height: 100%;
+        background: linear-gradient(90deg, #667eea, #764ba2);
+        border-radius: 4px;
+        transition: width 0.3s ease;
+      }
+
+      .comic-complete-msg {
+        margin-top: 15px;
+        padding: 12px 20px;
+        background: linear-gradient(135deg, #d4edda, #c3e6cb);
+        color: #155724;
+        border-radius: 8px;
+        text-align: center;
+        font-weight: 500;
+      }
+
+      /* 漫畫容器 */
+      .comic-container {
+        display: flex;
+        flex-direction: column;
+        gap: 20px;
+        max-width: 100%;
+      }
+
+      .comic-page {
+        background: white;
+        border: 3px solid #333;
+        border-radius: 8px;
+        overflow: hidden;
+        box-shadow: 0 4px 15px rgba(0,0,0,0.2);
+      }
+
+      .comic-page-header {
+        background: #333;
+        color: white;
+        padding: 8px 16px;
+        font-weight: bold;
+        font-size: 0.9rem;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+      }
+
+      .comic-page-download-btn {
+        background: rgba(255,255,255,0.15);
+        border: 1px solid rgba(255,255,255,0.3);
+        color: white;
+        padding: 4px 12px;
+        border-radius: 4px;
         font-size: 0.8rem;
+        cursor: pointer;
+        transition: all 0.2s;
+      }
+
+      .comic-page-download-btn:hover {
+        background: rgba(255,255,255,0.25);
+        border-color: rgba(255,255,255,0.5);
+      }
+
+      .comic-page-download-btn:active {
+        transform: scale(0.95);
+      }
+
+      .comic-grid {
+        display: grid;
+        gap: 3px;
+        background: #333;
+        padding: 3px;
+      }
+
+      .comic-grid.panels-4 {
+        grid-template-columns: repeat(2, 1fr);
+        grid-template-rows: repeat(2, 1fr);
+      }
+
+      .comic-grid.panels-6 {
+        grid-template-columns: repeat(2, 1fr);
+        grid-template-rows: repeat(3, 1fr);
+      }
+
+      .comic-grid.panels-9 {
+        grid-template-columns: repeat(3, 1fr);
+        grid-template-rows: repeat(3, 1fr);
+      }
+
+      .comic-panel {
+        background: white;
+        position: relative;
+        aspect-ratio: 1;
+        overflow: hidden;
+        display: flex;
+        flex-direction: column;
+      }
+
+      .comic-panel-image {
+        flex: 1;
+        background-size: cover;
+        background-position: center;
+        background-color: #f5f5f5;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        color: #999;
+        font-size: 2rem;
+      }
+
+      .comic-panel-image img {
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+      }
+
+      .comic-panel-text {
+        background: white;
+        padding: 8px 10px;
+        font-size: 0.85rem;
+        line-height: 1.4;
+        border-top: 2px solid #333;
+        min-height: 60px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        text-align: center;
+      }
+
+      .comic-panel-text.dialogue {
+        background: #fff9e6;
+        font-style: normal;
+      }
+
+      .comic-panel-text.narration {
+        background: #f0f0f0;
+        font-style: italic;
+        color: #555;
+      }
+
+      .comic-bubble {
+        position: absolute;
+        background: white;
+        border: 2px solid #333;
+        border-radius: 20px;
+        padding: 8px 12px;
+        font-size: 0.8rem;
+        max-width: 80%;
+        box-shadow: 2px 2px 0 #333;
+      }
+
+      .comic-bubble::after {
+        content: '';
+        position: absolute;
+        bottom: -10px;
+        left: 20px;
+        border-width: 10px 10px 0;
+        border-style: solid;
+        border-color: #333 transparent transparent;
+      }
+
+      .btn-text {
+        background: none;
+        border: none;
         color: var(--text-light);
-        margin-top: 8px;
+        cursor: pointer;
+        font-size: 0.85rem;
+      }
+
+      .btn-text:hover {
+        color: var(--accent);
       }
 
       /* 朗讀中的文字高亮 */
@@ -2082,11 +2326,11 @@
 
     <div class="container">
       <header>
-        <h1>小說生成器</h1>
+        <h1>🎨 AI 小說 & 漫畫工坊</h1>
         <p class="subtitle">
-          結合 AI 的無限創意，打造專屬於你的長篇故事<br>
-          設定主題、人物、背景，一鍵生成精彩小說<br>
-          <small style="opacity: 0.7;">💡 支援離線閱讀、朗讀、匯出、匯入書籤</small>
+          結合 AI 的無限創意，打造專屬於你的長篇故事與漫畫<br>
+          設定主題、人物、背景，一鍵生成精彩小說，還能轉換成漫畫！<br>
+          <small style="opacity: 0.7;">💡 支援離線閱讀、朗讀、書籤管理、漫畫生成、匯出匯入</small>
         </p>
       </header>
 
@@ -2247,6 +2491,8 @@
             </div>
           </div>
           
+          <button id="generateImageBtn" type="button" class="btn-outline" disabled>📚 AI 漫畫</button>
+          
           <button id="speakBtn" type="button" class="btn-outline" disabled>🔊 朗讀文章</button>
         </div>
 
@@ -2263,21 +2509,6 @@
             <button id="closeSpeechPanel" class="speech-close">✕</button>
           </div>
           <div class="speech-controls">
-            <!-- TTS 引擎切換 -->
-            <div class="tts-engine-toggle">
-              <div class="toggle-options">
-                <button type="button" id="ttsLocalBtn" class="toggle-btn active" title="使用瀏覽器內建語音（免費、離線可用）">
-                  🔊 瀏覽器語音
-                </button>
-                <button type="button" id="ttsApiBtn" class="toggle-btn" title="使用 Gemini API 語音（使用相同 API Key）">
-                  ☁️ API 語音
-                </button>
-              </div>
-              <div id="ttsApiSettings" class="tts-api-settings" style="display: none;">
-                <div class="api-hint">💡 將使用上方的 Gemini API Key 進行語音合成</div>
-              </div>
-            </div>
-            
             <div class="speech-row">
               <label>語音：</label>
               <select id="voiceSelect"></select>
@@ -2361,6 +2592,75 @@
             
             <div class="speech-extra-buttons">
               <button id="copyAllBtn" class="btn-outline btn-full">📋 複製全文（可貼到其他 App 朗讀）</button>
+            </div>
+          </div>
+        </div>
+
+        <!-- AI 漫畫面板 -->
+        <div id="imagePanel" class="image-panel" style="display: none;">
+          <div class="image-panel-header">
+            <span class="image-panel-title">📚 AI 漫畫生成</span>
+            <button id="closeImagePanel" class="image-panel-close">✕</button>
+          </div>
+          <div class="image-panel-content">
+            <div class="image-settings">
+              <div class="image-row">
+                <label>漫畫風格：</label>
+                <select id="imageStyle">
+                  <option value="manga">🇯🇵 日式漫畫（黑白）</option>
+                  <option value="manhwa">🇰🇷 韓式漫畫（彩色）</option>
+                  <option value="manhua">🇨🇳 中式漫畫</option>
+                  <option value="comic">🇺🇸 美式漫畫</option>
+                  <option value="webtoon">📱 條漫風格</option>
+                </select>
+              </div>
+              <div class="image-row">
+                <label>選擇章節：</label>
+                <select id="comicChapterSelect"></select>
+              </div>
+              <div class="image-row">
+                <label>每頁格數：</label>
+                <select id="panelsPerPage">
+                  <option value="4">4 格（2x2）</option>
+                  <option value="6" selected>6 格（2x3）</option>
+                  <option value="9">9 格（3x3）</option>
+                </select>
+              </div>
+            </div>
+            
+            <button id="generateImageNowBtn" class="btn-primary btn-full">🎬 開始生成漫畫</button>
+            
+            <div id="imageResult" class="image-result" style="display: none;">
+              <div id="imageLoading" class="image-loading">
+                <div class="spinner"></div>
+                <span>AI 正在繪製漫畫中...</span>
+                <small id="comicProgress">分析劇情...</small>
+              </div>
+              
+              <!-- 進度顯示 -->
+              <div id="comicProgressBar" class="comic-progress-bar" style="display: none;">
+                <div class="progress-info">
+                  <span id="comicPageInfo">第 1 頁</span>
+                  <span id="comicContentProgress">0%</span>
+                </div>
+                <div class="progress-track">
+                  <div id="comicProgressFill" class="progress-fill" style="width: 0%"></div>
+                </div>
+              </div>
+              
+              <div id="comicContainer" class="comic-container" style="display: none;"></div>
+              
+              <div id="imageActions" class="image-actions" style="display: none;">
+                <button id="continueComicBtn" class="btn-primary" style="display: none;">➤ 繼續生成下一頁</button>
+                <button id="downloadImageBtn" class="btn-outline">⬇️ 下載全部</button>
+                <button id="regenerateImageBtn" class="btn-outline">🔄 重新開始</button>
+                <button id="clearComicBtn" class="btn-outline" style="color: #e74c3c;">🗑️ 清除漫畫</button>
+              </div>
+              
+              <!-- 完成提示 -->
+              <div id="comicCompleteMsg" class="comic-complete-msg" style="display: none;">
+                ✅ 本章節漫畫已全部生成完成！
+              </div>
             </div>
           </div>
         </div>
@@ -2535,6 +2835,7 @@
       const generateBtn = document.getElementById('generateBtn');
       const downloadBtn = document.getElementById('downloadBtn');
       const continueBtn = document.getElementById('continueBtn');
+      const generateImageBtn = document.getElementById('generateImageBtn');
       const statusDiv = document.getElementById('status');
       const resultDiv = document.getElementById('result');
       const toggleApiKeyVisibility = document.getElementById('toggleApiKeyVisibility');
@@ -2645,6 +2946,7 @@
         downloadBtn.disabled = false;
         continueBtn.disabled = false;
         speakBtn.disabled = false;
+        generateImageBtn.disabled = false;
         parseAndShowChapters(savedStory);
       }
 
@@ -4383,6 +4685,7 @@
             downloadBtn.disabled = false;
             continueBtn.disabled = false;
             speakBtn.disabled = false;
+            generateImageBtn.disabled = false;
             parseAndShowChapters(latestStory);
           } else {
             showStatus('error', '沒有獲得內容，請調整設定');
@@ -4652,6 +4955,7 @@
               
               downloadBtn.disabled = false;
               speakBtn.disabled = false;
+              generateImageBtn.disabled = false;
               parseAndShowChapters(latestStory);
             } else {
               showStatus('error', '沒有獲得續篇內容，可能已完結');
@@ -5398,11 +5702,632 @@
         });
       });
 
+      // ==================== AI 漫畫功能 ====================
+      const imagePanel = document.getElementById('imagePanel');
+      const closeImagePanel = document.getElementById('closeImagePanel');
+      const imageStyle = document.getElementById('imageStyle');
+      const comicChapterSelect = document.getElementById('comicChapterSelect');
+      const panelsPerPage = document.getElementById('panelsPerPage');
+      const generateImageNowBtn = document.getElementById('generateImageNowBtn');
+      const imageResult = document.getElementById('imageResult');
+      const imageLoading = document.getElementById('imageLoading');
+      const comicProgress = document.getElementById('comicProgress');
+      const comicProgressBar = document.getElementById('comicProgressBar');
+      const comicPageInfo = document.getElementById('comicPageInfo');
+      const comicContentProgress = document.getElementById('comicContentProgress');
+      const comicProgressFill = document.getElementById('comicProgressFill');
+      const comicContainer = document.getElementById('comicContainer');
+      const imageActions = document.getElementById('imageActions');
+      const continueComicBtn = document.getElementById('continueComicBtn');
+      const downloadImageBtn = document.getElementById('downloadImageBtn');
+      const regenerateImageBtn = document.getElementById('regenerateImageBtn');
+      const comicCompleteMsg = document.getElementById('comicCompleteMsg');
+
+      // 漫畫生成狀態
+      let comicState = {
+        chapterContent: '',      // 完整章節內容
+        chapterTitle: '',        // 章節標題
+        style: null,             // 風格設定
+        numPanels: 6,            // 每頁格數
+        currentPosition: 0,      // 目前處理到的位置
+        pages: [],               // 已生成的頁面圖片
+        isComplete: false,       // 是否完成
+        characterDesigns: '',    // 角色設計描述（保持一致性）
+        firstPageImage: null     // 第一頁圖片（用於參考）
+      };
+
+      // 開啟/關閉漫畫面板
+      generateImageBtn.addEventListener('click', () => {
+        imagePanel.style.display = imagePanel.style.display === 'none' ? 'block' : 'none';
+        if (imagePanel.style.display === 'block') {
+          updateComicChapterList();
+        }
+      });
+
+      closeImagePanel.addEventListener('click', () => {
+        imagePanel.style.display = 'none';
+      });
+
+      // 更新章節列表
+      function updateComicChapterList() {
+        if (!latestStory) return;
+        
+        const chapterPattern = /###?\s*(第[一二三四五六七八九十百千萬零壹貳參肆伍陸柒捌玖拾佰仟\d]+[章節回卷部集篇][：:].*)/g;
+        const matches = [...latestStory.matchAll(chapterPattern)];
+        
+        comicChapterSelect.innerHTML = '';
+        matches.forEach((match, index) => {
+          const option = document.createElement('option');
+          option.value = index;
+          option.textContent = match[1].slice(0, 30) + (match[1].length > 30 ? '...' : '');
+          comicChapterSelect.appendChild(option);
+        });
+        
+        if (matches.length === 0) {
+          const option = document.createElement('option');
+          option.value = '0';
+          option.textContent = '（整篇故事）';
+          comicChapterSelect.appendChild(option);
+        }
+      }
+
+      // 開始生成漫畫（重新開始）
+      generateImageNowBtn.addEventListener('click', () => startComicGeneration(true));
+      regenerateImageBtn.addEventListener('click', () => startComicGeneration(true));
+      
+      // 繼續生成
+      continueComicBtn.addEventListener('click', () => startComicGeneration(false));
+
+      async function startComicGeneration(isNewStart) {
+        const apiKey = apiKeyInput.value.trim();
+        if (!apiKey) {
+          showStatus('error', '請先輸入 Gemini API Key');
+          return;
+        }
+
+        if (!latestStory) {
+          showStatus('error', '請先生成小說內容');
+          return;
+        }
+
+        if (isNewStart) {
+          // 重新開始，重置狀態
+          const chapterPattern = /###?\s*(第[一二三四五六七八九十百千萬零壹貳參肆伍陸柒捌玖拾佰仟\d]+[章節回卷部集篇][：:].*)/g;
+          const matches = [...latestStory.matchAll(chapterPattern)];
+          const allParts = latestStory.split(chapterPattern).filter(s => s.trim());
+          
+          const idx = parseInt(comicChapterSelect.value) || 0;
+          let chapterContent = '';
+          let chapterTitle = '';
+          
+          if (matches.length > 0 && allParts.length > idx * 2 + 1) {
+            chapterTitle = matches[idx]?.[1] || '第' + (idx + 1) + '章';
+            chapterContent = allParts[idx * 2 + 1] || '';
+          } else {
+            chapterTitle = '故事';
+            chapterContent = latestStory.slice(0, 5000);
+          }
+
+          // 風格設定
+          const styleSettings = {
+            'manga': { name: '日式漫畫', desc: 'Japanese manga style, black and white, screentone effects, dynamic action lines, expressive faces, clear panel borders' },
+            'manhwa': { name: '韓式漫畫', desc: 'Korean manhwa style, full color, soft pastel tones, beautiful detailed characters, romantic atmosphere' },
+            'manhua': { name: '中式漫畫', desc: 'Chinese manhua style, traditional ink wash or ancient style coloring, Eastern aesthetics, flowing robes' },
+            'comic': { name: '美式漫畫', desc: 'American comic style, vivid bold colors, strong contrast, dynamic poses, superhero comic feel' },
+            'webtoon': { name: '條漫風格', desc: 'Modern webtoon style, clean lines, soft colors, contemporary setting, vertical scroll friendly' }
+          };
+
+          // 從小說設定中提取多角色資訊
+          let characters = [];
+          const characterInputs = document.querySelectorAll('.character-card');
+          if (characterInputs.length > 0) {
+            characterInputs.forEach((card, idx) => {
+              const nameInput = card.querySelector('input[placeholder*="名字"]');
+              const descInput = card.querySelector('textarea');
+              if (nameInput && nameInput.value) {
+                const name = nameInput.value.trim();
+                const desc = descInput ? descInput.value.trim() : '';
+                characters.push({
+                  id: idx + 1,
+                  name: name,
+                  description: desc,
+                  // 為每個角色生成唯一的視覺標識建議
+                  visualId: generateVisualIdentifier(idx, name)
+                });
+              }
+            });
+          }
+          
+          // 如果沒有角色設定，從章節內容分析角色
+          if (characters.length === 0 && chapterContent) {
+            // 提取對話中的角色名
+            const dialoguePattern = /[「『]([^」』]+)[」』]\s*[，,。！？]?\s*([^\s「『」』]{2,4})(說|道|問|答|喊|叫|笑|嘆)/g;
+            const matches = [...chapterContent.matchAll(dialoguePattern)];
+            const nameCount = {};
+            matches.forEach(m => {
+              const name = m[2];
+              if (name && name.length >= 2 && name.length <= 4) {
+                nameCount[name] = (nameCount[name] || 0) + 1;
+              }
+            });
+            
+            // 取出現次數最多的前5個角色
+            const sortedNames = Object.entries(nameCount)
+              .sort((a, b) => b[1] - a[1])
+              .slice(0, 5);
+            
+            sortedNames.forEach(([name, count], idx) => {
+              characters.push({
+                id: idx + 1,
+                name: name,
+                description: `appears ${count} times in dialogue`,
+                visualId: generateVisualIdentifier(idx, name)
+              });
+            });
+          }
+
+          // 限制最多5個角色（Gemini 3 Pro Image 的限制）
+          characters = characters.slice(0, 5);
+
+          comicState = {
+            chapterContent: chapterContent,
+            chapterTitle: chapterTitle,
+            style: styleSettings[imageStyle.value] || styleSettings['manga'],
+            numPanels: parseInt(panelsPerPage.value) || 6,
+            currentPosition: 0,
+            pages: [],
+            isComplete: false,
+            characters: characters,  // 改用結構化的角色陣列
+            firstPageImage: null
+          };
+
+          // 清空容器和舊資料
+          comicContainer.innerHTML = '';
+          comicCompleteMsg.style.display = 'none';
+          
+          // 清除 IndexedDB 中的舊漫畫
+          await clearComicFromDB();
+        }
+
+        // 顯示載入狀態
+        imageResult.style.display = 'block';
+        imageLoading.style.display = 'flex';
+        comicProgressBar.style.display = 'block';
+        imageActions.style.display = 'none';
+        generateImageNowBtn.disabled = true;
+        continueComicBtn.disabled = true;
+        
+        const pageNum = comicState.pages.length + 1;
+        comicPageInfo.textContent = `第 ${pageNum} 頁`;
+        comicProgress.textContent = '準備繪製中...';
+
+        try {
+          await generateComicPage(apiKey);
+        } catch (err) {
+          console.error('漫畫生成錯誤：', err);
+          imageLoading.style.display = 'none';
+          
+          const errorMsg = err.message || '';
+          if (errorMsg.includes('quota') || errorMsg.includes('limit') || errorMsg.includes('429')) {
+            showStatus('error', '⚠️ API 配額已用完，請稍後再試');
+          } else if (errorMsg.includes('not found') || errorMsg.includes('404')) {
+            showStatus('error', '⚠️ 圖片生成模型不可用，請確認 API 權限');
+          } else if (errorMsg.includes('safety') || errorMsg.includes('blocked')) {
+            showStatus('error', '⚠️ 內容被安全過濾，請調整章節內容後重試');
+          } else {
+            showStatus('error', '漫畫生成失敗：' + errorMsg);
+          }
+          
+          // 顯示操作按鈕讓使用者可以重試
+          imageActions.style.display = 'flex';
+          if (comicState.pages.length > 0) {
+            comicContainer.style.display = 'flex';
+            continueComicBtn.style.display = 'inline-block';
+          }
+        } finally {
+          generateImageNowBtn.disabled = false;
+          continueComicBtn.disabled = false;
+        }
+      }
+
+      // 為角色生成獨特的視覺標識
+      function generateVisualIdentifier(index, name) {
+        // 預設的視覺特徵組合，確保每個角色都有獨特外觀
+        const hairStyles = ['short spiky', 'long straight', 'medium wavy', 'ponytail', 'twin tails', 'bob cut', 'braided', 'messy'];
+        const hairColors = ['black', 'dark brown', 'light brown', 'blonde', 'silver/white', 'dark blue', 'auburn red', 'purple'];
+        const eyeColors = ['brown', 'dark brown', 'blue', 'green', 'amber', 'gray', 'violet', 'golden'];
+        const features = ['sharp eyes', 'soft features', 'strong jawline', 'gentle smile', 'serious expression', 'cheerful face', 'mysterious aura', 'determined look'];
+        const clothingStyles = ['formal suit', 'casual modern', 'traditional robes', 'school uniform', 'military style', 'elegant dress', 'adventurer gear', 'simple clothes'];
+        const accessories = ['glasses', 'earrings', 'necklace', 'hair ribbon', 'headband', 'scarf', 'watch', 'bracelet'];
+        
+        // 根據角色索引選擇不同特徵，確保多角色有明顯區別
+        return {
+          hair: `${hairColors[index % hairColors.length]} ${hairStyles[index % hairStyles.length]} hair`,
+          eyes: `${eyeColors[(index + 3) % eyeColors.length]} eyes`,
+          feature: features[index % features.length],
+          clothing: clothingStyles[index % clothingStyles.length],
+          accessory: accessories[(index + 2) % accessories.length]
+        };
+      }
+
+      // 建立多角色描述文字
+      function buildCharacterSheet(characters, isFirstPage) {
+        if (!characters || characters.length === 0) {
+          return '';
+        }
+
+        let sheet = '';
+        
+        if (isFirstPage) {
+          sheet = `
+═══════════════════════════════════════════════════════════
+CHARACTER DESIGN SHEET - ESTABLISH THESE EXACTLY (${characters.length} characters)
+These designs MUST remain IDENTICAL throughout ALL pages!
+═══════════════════════════════════════════════════════════
+
+`;
+          characters.forEach((char, idx) => {
+            const v = char.visualId;
+            sheet += `【CHARACTER ${idx + 1}: "${char.name}"】
+• Hair: ${v.hair}
+• Eyes: ${v.eyes}
+• Face: ${v.feature}
+• Outfit: ${v.clothing}
+• Accessory: ${v.accessory}
+${char.description ? `• Description: ${char.description}` : ''}
+• UNIQUE IDENTIFIER: Always draw ${char.name} with ${v.hair} and ${v.accessory}
+
+`;
+          });
+          
+          sheet += `
+═══════════════════════════════════════════════════════════
+CRITICAL: Each character MUST be visually DISTINCT and CONSISTENT!
+- Different hair colors/styles for each character
+- Consistent clothing throughout all pages  
+- Same facial features every time they appear
+═══════════════════════════════════════════════════════════`;
+        } else {
+          // 後續頁面的簡化版本，強調一致性
+          sheet = `
+【MANDATORY CHARACTER CONSISTENCY - ${characters.length} CHARACTERS】
+You MUST draw these characters EXACTLY as established on page 1:
+
+`;
+          characters.forEach((char, idx) => {
+            const v = char.visualId;
+            sheet += `${idx + 1}. "${char.name}": ${v.hair}, ${v.eyes}, ${v.clothing}, wearing ${v.accessory}
+`;
+          });
+          
+          sheet += `
+⚠️ DO NOT CHANGE ANY CHARACTER'S APPEARANCE!
+⚠️ Same hair, same eyes, same clothes, same accessories!
+⚠️ Characters must be IMMEDIATELY recognizable from page 1!`;
+        }
+        
+        return sheet;
+      }
+
+      async function generateComicPage(apiKey) {
+        const { chapterContent, chapterTitle, style, numPanels, currentPosition, pages, characters, firstPageImage } = comicState;
+        
+        // 計算這一頁要處理的內容
+        const chunkSize = Math.ceil(chapterContent.length / Math.ceil(chapterContent.length / 800)); // 每頁約 800 字
+        const startPos = currentPosition;
+        const endPos = Math.min(currentPosition + chunkSize, chapterContent.length);
+        const pageContent = chapterContent.slice(startPos, endPos);
+        
+        // 更新進度
+        const progress = Math.round((endPos / chapterContent.length) * 100);
+        comicContentProgress.textContent = `${progress}%`;
+        comicProgressFill.style.width = `${progress}%`;
+        
+        const pageNum = pages.length + 1;
+        comicProgress.textContent = `繪製第 ${pageNum} 頁...（約需 30-60 秒）`;
+
+        // 建立提示詞
+        const isFirstPage = pages.length === 0;
+        const isLastPage = endPos >= chapterContent.length;
+        
+        // 建立角色描述表
+        const characterSheet = buildCharacterSheet(characters, isFirstPage);
+        
+        // 分析這一頁出現的角色
+        let appearingCharacters = '';
+        if (characters && characters.length > 0) {
+          const appearing = characters.filter(char => 
+            pageContent.includes(char.name)
+          );
+          if (appearing.length > 0) {
+            appearingCharacters = `\n\n【Characters appearing in this page's scene】:\n` +
+              appearing.map(c => `- ${c.name} (${c.visualId.hair}, ${c.visualId.clothing})`).join('\n');
+          }
+        }
+        
+        const prompt = `Create a ${numPanels}-panel comic/manga page.
+
+${characterSheet}
+${appearingCharacters}
+
+═══════════════════════════════════════════════════════════
+STORY CONTENT FOR THIS PAGE:
+═══════════════════════════════════════════════════════════
+${pageContent}
+
+═══════════════════════════════════════════════════════════
+ART STYLE & REQUIREMENTS:
+═══════════════════════════════════════════════════════════
+Style: ${style.desc}
+
+Panel Layout:
+- Draw exactly ${numPanels} panels in a professional comic page layout
+- Clear panel borders and consistent gutters
+- Varied panel sizes for visual interest
+
+${isFirstPage ? `
+【FIRST PAGE INSTRUCTIONS】
+- This is PAGE 1 - establish ALL character designs clearly
+- Show each character's full appearance at least once
+- Make sure each character is visually DISTINCT from others
+- These designs will be the REFERENCE for all future pages
+` : `
+【CONTINUATION PAGE ${pageNum} INSTRUCTIONS】  
+- MAINTAIN EXACT character consistency with page 1
+- DO NOT modify any character's appearance
+- Same hair color, same clothes, same accessories
+- Characters must be INSTANTLY recognizable
+`}
+
+Content Requirements:
+- Include speech bubbles with CHINESE dialogue (Traditional Chinese)
+- Show character emotions and actions vividly
+- ${isLastPage ? 'This is the LAST page - provide story closure' : 'End with a hook leading to next page'}
+- Add speed lines, emotion effects, and detailed backgrounds
+
+Chapter: ${chapterTitle}
+Page: ${pageNum}
+${characters.length > 0 ? `Total characters to maintain: ${characters.length}` : ''}
+${!isFirstPage ? '\n⚠️ CRITICAL: Characters MUST match page 1 EXACTLY! Same hair, eyes, clothes!' : ''}`;
+
+        // 建立請求內容
+        const requestParts = [];
+        
+        // 如果不是第一頁且有第一頁圖片，加入作為參考
+        if (!isFirstPage && firstPageImage) {
+          const base64Data = firstPageImage.split(',')[1];
+          if (base64Data) {
+            requestParts.push({
+              inlineData: {
+                mimeType: 'image/png',
+                data: base64Data
+              }
+            });
+            requestParts.push({
+              text: `【REFERENCE IMAGE - PAGE 1】
+This is the first page of this comic. You MUST maintain the EXACT SAME:
+- Character designs (face, hair, body, clothes)
+- Art style and line work
+- Color palette
+- Panel border style
+
+ALL characters must look IDENTICAL to how they appear in this reference!
+
+` + prompt
+            });
+          } else {
+            requestParts.push({ text: prompt });
+          }
+        } else {
+          requestParts.push({ text: prompt });
+        }
+
+        // 使用 Gemini 3 Pro Image 圖片生成模型
+        const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-3-pro-image-preview:generateContent?key=${apiKey}`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            contents: [{
+              parts: requestParts
+            }],
+            generationConfig: {
+              responseModalities: ["IMAGE", "TEXT"]
+            }
+          })
+        });
+
+        const data = await response.json();
+        
+        if (data.error) {
+          throw new Error(data.error.message);
+        }
+
+        // 尋找圖片回應
+        let imageUrl = null;
+        if (data.candidates && data.candidates[0]?.content?.parts) {
+          for (const part of data.candidates[0].content.parts) {
+            if (part.inlineData && part.inlineData.mimeType?.startsWith('image/')) {
+              imageUrl = `data:${part.inlineData.mimeType};base64,${part.inlineData.data}`;
+              break;
+            }
+          }
+        }
+
+        if (!imageUrl) {
+          throw new Error('未收到圖片，API 可能不支援圖片生成');
+        }
+
+        // 如果是第一頁，儲存作為參考
+        if (isFirstPage) {
+          comicState.firstPageImage = imageUrl;
+        }
+
+        // 儲存這一頁
+        comicState.pages.push({
+          pageNum: pageNum,
+          imageUrl: imageUrl,
+          content: pageContent
+        });
+        comicState.currentPosition = endPos;
+        comicState.isComplete = (endPos >= chapterContent.length);
+
+        // 渲染這一頁
+        renderComicPage(pageNum, imageUrl);
+
+        // 更新 UI
+        imageLoading.style.display = 'none';
+        comicContainer.style.display = 'flex';
+        imageActions.style.display = 'flex';
+
+        if (comicState.isComplete) {
+          // 章節完成
+          continueComicBtn.style.display = 'none';
+          comicCompleteMsg.style.display = 'block';
+          comicProgressFill.style.width = '100%';
+          comicContentProgress.textContent = '100%';
+          showStatus('success', `📚 ${chapterTitle} 漫畫全部生成完成！共 ${pages.length} 頁`);
+        } else {
+          // 還有更多內容
+          continueComicBtn.style.display = 'inline-block';
+          comicCompleteMsg.style.display = 'none';
+          showStatus('success', `📖 第 ${pageNum} 頁完成！點擊「繼續生成」產生下一頁`);
+        }
+        
+        // 自動儲存漫畫到 IndexedDB
+        await saveComicToDB();
+      }
+
+      // 渲染單頁漫畫
+      function renderComicPage(pageNum, imageUrl) {
+        const pageDiv = document.createElement('div');
+        pageDiv.className = 'comic-page';
+        pageDiv.innerHTML = `
+          <div class="comic-page-header">
+            <span>📖 ${comicState.chapterTitle} - 第 ${pageNum} 頁</span>
+            <button class="comic-page-download-btn" onclick="downloadSinglePage(${pageNum})" title="下載此頁">
+              ⬇️ 下載
+            </button>
+          </div>
+          <div style="padding: 5px; background: #f5f5f5;">
+            <img src="${imageUrl}" alt="漫畫第${pageNum}頁" style="width: 100%; border-radius: 4px; display: block;">
+          </div>
+        `;
+        comicContainer.appendChild(pageDiv);
+        
+        // 滾動到新頁面
+        pageDiv.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      }
+
+      // 下載單張漫畫
+      function downloadSinglePage(pageNum) {
+        const page = comicState.pages.find(p => p.pageNum === pageNum);
+        if (!page) {
+          showStatus('error', '找不到該頁漫畫');
+          return;
+        }
+        
+        const link = document.createElement('a');
+        link.href = page.imageUrl;
+        link.download = `漫畫_${comicState.chapterTitle}_第${pageNum}頁.png`;
+        link.click();
+        showStatus('success', `📥 第 ${pageNum} 頁已下載`);
+      }
+
+      // 下載漫畫
+      downloadImageBtn.addEventListener('click', async () => {
+        if (!comicState.pages || comicState.pages.length === 0) {
+          showStatus('error', '沒有可下載的漫畫');
+          return;
+        }
+
+        if (comicState.pages.length === 1) {
+          // 單頁直接下載圖片
+          const link = document.createElement('a');
+          link.href = comicState.pages[0].imageUrl;
+          link.download = `漫畫_${comicState.chapterTitle}_第1頁.png`;
+          link.click();
+          showStatus('success', '📥 漫畫已下載');
+        } else {
+          // 多頁生成 HTML
+          const htmlContent = `<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>${comicState.chapterTitle} - 漫畫</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body { background: #222; padding: 20px; font-family: sans-serif; }
+    .comic-page { max-width: 800px; margin: 0 auto 30px; background: white; border-radius: 8px; overflow: hidden; box-shadow: 0 5px 20px rgba(0,0,0,0.3); }
+    .page-header { background: #333; color: white; padding: 12px 20px; font-weight: bold; }
+    .page-image { padding: 5px; background: #f5f5f5; }
+    .page-image img { width: 100%; display: block; }
+    h1 { color: white; text-align: center; margin-bottom: 30px; }
+  </style>
+</head>
+<body>
+  <h1>📚 ${comicState.chapterTitle}</h1>
+  ${comicState.pages.map(p => `
+    <div class="comic-page">
+      <div class="page-header">第 ${p.pageNum} 頁</div>
+      <div class="page-image"><img src="${p.imageUrl}" alt="第${p.pageNum}頁"></div>
+    </div>
+  `).join('')}
+</body>
+</html>`;
+
+          const blob = new Blob([htmlContent], { type: 'text/html;charset=utf-8' });
+          const url = URL.createObjectURL(blob);
+          const link = document.createElement('a');
+          link.href = url;
+          link.download = `漫畫_${comicState.chapterTitle}.html`;
+          link.click();
+          URL.revokeObjectURL(url);
+          showStatus('success', `📥 已下載 ${comicState.pages.length} 頁漫畫`);
+        }
+      });
+
+      // 清除漫畫按鈕
+      document.getElementById('clearComicBtn').addEventListener('click', async () => {
+        if (!comicState.pages || comicState.pages.length === 0) {
+          showStatus('info', '沒有漫畫需要清除');
+          return;
+        }
+        
+        if (confirm(`確定要清除所有漫畫嗎？（共 ${comicState.pages.length} 頁）\n此操作無法復原！`)) {
+          // 重置狀態
+          comicState = {
+            chapterContent: '',
+            chapterTitle: '',
+            style: null,
+            numPanels: 6,
+            currentPosition: 0,
+            pages: [],
+            isComplete: false,
+            characters: [],
+            firstPageImage: null
+          };
+          
+          // 清空 UI
+          comicContainer.innerHTML = '';
+          imageResult.style.display = 'none';
+          comicProgressBar.style.display = 'none';
+          imageActions.style.display = 'none';
+          comicCompleteMsg.style.display = 'none';
+          
+          // 清除 IndexedDB
+          await clearComicFromDB();
+          
+          showStatus('success', '🗑️ 漫畫已清除');
+        }
+      });
+
       // ==================== 書籤功能 (大幅優化) ====================
       // ==================== IndexedDB 書籤儲存 ====================
       const DB_NAME = 'NovelGeneratorDB';
-      const DB_VERSION = 1;
+      const DB_VERSION = 2;  // 升級版本以加入漫畫儲存
       const STORE_NAME = 'bookmarks';
+      const COMIC_STORE_NAME = 'comics';  // 漫畫儲存區
       let db = null;
 
       // 初始化 IndexedDB
@@ -5427,8 +6352,138 @@
               database.createObjectStore(STORE_NAME, { keyPath: 'id' });
               console.log('建立書籤儲存區');
             }
+            // 加入漫畫儲存區
+            if (!database.objectStoreNames.contains(COMIC_STORE_NAME)) {
+              database.createObjectStore(COMIC_STORE_NAME, { keyPath: 'id' });
+              console.log('建立漫畫儲存區');
+            }
           };
         });
+      }
+
+      // ==================== 漫畫資料持久化 ====================
+      // 儲存漫畫到 IndexedDB
+      async function saveComicToDB() {
+        if (!db || !comicState.pages || comicState.pages.length === 0) return;
+        
+        try {
+          const comicData = {
+            id: 'current_comic',  // 使用固定 ID，每次覆蓋
+            chapterTitle: comicState.chapterTitle,
+            chapterContent: comicState.chapterContent,
+            style: comicState.style,
+            numPanels: comicState.numPanels,
+            currentPosition: comicState.currentPosition,
+            pages: comicState.pages,
+            characters: comicState.characters,
+            firstPageImage: comicState.firstPageImage,
+            isComplete: comicState.isComplete,
+            savedAt: new Date().toISOString()
+          };
+          
+          const transaction = db.transaction([COMIC_STORE_NAME], 'readwrite');
+          const store = transaction.objectStore(COMIC_STORE_NAME);
+          await store.put(comicData);
+          console.log('漫畫已儲存到 IndexedDB');
+        } catch (err) {
+          console.error('儲存漫畫失敗：', err);
+        }
+      }
+
+      // 從 IndexedDB 載入漫畫
+      async function loadComicFromDB() {
+        if (!db) return null;
+        
+        return new Promise((resolve) => {
+          try {
+            const transaction = db.transaction([COMIC_STORE_NAME], 'readonly');
+            const store = transaction.objectStore(COMIC_STORE_NAME);
+            const request = store.get('current_comic');
+            
+            request.onsuccess = () => {
+              if (request.result) {
+                console.log('從 IndexedDB 載入漫畫，共', request.result.pages?.length || 0, '頁');
+                resolve(request.result);
+              } else {
+                resolve(null);
+              }
+            };
+            
+            request.onerror = () => {
+              console.error('載入漫畫失敗');
+              resolve(null);
+            };
+          } catch (err) {
+            console.error('載入漫畫錯誤：', err);
+            resolve(null);
+          }
+        });
+      }
+
+      // 清除儲存的漫畫
+      async function clearComicFromDB() {
+        if (!db) return;
+        
+        try {
+          const transaction = db.transaction([COMIC_STORE_NAME], 'readwrite');
+          const store = transaction.objectStore(COMIC_STORE_NAME);
+          await store.delete('current_comic');
+          console.log('已清除儲存的漫畫');
+        } catch (err) {
+          console.error('清除漫畫失敗：', err);
+        }
+      }
+
+      // 恢復漫畫狀態並渲染
+      async function restoreComic() {
+        const savedComic = await loadComicFromDB();
+        if (!savedComic || !savedComic.pages || savedComic.pages.length === 0) {
+          return false;
+        }
+        
+        // 恢復狀態
+        comicState = {
+          chapterContent: savedComic.chapterContent || '',
+          chapterTitle: savedComic.chapterTitle || '漫畫',
+          style: savedComic.style || { name: '日式漫畫', desc: '' },
+          numPanels: savedComic.numPanels || 6,
+          currentPosition: savedComic.currentPosition || 0,
+          pages: savedComic.pages || [],
+          isComplete: savedComic.isComplete || false,
+          characters: savedComic.characters || [],
+          firstPageImage: savedComic.firstPageImage || null
+        };
+        
+        // 渲染所有頁面
+        comicContainer.innerHTML = '';
+        savedComic.pages.forEach(page => {
+          renderComicPage(page.pageNum, page.imageUrl);
+        });
+        
+        // 更新 UI
+        imageResult.style.display = 'block';
+        imageLoading.style.display = 'none';
+        comicProgressBar.style.display = 'block';
+        comicContainer.style.display = 'flex';
+        imageActions.style.display = 'flex';
+        
+        // 更新進度
+        const progress = comicState.isComplete ? 100 : 
+          Math.round((comicState.currentPosition / comicState.chapterContent.length) * 100);
+        comicProgressFill.style.width = `${progress}%`;
+        comicContentProgress.textContent = `${progress}%`;
+        comicPageInfo.textContent = `共 ${comicState.pages.length} 頁`;
+        
+        if (comicState.isComplete) {
+          continueComicBtn.style.display = 'none';
+          comicCompleteMsg.style.display = 'block';
+        } else {
+          continueComicBtn.style.display = 'inline-block';
+          comicCompleteMsg.style.display = 'none';
+        }
+        
+        console.log('已恢復漫畫，共', comicState.pages.length, '頁');
+        return true;
       }
 
       // 從 IndexedDB 載入所有書籤
@@ -5565,6 +6620,14 @@
                 console.log('遷移完成，已清除 localStorage');
               } catch (e) {}
             }
+          }
+          
+          // 嘗試恢復漫畫
+          const comicRestored = await restoreComic();
+          if (comicRestored) {
+            console.log('已恢復上次的漫畫');
+            // 顯示漫畫面板
+            imagePanel.style.display = 'block';
           }
         } else {
           // 退回使用 localStorage
@@ -5886,223 +6949,6 @@
       let currentSegmentIndex = 0;
       let availableVoices = [];
       let segmentRanges = []; // 儲存每個段落在原文中的位置
-      
-      // TTS 引擎設定
-      let useTtsApi = false; // false = 瀏覽器語音, true = Google Cloud TTS API
-      let ttsApiAudio = null; // API 語音的 Audio 元素
-
-      // TTS 切換元素
-      const ttsLocalBtn = document.getElementById('ttsLocalBtn');
-      const ttsApiBtn = document.getElementById('ttsApiBtn');
-      const ttsApiSettings = document.getElementById('ttsApiSettings');
-
-      // TTS 切換事件
-      ttsLocalBtn.addEventListener('click', () => {
-        useTtsApi = false;
-        ttsLocalBtn.classList.add('active');
-        ttsApiBtn.classList.remove('active');
-        ttsApiSettings.style.display = 'none';
-        // 重新載入瀏覽器語音列表
-        loadVoices();
-        saveTtsPreference();
-      });
-
-      ttsApiBtn.addEventListener('click', () => {
-        // 檢查是否有 API Key
-        const apiKey = apiKeyInput.value.trim();
-        if (!apiKey) {
-          showStatus('error', '請先在上方輸入 Gemini API Key');
-          return;
-        }
-        
-        useTtsApi = true;
-        ttsApiBtn.classList.add('active');
-        ttsLocalBtn.classList.remove('active');
-        ttsApiSettings.style.display = 'block';
-        // 載入 API 語音列表
-        loadApiVoices();
-        saveTtsPreference();
-      });
-
-      // 儲存 TTS 偏好
-      function saveTtsPreference() {
-        try {
-          localStorage.setItem('ttsPreference', JSON.stringify({
-            useApi: useTtsApi
-          }));
-        } catch (e) {}
-      }
-
-      // 載入 TTS 偏好
-      function loadTtsPreference() {
-        try {
-          const pref = JSON.parse(localStorage.getItem('ttsPreference') || '{}');
-          
-          if (pref.useApi && apiKeyInput.value.trim()) {
-            useTtsApi = true;
-            ttsApiBtn.classList.add('active');
-            ttsLocalBtn.classList.remove('active');
-            ttsApiSettings.style.display = 'block';
-            loadApiVoices();
-          }
-        } catch (e) {}
-      }
-
-      // 載入 Gemini API 語音列表
-      function loadApiVoices() {
-        voiceSelect.innerHTML = '';
-        
-        // Gemini 2.5 Flash 支援的語音
-        const geminiVoices = [
-          { name: 'Zephyr', desc: '明亮活潑' },
-          { name: 'Puck', desc: '活潑俏皮' },
-          { name: 'Charon', desc: '沉穩低沉' },
-          { name: 'Kore', desc: '清晰專業' },
-          { name: 'Fenrir', desc: '成熟穩重' },
-          { name: 'Leda', desc: '溫柔甜美' },
-          { name: 'Orus', desc: '渾厚有力' },
-          { name: 'Aoede', desc: '優雅知性' }
-        ];
-        
-        const group = document.createElement('optgroup');
-        group.label = '🤖 Gemini API 語音';
-        
-        geminiVoices.forEach(voice => {
-          const option = document.createElement('option');
-          option.value = voice.name;
-          option.textContent = `🎙️ ${voice.name} - ${voice.desc}`;
-          group.appendChild(option);
-        });
-        
-        voiceSelect.appendChild(group);
-      }
-
-      // 使用 Gemini API 朗讀
-      async function speakWithApi(text, onEnd) {
-        const apiKey = apiKeyInput.value.trim();
-        const voiceName = voiceSelect.value || 'Zephyr';
-        
-        if (!apiKey) {
-          showStatus('error', '請先輸入 Gemini API Key');
-          if (onEnd) onEnd();
-          return;
-        }
-        
-        // 限制文字長度，Gemini TTS 有 token 限制
-        // 每段最多約 500 字，超過的會被截斷
-        const maxLength = 500;
-        let processedText = text;
-        if (text.length > maxLength) {
-          processedText = text.substring(0, maxLength);
-        }
-        
-        try {
-          // 使用 Gemini 2.5 Flash TTS
-          const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-tts:generateContent?key=${apiKey}`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-              contents: [{
-                parts: [{ text: processedText }]
-              }],
-              generationConfig: {
-                response_modalities: ["AUDIO"],
-                speech_config: {
-                  voice_config: {
-                    prebuilt_voice_config: {
-                      voice_name: voiceName
-                    }
-                  }
-                }
-              }
-            })
-          });
-          
-          const data = await response.json();
-          
-          if (data.error) {
-            const errorMsg = data.error.message || '';
-            // 配額超限時提示等待
-            if (errorMsg.includes('quota') || errorMsg.includes('429') || errorMsg.includes('rate')) {
-              const waitMatch = errorMsg.match(/retry in ([\d.]+)s/i);
-              const waitTime = waitMatch ? Math.ceil(parseFloat(waitMatch[1])) : 20;
-              showStatus('error', `⏳ API 配額限制，${waitTime} 秒後自動重試...`);
-              // 等待後重試
-              setTimeout(() => {
-                speakWithApi(text, onEnd);
-              }, waitTime * 1000);
-              return;
-            }
-            
-            console.warn('Gemini TTS 錯誤：', data.error.message);
-            showStatus('error', 'API 語音錯誤，切換回瀏覽器語音');
-            // 自動切換回瀏覽器語音
-            useTtsApi = false;
-            ttsLocalBtn.classList.add('active');
-            ttsApiBtn.classList.remove('active');
-            loadVoices();
-            if (onEnd) onEnd();
-            return;
-          }
-          
-          // 檢查是否有音訊回應
-          if (data.candidates && data.candidates[0]?.content?.parts) {
-            const audioPart = data.candidates[0].content.parts.find(p => p.inlineData?.mimeType?.startsWith('audio/'));
-            
-            if (audioPart && audioPart.inlineData) {
-              const audioBlob = base64ToBlob(audioPart.inlineData.data, audioPart.inlineData.mimeType);
-              const audioUrl = URL.createObjectURL(audioBlob);
-              
-              if (ttsApiAudio) {
-                ttsApiAudio.pause();
-                URL.revokeObjectURL(ttsApiAudio.src);
-              }
-              
-              ttsApiAudio = new Audio(audioUrl);
-              
-              // 設定播放速度
-              ttsApiAudio.playbackRate = parseFloat(speechRate.value);
-              
-              ttsApiAudio.onended = () => {
-                URL.revokeObjectURL(audioUrl);
-                if (onEnd) onEnd();
-              };
-              ttsApiAudio.onerror = (e) => {
-                console.error('音訊播放錯誤：', e);
-                showStatus('error', '音訊播放失敗');
-                if (onEnd) onEnd();
-              };
-              
-              await ttsApiAudio.play();
-              return;
-            }
-          }
-          
-          // 沒有音訊，回調繼續
-          console.warn('未收到音訊回應');
-          if (onEnd) onEnd();
-          
-        } catch (err) {
-          console.error('API 請求錯誤：', err);
-          showStatus('error', 'API 請求失敗：' + err.message);
-          if (onEnd) onEnd();
-        }
-      }
-
-      // Base64 轉 Blob
-      function base64ToBlob(base64, mimeType) {
-        const byteCharacters = atob(base64);
-        const byteArrays = [];
-        for (let offset = 0; offset < byteCharacters.length; offset += 512) {
-          const slice = byteCharacters.slice(offset, offset + 512);
-          const byteNumbers = new Array(slice.length);
-          for (let i = 0; i < slice.length; i++) {
-            byteNumbers[i] = slice.charCodeAt(i);
-          }
-          byteArrays.push(new Uint8Array(byteNumbers));
-        }
-        return new Blob(byteArrays, { type: mimeType });
-      }
 
       // 朗讀控制元素
       const prevSegmentBtn = document.getElementById('prevSegmentBtn');
@@ -6328,7 +7174,6 @@
 
       // 初始化語音
       loadVoices();
-      loadTtsPreference(); // 載入 TTS 引擎偏好
       if (speechSynth.onvoiceschanged !== undefined) {
         speechSynth.onvoiceschanged = loadVoices;
       }
@@ -6598,21 +7443,8 @@
         speechProgressText.textContent = `正在朗讀 ${index + 1}/${speechSegments.length} 段...`;
         currentSegmentDisplay.textContent = `${index + 1} / ${speechSegments.length}`;
         
-        // 根據 TTS 引擎選擇
-        if (useTtsApi) {
-          // 使用 Google Cloud TTS API
-          speakWithApi(processedText, () => {
-            // 段落間停頓
-            setTimeout(() => {
-              if (isSpeaking && !isPaused) {
-                speakSegment(index + 1);
-              }
-            }, params.pause);
-          });
-        } else {
-          // 使用瀏覽器內建語音
-          speakWithBrowser(processedText, params, index);
-        }
+        // 使用瀏覽器內建語音
+        speakWithBrowser(processedText, params, index);
       }
       
       // 使用瀏覽器內建語音朗讀
@@ -6797,11 +7629,6 @@
       // 停止朗讀
       function stopSpeech() {
         speechSynth.cancel();
-        // 停止 API 音訊
-        if (ttsApiAudio) {
-          ttsApiAudio.pause();
-          ttsApiAudio.currentTime = 0;
-        }
         isSpeaking = false;
         isPaused = false;
         stopSpeechKeepAlive(); // 停止 Chrome bug workaround
