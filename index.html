@@ -2943,11 +2943,13 @@
       if (savedStory) {
         latestStory = savedStory;
         resultDiv.textContent = savedStory;
-        downloadBtn.disabled = false;
-        continueBtn.disabled = false;
-        speakBtn.disabled = false;
-        generateImageBtn.disabled = false;
+        // 直接用 getElementById 確保獲取正確的元素
+        document.getElementById('downloadBtn').disabled = false;
+        document.getElementById('continueBtn').disabled = false;
+        document.getElementById('speakBtn').disabled = false;
+        document.getElementById('generateImageBtn').disabled = false;
         parseAndShowChapters(savedStory);
+        console.log('已載入儲存的故事，按鈕已啟用');
       }
 
       // ==================== 隨機資料庫 ====================
@@ -7843,14 +7845,22 @@ ALL characters must look IDENTICAL to how they appear in this reference!
 
       // 頁面完全載入後，確保按鈕狀態正確
       window.addEventListener('load', () => {
+        console.log('Window load 事件觸發');
         setTimeout(() => {
           // 如果有故事內容，確保按鈕啟用
+          console.log('檢查故事內容，latestStory 長度：', latestStory ? latestStory.length : 0);
           if (latestStory && latestStory.length > 0) {
-            console.log('確認啟用按鈕，故事長度：', latestStory.length);
+            console.log('確認啟用按鈕');
+            const imgBtn = document.getElementById('generateImageBtn');
+            console.log('generateImageBtn 元素：', imgBtn);
+            console.log('目前 disabled 狀態：', imgBtn ? imgBtn.disabled : 'null');
+            
             document.getElementById('downloadBtn').disabled = false;
             document.getElementById('continueBtn').disabled = false;
             document.getElementById('speakBtn').disabled = false;
             document.getElementById('generateImageBtn').disabled = false;
+            
+            console.log('設定後 disabled 狀態：', imgBtn ? imgBtn.disabled : 'null');
           }
         }, 500);
       });
