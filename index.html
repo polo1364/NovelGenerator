@@ -6643,12 +6643,21 @@ ALL characters must look IDENTICAL to how they appear in this reference!
           const comicRestored = await restoreComic();
           if (comicRestored) {
             console.log('已恢復上次的漫畫');
-            // 顯示漫畫面板
+            // 顯示漫畫面板並啟用按鈕
             imagePanel.style.display = 'block';
+            generateImageBtn.disabled = false;
           }
         } else {
           // 退回使用 localStorage
           bookmarksCache = loadFromLocalStorage();
+        }
+        
+        // 確保如果有儲存的故事，按鈕都會啟用
+        if (latestStory) {
+          downloadBtn.disabled = false;
+          continueBtn.disabled = false;
+          speakBtn.disabled = false;
+          generateImageBtn.disabled = false;
         }
         
         console.log(`書籤系統初始化完成，使用 ${useIndexedDB ? 'IndexedDB' : 'localStorage'}，共 ${bookmarksCache.length} 個書籤`);
@@ -7830,6 +7839,20 @@ ALL characters must look IDENTICAL to how they appear in this reference!
           saveSpeechProgress();
         }
         speechSynth.cancel();
+      });
+
+      // 頁面完全載入後，確保按鈕狀態正確
+      window.addEventListener('load', () => {
+        setTimeout(() => {
+          // 如果有故事內容，確保按鈕啟用
+          if (latestStory && latestStory.length > 0) {
+            console.log('確認啟用按鈕，故事長度：', latestStory.length);
+            document.getElementById('downloadBtn').disabled = false;
+            document.getElementById('continueBtn').disabled = false;
+            document.getElementById('speakBtn').disabled = false;
+            document.getElementById('generateImageBtn').disabled = false;
+          }
+        }, 500);
       });
     </script>
   </body>
