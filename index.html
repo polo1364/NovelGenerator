@@ -79,6 +79,19 @@
       .container {
         max-width: 1000px;
         margin: 0 auto;
+        margin-left: 90px; /* 為浮動工具列留出空間 */
+      }
+
+      @media (max-width: 768px) {
+        .container {
+          margin-left: 70px;
+        }
+      }
+
+      @media (max-width: 480px) {
+        .container {
+          margin-left: 60px;
+        }
       }
 
       /* 頭部區域 */
@@ -1085,6 +1098,324 @@
         background: linear-gradient(90deg, var(--accent), var(--gold));
         z-index: 1001;
         transition: width 0.1s ease;
+      }
+
+      /* ==================== 浮動工具列 ==================== */
+      .floating-toolbar {
+        position: fixed;
+        left: 20px;
+        top: 50%;
+        transform: translateY(-50%);
+        z-index: 999;
+        display: flex;
+        flex-direction: column;
+        gap: 8px;
+      }
+
+      .toolbar-btn {
+        width: 52px;
+        height: 52px;
+        border-radius: 14px;
+        border: none;
+        cursor: pointer;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 1.3rem;
+        transition: all 0.3s ease;
+        position: relative;
+        box-shadow: 0 4px 15px rgba(0, 0, 0, 0.15);
+      }
+
+      .toolbar-btn:hover {
+        transform: scale(1.1) translateX(5px);
+      }
+
+      .toolbar-btn:active {
+        transform: scale(0.95);
+      }
+
+      .toolbar-btn:disabled {
+        opacity: 0.4;
+        cursor: not-allowed;
+        transform: none !important;
+      }
+
+      .toolbar-btn:disabled:hover {
+        transform: none !important;
+      }
+
+      /* 工具列按鈕顏色 */
+      .toolbar-btn.btn-api {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        color: white;
+      }
+
+      .toolbar-btn.btn-random {
+        background: linear-gradient(135deg, var(--gold) 0%, #f39c12 100%);
+        color: white;
+      }
+
+      .toolbar-btn.btn-generate {
+        background: linear-gradient(135deg, var(--accent) 0%, #c0392b 100%);
+        color: white;
+      }
+
+      .toolbar-btn.btn-continue {
+        background: linear-gradient(135deg, #00b894 0%, #00cec9 100%);
+        color: white;
+      }
+
+      .toolbar-btn.btn-download {
+        background: linear-gradient(135deg, #0984e3 0%, #6c5ce7 100%);
+        color: white;
+      }
+
+      .toolbar-btn.btn-comic {
+        background: linear-gradient(135deg, #e17055 0%, #fdcb6e 100%);
+        color: white;
+      }
+
+      .toolbar-btn.btn-speak {
+        background: linear-gradient(135deg, #a29bfe 0%, #fd79a8 100%);
+        color: white;
+      }
+
+      /* 工具列提示標籤 */
+      .toolbar-btn .toolbar-tooltip {
+        position: absolute;
+        left: 62px;
+        top: 50%;
+        transform: translateY(-50%);
+        background: var(--primary);
+        color: white;
+        padding: 8px 14px;
+        border-radius: 8px;
+        font-size: 0.85rem;
+        white-space: nowrap;
+        opacity: 0;
+        visibility: hidden;
+        transition: all 0.2s ease;
+        pointer-events: none;
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+      }
+
+      .toolbar-btn .toolbar-tooltip::before {
+        content: '';
+        position: absolute;
+        left: -6px;
+        top: 50%;
+        transform: translateY(-50%);
+        border-width: 6px;
+        border-style: solid;
+        border-color: transparent var(--primary) transparent transparent;
+      }
+
+      .toolbar-btn:hover .toolbar-tooltip {
+        opacity: 1;
+        visibility: visible;
+        left: 65px;
+      }
+
+      /* API 面板 */
+      .api-panel {
+        position: fixed;
+        left: 85px;
+        top: 50%;
+        transform: translateY(-50%);
+        background: var(--card-bg);
+        border-radius: 16px;
+        box-shadow: 0 10px 40px rgba(0, 0, 0, 0.15);
+        padding: 20px;
+        width: 320px;
+        max-height: 80vh;
+        overflow-y: auto;
+        opacity: 0;
+        visibility: hidden;
+        z-index: 998;
+        transition: all 0.3s ease;
+      }
+
+      .api-panel.open {
+        opacity: 1;
+        visibility: visible;
+        left: 90px;
+      }
+
+      .api-panel-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 16px;
+        padding-bottom: 12px;
+        border-bottom: 1px solid var(--border);
+      }
+
+      .api-panel-title {
+        font-weight: 600;
+        color: #667eea;
+        font-size: 1rem;
+      }
+
+      .api-panel-close {
+        background: none;
+        border: none;
+        color: var(--text-light);
+        cursor: pointer;
+        padding: 4px;
+        font-size: 1.2rem;
+        line-height: 1;
+      }
+
+      .api-panel-close:hover {
+        color: var(--accent);
+      }
+
+      .api-panel .input-group {
+        margin-bottom: 16px;
+      }
+
+      .api-panel .input-group:last-child {
+        margin-bottom: 0;
+      }
+
+      .api-panel label {
+        display: block;
+        font-size: 0.85rem;
+        font-weight: 500;
+        color: var(--text);
+        margin-bottom: 6px;
+      }
+
+      .api-panel input,
+      .api-panel select {
+        width: 100%;
+        padding: 10px 12px;
+        border: 1px solid var(--border);
+        border-radius: 8px;
+        font-size: 0.9rem;
+        transition: border-color 0.2s;
+      }
+
+      .api-panel input:focus,
+      .api-panel select:focus {
+        border-color: #667eea;
+        outline: none;
+      }
+
+      .api-key-row {
+        display: flex;
+        gap: 8px;
+      }
+
+      .api-key-row input {
+        flex: 1;
+      }
+
+      .api-key-row button {
+        padding: 10px 14px;
+        border: 1px solid var(--border);
+        border-radius: 8px;
+        background: #f8f9fa;
+        cursor: pointer;
+        font-size: 0.8rem;
+        transition: all 0.2s;
+      }
+
+      .api-key-row button:hover {
+        background: var(--border);
+      }
+
+      /* 下載選單（工具列版本） */
+      .toolbar-download-menu {
+        position: absolute;
+        left: 62px;
+        top: 0;
+        background: var(--card-bg);
+        border-radius: 12px;
+        box-shadow: 0 8px 30px rgba(0, 0, 0, 0.15);
+        padding: 8px;
+        min-width: 180px;
+        opacity: 0;
+        visibility: hidden;
+        transform: translateX(-10px);
+        transition: all 0.2s ease;
+        z-index: 1000;
+      }
+
+      .toolbar-download-menu.open {
+        opacity: 1;
+        visibility: visible;
+        transform: translateX(0);
+      }
+
+      .toolbar-download-menu button {
+        display: block;
+        width: 100%;
+        padding: 10px 14px;
+        border: none;
+        background: transparent;
+        text-align: left;
+        cursor: pointer;
+        border-radius: 8px;
+        font-size: 0.9rem;
+        transition: all 0.2s;
+      }
+
+      .toolbar-download-menu button:hover {
+        background: rgba(233, 69, 96, 0.1);
+        color: var(--accent);
+      }
+
+      .toolbar-download-menu button:disabled {
+        opacity: 0.5;
+        cursor: not-allowed;
+      }
+
+      /* 分隔線 */
+      .toolbar-divider {
+        width: 36px;
+        height: 2px;
+        background: var(--border);
+        margin: 4px auto;
+        border-radius: 1px;
+      }
+
+      /* 手機版調整 */
+      @media (max-width: 768px) {
+        .floating-toolbar {
+          left: 10px;
+          gap: 6px;
+        }
+
+        .toolbar-btn {
+          width: 44px;
+          height: 44px;
+          border-radius: 12px;
+          font-size: 1.1rem;
+        }
+
+        .toolbar-btn .toolbar-tooltip {
+          display: none;
+        }
+
+        .api-panel {
+          left: 10px;
+          right: 10px;
+          width: auto;
+          top: auto;
+          bottom: 20px;
+          transform: none;
+          max-height: 60vh;
+        }
+
+        .api-panel.open {
+          left: 10px;
+        }
+
+        .toolbar-download-menu {
+          left: 54px;
+        }
       }
 
       /* 浮動書籤導航 */
@@ -2324,6 +2655,88 @@
       📴 目前為離線模式 - 朗讀、閱讀、匯出、匯入功能仍可使用
     </div>
 
+    <!-- ==================== 浮動工具列 ==================== -->
+    <div class="floating-toolbar">
+      <!-- API 設定 -->
+      <button id="apiPanelToggle" class="toolbar-btn btn-api" title="API 設定">
+        🔑
+        <span class="toolbar-tooltip">API 設定</span>
+      </button>
+
+      <div class="toolbar-divider"></div>
+
+      <!-- 隨機填充 -->
+      <button id="randomBtn" class="toolbar-btn btn-random" title="隨機填充">
+        🎲
+        <span class="toolbar-tooltip">隨機填充</span>
+      </button>
+
+      <!-- 開始生成 -->
+      <button id="generateBtn" class="toolbar-btn btn-generate" title="開始生成">
+        ✨
+        <span class="toolbar-tooltip">開始生成</span>
+      </button>
+
+      <!-- 繼續生成 -->
+      <button id="continueBtn" class="toolbar-btn btn-continue" title="繼續生成" disabled>
+        ➤
+        <span class="toolbar-tooltip">繼續生成</span>
+      </button>
+
+      <div class="toolbar-divider"></div>
+
+      <!-- 下載小說 -->
+      <div style="position: relative;">
+        <button id="downloadBtn" class="toolbar-btn btn-download" title="下載小說" disabled>
+          ⬇️
+          <span class="toolbar-tooltip">下載小說</span>
+        </button>
+        <div id="toolbarDownloadMenu" class="toolbar-download-menu">
+          <button type="button" data-format="txt">📄 TXT 純文字檔</button>
+          <button type="button" data-format="html">📱 HTML 手機閱讀版</button>
+        </div>
+      </div>
+
+      <!-- AI 漫畫 -->
+      <button id="generateImageBtn" class="toolbar-btn btn-comic" title="AI 漫畫" disabled>
+        📚
+        <span class="toolbar-tooltip">AI 漫畫</span>
+      </button>
+
+      <!-- 朗讀文章 -->
+      <button id="speakBtn" class="toolbar-btn btn-speak" title="朗讀文章" disabled>
+        🔊
+        <span class="toolbar-tooltip">朗讀文章</span>
+      </button>
+    </div>
+
+    <!-- API 設定面板 -->
+    <div id="apiPanel" class="api-panel">
+      <div class="api-panel-header">
+        <span class="api-panel-title">🔑 API 設定</span>
+        <button id="apiPanelClose" class="api-panel-close">✕</button>
+      </div>
+      <div class="input-group">
+        <label for="apiKey">Gemini API 金鑰</label>
+        <div class="api-key-row">
+          <input
+            type="password"
+            id="apiKey"
+            placeholder="請輸入您的 API 金鑰"
+            autocomplete="off"
+          />
+          <button type="button" id="toggleApiKeyVisibility">顯示</button>
+        </div>
+      </div>
+      <div class="input-group">
+        <label for="model">選擇模型</label>
+        <select id="model">
+          <option value="gemini-2.5-flash">Gemini 2.5 Flash</option>
+          <option value="gemini-pro">Gemini Pro</option>
+        </select>
+      </div>
+    </div>
+
     <div class="container">
       <header>
         <h1>🎨 AI 小說 & 漫畫工坊</h1>
@@ -2335,30 +2748,6 @@
       </header>
 
       <div class="card">
-        <!-- 基本設定 -->
-        <div class="section">
-          <h2 class="section-title" data-icon="⚙️">基本設定</h2>
-          <div class="input-group">
-            <label for="apiKey">Gemini API 金鑰</label>
-            <div class="api-key-container">
-              <input
-                type="password"
-                id="apiKey"
-                placeholder="請輸入您的 API 金鑰"
-                autocomplete="off"
-              />
-              <button type="button" id="toggleApiKeyVisibility" class="btn-outline btn-small">顯示</button>
-            </div>
-          </div>
-          <div class="input-group">
-            <label for="model">選擇模型</label>
-            <select id="model">
-              <option value="gemini-2.5-flash">Gemini 2.5 Flash</option>
-              <option value="gemini-pro">Gemini Pro</option>
-            </select>
-          </div>
-        </div>
-
         <!-- 故事元素 -->
         <div class="section">
           <h2 class="section-title" data-icon="📖">故事元素</h2>
@@ -2476,24 +2865,6 @@
           </div>
         </div>
 
-        <!-- 控制按鈕 -->
-        <div class="buttons">
-          <button id="randomBtn" type="button" class="btn-gold">🎲 隨機填充</button>
-          <button id="generateBtn" type="button" class="btn-primary">✨ 開始生成</button>
-          <button id="continueBtn" type="button" class="btn-secondary" disabled>➤ 繼續生成</button>
-          
-          <!-- 下載選單 -->
-          <div class="download-dropdown">
-            <button id="downloadBtn" type="button" class="btn-outline" disabled>⬇ 下載小說 ▾</button>
-            <div class="download-menu" id="downloadMenu">
-              <button type="button" data-format="txt">📄 TXT 純文字檔</button>
-              <button type="button" data-format="html">📱 HTML 手機閱讀版</button>
-            </div>
-          </div>
-          
-          <button id="generateImageBtn" type="button" class="btn-outline" disabled>📚 AI 漫畫</button>
-          
-          <button id="speakBtn" type="button" class="btn-outline" disabled>🔊 朗讀文章</button>
         </div>
 
         <!-- 狀態訊息 -->
@@ -2842,6 +3213,55 @@
       const charactersContainer = document.getElementById('charactersContainer');
       const randomAllCharactersBtn = document.getElementById('randomAllCharactersBtn');
       const addCharacterBtn = document.getElementById('addCharacterBtn');
+
+      // 浮動工具列元素
+      const apiPanelToggle = document.getElementById('apiPanelToggle');
+      const apiPanel = document.getElementById('apiPanel');
+      const apiPanelClose = document.getElementById('apiPanelClose');
+      const toolbarDownloadMenu = document.getElementById('toolbarDownloadMenu');
+
+      // ==================== 浮動工具列事件 ====================
+      // API 面板開關
+      apiPanelToggle.addEventListener('click', () => {
+        apiPanel.classList.toggle('open');
+        // 關閉下載選單
+        toolbarDownloadMenu.classList.remove('open');
+      });
+
+      apiPanelClose.addEventListener('click', () => {
+        apiPanel.classList.remove('open');
+      });
+
+      // 點擊外部關閉 API 面板
+      document.addEventListener('click', (e) => {
+        if (!apiPanel.contains(e.target) && !apiPanelToggle.contains(e.target)) {
+          apiPanel.classList.remove('open');
+        }
+        if (!toolbarDownloadMenu.contains(e.target) && !downloadBtn.contains(e.target)) {
+          toolbarDownloadMenu.classList.remove('open');
+        }
+      });
+
+      // 下載選單開關
+      downloadBtn.addEventListener('click', () => {
+        if (downloadBtn.disabled) return;
+        toolbarDownloadMenu.classList.toggle('open');
+        // 關閉 API 面板
+        apiPanel.classList.remove('open');
+      });
+
+      // 下載選單按鈕事件
+      toolbarDownloadMenu.querySelectorAll('button').forEach(btn => {
+        btn.addEventListener('click', () => {
+          const format = btn.dataset.format;
+          if (format === 'txt') {
+            downloadAsTxt();
+          } else if (format === 'html') {
+            downloadAsHtml();
+          }
+          toolbarDownloadMenu.classList.remove('open');
+        });
+      });
 
       // 進階設定元素
       const narrativeSelect = document.getElementById('narrative');
@@ -5570,24 +5990,23 @@
 </html>`;
       }
 
-      // 下載下拉選單控制
-      const downloadDropdown = document.querySelector('.download-dropdown');
-      const downloadMenu = document.getElementById('downloadMenu');
-      
-      downloadBtn.addEventListener('click', (e) => {
-        if (downloadBtn.disabled) return;
-        e.stopPropagation();
-        downloadDropdown.classList.toggle('open');
-      });
-      
-      // 點擊外部關閉選單
-      document.addEventListener('click', (e) => {
-        if (!downloadDropdown.contains(e.target)) {
-          downloadDropdown.classList.remove('open');
-        }
-      });
-      
-      // 下載選項點擊事件
+      // 下載功能函數
+      function downloadAsTxt() {
+        if (!latestStory) return;
+        const optimizedTxt = optimizeTxtForMobile(latestStory);
+        const filename = generateFilename('txt');
+        downloadFile(filename, optimizedTxt, 'text/plain');
+        showStatus('success', `📄 已下載 ${filename}`);
+      }
+
+      function downloadAsHtml() {
+        if (!latestStory) return;
+        const htmlContent = generateMobileHTML(latestStory);
+        const filename = generateFilename('html');
+        downloadFile(filename, htmlContent, 'text/html');
+        showStatus('success', `📱 已下載 ${filename}（手機閱讀版）`);
+      }
+
       // 優化 TXT 格式，讓手機閱讀更舒適
       function optimizeTxtForMobile(text) {
         const MAX_LINE_WIDTH = 25; // 每行最大字數（適合手機螢幕）
@@ -5678,31 +6097,6 @@
         
         return result.trim();
       }
-
-      downloadMenu.querySelectorAll('button').forEach(btn => {
-        btn.addEventListener('click', (e) => {
-          e.stopPropagation();
-          if (!latestStory) return;
-          
-          const format = btn.dataset.format;
-          
-          if (format === 'txt') {
-            // 下載優化後的 TXT
-            const optimizedTxt = optimizeTxtForMobile(latestStory);
-            const filename = generateFilename('txt');
-            downloadFile(filename, optimizedTxt, 'text/plain');
-            showStatus('success', `📄 已下載 ${filename}`);
-          } else if (format === 'html') {
-            // 下載 HTML 手機閱讀版
-            const htmlContent = generateMobileHTML(latestStory);
-            const filename = generateFilename('html');
-            downloadFile(filename, htmlContent, 'text/html');
-            showStatus('success', `📱 已下載 ${filename}（手機閱讀版）`);
-          }
-          
-          downloadDropdown.classList.remove('open');
-        });
-      });
 
       // ==================== AI 漫畫功能 ====================
       const imagePanel = document.getElementById('imagePanel');
