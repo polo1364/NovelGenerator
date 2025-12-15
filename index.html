@@ -1172,6 +1172,20 @@
         color: white;
       }
 
+      /* 正在作業中的按鈕動畫 */
+      .toolbar-btn.active-task {
+        animation: pulse-glow 1.5s ease-in-out infinite;
+      }
+
+      @keyframes pulse-glow {
+        0%, 100% {
+          box-shadow: 0 4px 15px rgba(0, 0, 0, 0.15);
+        }
+        50% {
+          box-shadow: 0 4px 25px rgba(255, 255, 255, 0.5), 0 0 20px currentColor;
+        }
+      }
+
       /* 工具列提示標籤 */
       .toolbar-btn .toolbar-tooltip {
         position: absolute;
@@ -6300,6 +6314,9 @@
         firstPageImage: null     // 第一頁圖片（用於參考）
       };
 
+      // 追蹤漫畫是否正在生成
+      let isGeneratingComic = false;
+
       // 開啟/關閉漫畫模態視窗
       generateImageBtn.addEventListener('click', () => {
         comicModal.classList.add('open');
@@ -6308,12 +6325,18 @@
 
       closeComicModal.addEventListener('click', () => {
         comicModal.classList.remove('open');
+        if (isGeneratingComic) {
+          showStatus('info', '📚 漫畫生成中... 點擊漫畫按鈕可返回查看進度');
+        }
       });
 
       // 點擊背景關閉模態視窗
       comicModal.addEventListener('click', (e) => {
         if (e.target === comicModal) {
           comicModal.classList.remove('open');
+          if (isGeneratingComic) {
+            showStatus('info', '📚 漫畫生成中... 點擊漫畫按鈕可返回查看進度');
+          }
         }
       });
 
@@ -6358,6 +6381,10 @@
           showStatus('error', '請先生成小說內容');
           return;
         }
+
+        // 標記開始生成
+        isGeneratingComic = true;
+        generateImageBtn.classList.add('active-task');
 
         if (isNewStart) {
           // 重新開始，重置狀態
@@ -6493,6 +6520,9 @@
             comicContainer.style.display = 'flex';
             continueComicBtn.style.display = 'inline-block';
           }
+          
+          isGeneratingComic = false; // 生成失敗，重置狀態
+          generateImageBtn.classList.remove('active-task');
         } finally {
           generateImageNowBtn.disabled = false;
           continueComicBtn.disabled = false;
@@ -6772,11 +6802,15 @@ ALL characters must look IDENTICAL to how they appear in this reference!
           comicProgressFill.style.width = '100%';
           comicContentProgress.textContent = '100%';
           showStatus('success', `📚 ${chapterTitle} 漫畫全部生成完成！共 ${pages.length} 頁`);
+          isGeneratingComic = false; // 生成完成
+          generateImageBtn.classList.remove('active-task');
         } else {
           // 還有更多內容
           continueComicBtn.style.display = 'inline-block';
           comicCompleteMsg.style.display = 'none';
           showStatus('success', `📖 第 ${pageNum} 頁完成！點擊「繼續生成」產生下一頁`);
+          isGeneratingComic = false; // 單頁完成，等待用戶繼續
+          generateImageBtn.classList.remove('active-task');
         }
         
         // 自動儲存漫畫到 IndexedDB
@@ -8212,6 +8246,9 @@ ALL characters must look IDENTICAL to how they appear in this reference!
           playPauseBtn.textContent = '⏸️ 暫停';
           startSpeechKeepAlive(); // 啟動 Chrome bug workaround
           
+          // 給朗讀按鈕添加視覺提示
+          speakBtn.classList.add('active-task');
+          
           // 顯示朗讀範圍
           if (!isReadingAll) {
             speechProgressText.textContent = `朗讀範圍：第 ${startIdx + 1} - ${endIdx} 段`;
@@ -8228,6 +8265,9 @@ ALL characters must look IDENTICAL to how they appear in this reference!
         isPaused = false;
         stopSpeechKeepAlive(); // 停止 Chrome bug workaround
         saveSpeechProgress(); // 停止時也儲存進度
+        
+        // 移除朗讀按鈕視覺提示
+        speakBtn.classList.remove('active-task');
         currentSegmentIndex = 0;
         playPauseBtn.textContent = '▶️ 開始朗讀';
         speechProgressFill.style.width = '0%';
@@ -8313,21 +8353,27 @@ ALL characters must look IDENTICAL to how they appear in this reference!
         
         // 檢查是否有儲存的進度，顯示提示
         const savedProgress = loadSpeechProgress();
-        if (savedProgress && savedProgress.segmentIndex > 0) {
+        if (savedProgress && savedProgress.segmentIndex > 0 && !isSpeaking) {
           speechProgressText.textContent = `📍 上次進度：第 ${savedProgress.segmentIndex + 1} 段`;
         }
       });
 
       closeSpeechModal.addEventListener('click', () => {
-        stopSpeech();
+        // 關閉視窗但不停止朗讀
         speechModal.classList.remove('open');
+        if (isSpeaking) {
+          showStatus('info', '🔊 朗讀繼續中... 點擊朗讀按鈕可返回控制面板');
+        }
       });
 
       // 點擊背景關閉模態視窗
       speechModal.addEventListener('click', (e) => {
         if (e.target === speechModal) {
-          stopSpeech();
+          // 關閉視窗但不停止朗讀
           speechModal.classList.remove('open');
+          if (isSpeaking) {
+            showStatus('info', '🔊 朗讀繼續中... 點擊朗讀按鈕可返回控制面板');
+          }
         }
       });
 
