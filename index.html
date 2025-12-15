@@ -77,21 +77,10 @@
       }
 
       .container {
-        max-width: 1000px;
+        max-width: 900px;
         margin: 0 auto;
-        margin-left: 90px; /* 為浮動工具列留出空間 */
-      }
-
-      @media (max-width: 768px) {
-        .container {
-          margin-left: 70px;
-        }
-      }
-
-      @media (max-width: 480px) {
-        .container {
-          margin-left: 60px;
-        }
+        padding-left: 20px;
+        padding-right: 20px;
       }
 
       /* 頭部區域 */
@@ -1103,32 +1092,33 @@
       /* ==================== 浮動工具列 ==================== */
       .floating-toolbar {
         position: fixed;
-        left: 20px;
+        left: 15px;
         top: 50%;
         transform: translateY(-50%);
         z-index: 999;
         display: flex;
         flex-direction: column;
-        gap: 8px;
+        gap: 6px;
       }
 
       .toolbar-btn {
-        width: 52px;
-        height: 52px;
-        border-radius: 14px;
+        width: 48px;
+        height: 48px;
+        border-radius: 12px;
         border: none;
         cursor: pointer;
         display: flex;
         align-items: center;
         justify-content: center;
-        font-size: 1.3rem;
+        font-size: 1.2rem;
         transition: all 0.3s ease;
         position: relative;
         box-shadow: 0 4px 15px rgba(0, 0, 0, 0.15);
       }
 
       .toolbar-btn:hover {
-        transform: scale(1.1) translateX(5px);
+        transform: scale(1.08);
+        box-shadow: 0 6px 20px rgba(0, 0, 0, 0.2);
       }
 
       .toolbar-btn:active {
@@ -1143,6 +1133,7 @@
 
       .toolbar-btn:disabled:hover {
         transform: none !important;
+        box-shadow: 0 4px 15px rgba(0, 0, 0, 0.15);
       }
 
       /* 工具列按鈕顏色 */
@@ -1374,29 +1365,56 @@
 
       /* 分隔線 */
       .toolbar-divider {
-        width: 36px;
+        width: 32px;
         height: 2px;
         background: var(--border);
-        margin: 4px auto;
+        margin: 2px auto;
         border-radius: 1px;
       }
 
-      /* 手機版調整 */
-      @media (max-width: 768px) {
+      /* 平板和小螢幕調整 */
+      @media (max-width: 1100px) {
         .floating-toolbar {
           left: 10px;
-          gap: 6px;
         }
 
         .toolbar-btn {
           width: 44px;
           height: 44px;
-          border-radius: 12px;
           font-size: 1.1rem;
+        }
+
+        .api-panel {
+          left: 65px;
+          width: 300px;
+        }
+
+        .api-panel.open {
+          left: 70px;
+        }
+      }
+
+      /* 手機版調整 */
+      @media (max-width: 768px) {
+        .floating-toolbar {
+          left: 8px;
+          gap: 5px;
+        }
+
+        .toolbar-btn {
+          width: 40px;
+          height: 40px;
+          border-radius: 10px;
+          font-size: 1rem;
         }
 
         .toolbar-btn .toolbar-tooltip {
           display: none;
+        }
+
+        .toolbar-divider {
+          width: 28px;
+          margin: 2px auto;
         }
 
         .api-panel {
@@ -1414,7 +1432,36 @@
         }
 
         .toolbar-download-menu {
-          left: 54px;
+          left: 50px;
+        }
+      }
+
+      /* 超小螢幕（手機直向） */
+      @media (max-width: 480px) {
+        .floating-toolbar {
+          left: 5px;
+          gap: 4px;
+        }
+
+        .toolbar-btn {
+          width: 36px;
+          height: 36px;
+          border-radius: 8px;
+          font-size: 0.9rem;
+        }
+
+        .toolbar-divider {
+          width: 24px;
+        }
+
+        .toolbar-download-menu {
+          left: 45px;
+          min-width: 150px;
+        }
+
+        .toolbar-download-menu button {
+          padding: 8px 12px;
+          font-size: 0.85rem;
         }
       }
 
@@ -2258,7 +2305,100 @@
         color: #666;
       }
 
-      /* AI 漫畫面板 */
+      /* ==================== 模態視窗通用樣式 ==================== */
+      .modal-overlay {
+        position: fixed;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        background: rgba(0, 0, 0, 0.6);
+        backdrop-filter: blur(4px);
+        z-index: 2000;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        opacity: 0;
+        visibility: hidden;
+        transition: all 0.3s ease;
+        padding: 20px;
+      }
+
+      .modal-overlay.open {
+        opacity: 1;
+        visibility: visible;
+      }
+
+      .modal-content {
+        background: var(--card-bg);
+        border-radius: 20px;
+        box-shadow: 0 25px 80px rgba(0, 0, 0, 0.3);
+        width: 100%;
+        max-width: 800px;
+        max-height: 90vh;
+        overflow: hidden;
+        display: flex;
+        flex-direction: column;
+        transform: scale(0.9) translateY(20px);
+        transition: all 0.3s ease;
+      }
+
+      .modal-overlay.open .modal-content {
+        transform: scale(1) translateY(0);
+      }
+
+      .modal-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 20px 24px;
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        color: white;
+      }
+
+      .modal-header.comic-header {
+        background: linear-gradient(135deg, #e17055 0%, #fdcb6e 100%);
+      }
+
+      .modal-header.speech-header {
+        background: linear-gradient(135deg, #a29bfe 0%, #fd79a8 100%);
+      }
+
+      .modal-title {
+        font-size: 1.2rem;
+        font-weight: 600;
+        display: flex;
+        align-items: center;
+        gap: 10px;
+      }
+
+      .modal-close {
+        background: rgba(255, 255, 255, 0.2);
+        border: none;
+        color: white;
+        width: 36px;
+        height: 36px;
+        border-radius: 50%;
+        cursor: pointer;
+        font-size: 1.2rem;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        transition: all 0.2s;
+      }
+
+      .modal-close:hover {
+        background: rgba(255, 255, 255, 0.3);
+        transform: rotate(90deg);
+      }
+
+      .modal-body {
+        padding: 24px;
+        overflow-y: auto;
+        flex: 1;
+      }
+
+      /* AI 漫畫面板（模態視窗版本） */
       .image-panel {
         background: white;
         border-radius: 16px;
@@ -2873,12 +3013,21 @@
           <span class="status-text"></span>
         </div>
 
-        <!-- 朗讀控制面板 -->
-        <div id="speechPanel" class="speech-panel" style="display: none;">
-          <div class="speech-header">
-            <span class="speech-title">🎙️ 朗讀控制</span>
-            <button id="closeSpeechPanel" class="speech-close">✕</button>
-          </div>
+        <!-- 輸出區 -->
+        <div class="output-header" style="margin-top: 30px;">
+          <span class="output-title">📜 生成結果</span>
+        </div>
+        <div id="result" class="output"></div>
+      </div>
+
+    <!-- ==================== 朗讀模態視窗 ==================== -->
+    <div id="speechModal" class="modal-overlay">
+      <div class="modal-content" style="max-width: 600px;">
+        <div class="modal-header speech-header">
+          <span class="modal-title">🎙️ 朗讀控制</span>
+          <button id="closeSpeechModal" class="modal-close">✕</button>
+        </div>
+        <div class="modal-body">
           <div class="speech-controls">
             <div class="speech-row">
               <label>語音：</label>
@@ -2966,82 +3115,79 @@
             </div>
           </div>
         </div>
-
-        <!-- AI 漫畫面板 -->
-        <div id="imagePanel" class="image-panel" style="display: none;">
-          <div class="image-panel-header">
-            <span class="image-panel-title">📚 AI 漫畫生成</span>
-            <button id="closeImagePanel" class="image-panel-close">✕</button>
-          </div>
-          <div class="image-panel-content">
-            <div class="image-settings">
-              <div class="image-row">
-                <label>漫畫風格：</label>
-                <select id="imageStyle">
-                  <option value="manga">🇯🇵 日式漫畫（黑白）</option>
-                  <option value="manhwa">🇰🇷 韓式漫畫（彩色）</option>
-                  <option value="manhua">🇨🇳 中式漫畫</option>
-                  <option value="comic">🇺🇸 美式漫畫</option>
-                  <option value="webtoon">📱 條漫風格</option>
-                </select>
-              </div>
-              <div class="image-row">
-                <label>選擇章節：</label>
-                <select id="comicChapterSelect"></select>
-              </div>
-              <div class="image-row">
-                <label>每頁格數：</label>
-                <select id="panelsPerPage">
-                  <option value="4">4 格（2x2）</option>
-                  <option value="6" selected>6 格（2x3）</option>
-                  <option value="9">9 格（3x3）</option>
-                </select>
-              </div>
-            </div>
-            
-            <button id="generateImageNowBtn" class="btn-primary btn-full">🎬 開始生成漫畫</button>
-            
-            <div id="imageResult" class="image-result" style="display: none;">
-              <div id="imageLoading" class="image-loading">
-                <div class="spinner"></div>
-                <span>AI 正在繪製漫畫中...</span>
-                <small id="comicProgress">分析劇情...</small>
-              </div>
-              
-              <!-- 進度顯示 -->
-              <div id="comicProgressBar" class="comic-progress-bar" style="display: none;">
-                <div class="progress-info">
-                  <span id="comicPageInfo">第 1 頁</span>
-                  <span id="comicContentProgress">0%</span>
-                </div>
-                <div class="progress-track">
-                  <div id="comicProgressFill" class="progress-fill" style="width: 0%"></div>
-                </div>
-              </div>
-              
-              <div id="comicContainer" class="comic-container" style="display: none;"></div>
-              
-              <div id="imageActions" class="image-actions" style="display: none;">
-                <button id="continueComicBtn" class="btn-primary" style="display: none;">➤ 繼續生成下一頁</button>
-                <button id="downloadImageBtn" class="btn-outline">⬇️ 下載全部</button>
-                <button id="regenerateImageBtn" class="btn-outline">🔄 重新開始</button>
-                <button id="clearComicBtn" class="btn-outline" style="color: #e74c3c;">🗑️ 清除漫畫</button>
-              </div>
-              
-              <!-- 完成提示 -->
-              <div id="comicCompleteMsg" class="comic-complete-msg" style="display: none;">
-                ✅ 本章節漫畫已全部生成完成！
-              </div>
-            </div>
-          </div>
-        </div>
-
-        <!-- 輸出區 -->
-        <div class="output-header" style="margin-top: 30px;">
-          <span class="output-title">📜 生成結果</span>
-        </div>
-        <div id="result" class="output"></div>
       </div>
+    </div>
+
+    <!-- ==================== AI 漫畫模態視窗 ==================== -->
+    <div id="comicModal" class="modal-overlay">
+      <div class="modal-content">
+        <div class="modal-header comic-header">
+          <span class="modal-title">📚 AI 漫畫生成</span>
+          <button id="closeComicModal" class="modal-close">✕</button>
+        </div>
+        <div class="modal-body">
+          <div class="image-settings">
+            <div class="image-row">
+              <label>漫畫風格：</label>
+              <select id="imageStyle">
+                <option value="manga">🇯🇵 日式漫畫（黑白）</option>
+                <option value="manhwa">🇰🇷 韓式漫畫（彩色）</option>
+                <option value="manhua">🇨🇳 中式漫畫</option>
+                <option value="comic">🇺🇸 美式漫畫</option>
+                <option value="webtoon">📱 條漫風格</option>
+              </select>
+            </div>
+            <div class="image-row">
+              <label>選擇章節：</label>
+              <select id="comicChapterSelect"></select>
+            </div>
+            <div class="image-row">
+              <label>每頁格數：</label>
+              <select id="panelsPerPage">
+                <option value="4">4 格（2x2）</option>
+                <option value="6" selected>6 格（2x3）</option>
+                <option value="9">9 格（3x3）</option>
+              </select>
+            </div>
+          </div>
+          
+          <button id="generateImageNowBtn" class="btn-primary btn-full">🎬 開始生成漫畫</button>
+          
+          <div id="imageResult" class="image-result" style="display: none;">
+            <div id="imageLoading" class="image-loading">
+              <div class="spinner"></div>
+              <span>AI 正在繪製漫畫中...</span>
+              <small id="comicProgress">分析劇情...</small>
+            </div>
+            
+            <!-- 進度顯示 -->
+            <div id="comicProgressBar" class="comic-progress-bar" style="display: none;">
+              <div class="progress-info">
+                <span id="comicPageInfo">第 1 頁</span>
+                <span id="comicContentProgress">0%</span>
+              </div>
+              <div class="progress-track">
+                <div id="comicProgressFill" class="progress-fill" style="width: 0%"></div>
+              </div>
+            </div>
+            
+            <div id="comicContainer" class="comic-container" style="display: none;"></div>
+            
+            <div id="imageActions" class="image-actions" style="display: none;">
+              <button id="continueComicBtn" class="btn-primary" style="display: none;">➤ 繼續生成下一頁</button>
+              <button id="downloadImageBtn" class="btn-outline">⬇️ 下載全部</button>
+              <button id="regenerateImageBtn" class="btn-outline">🔄 重新開始</button>
+              <button id="clearComicBtn" class="btn-outline" style="color: #e74c3c;">🗑️ 清除漫畫</button>
+            </div>
+            
+            <!-- 完成提示 -->
+            <div id="comicCompleteMsg" class="comic-complete-msg" style="display: none;">
+              ✅ 本章節漫畫已全部生成完成！
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
 
       <!-- 浮動章節導航 -->
       <div id="chapterNavContainer" class="chapter-nav-container">
@@ -3263,6 +3409,26 @@
         });
       });
 
+      // ESC 鍵關閉模態視窗
+      document.addEventListener('keydown', (e) => {
+        if (e.key === 'Escape') {
+          // 關閉 API 面板
+          apiPanel.classList.remove('open');
+          // 關閉下載選單
+          toolbarDownloadMenu.classList.remove('open');
+          // 關閉朗讀模態視窗
+          const speechModal = document.getElementById('speechModal');
+          if (speechModal && speechModal.classList.contains('open')) {
+            speechModal.classList.remove('open');
+          }
+          // 關閉漫畫模態視窗
+          const comicModal = document.getElementById('comicModal');
+          if (comicModal && comicModal.classList.contains('open')) {
+            comicModal.classList.remove('open');
+          }
+        }
+      });
+
       // 進階設定元素
       const narrativeSelect = document.getElementById('narrative');
       const eraSelect = document.getElementById('era');
@@ -3291,10 +3457,10 @@
       const bookmarkSort = document.getElementById('bookmarkSort');
       const bookmarkList = document.getElementById('bookmarkList');
 
-      // 朗讀元素
+      // 朗讀模態視窗元素
       const speakBtn = document.getElementById('speakBtn');
-      const speechPanel = document.getElementById('speechPanel');
-      const closeSpeechPanel = document.getElementById('closeSpeechPanel');
+      const speechModal = document.getElementById('speechModal');
+      const closeSpeechModal = document.getElementById('closeSpeechModal');
       const voiceSelect = document.getElementById('voiceSelect');
       const speechRate = document.getElementById('speechRate');
       const speechPitch = document.getElementById('speechPitch');
@@ -3306,6 +3472,10 @@
       const resetSpeechBtn = document.getElementById('resetSpeechBtn');
       const speechProgressFill = document.getElementById('speechProgressFill');
       const speechProgressText = document.getElementById('speechProgressText');
+
+      // 漫畫模態視窗元素
+      const comicModal = document.getElementById('comicModal');
+      const closeComicModal = document.getElementById('closeComicModal');
 
       // 編輯彈窗元素
       const editModal = document.getElementById('editModal');
@@ -6099,8 +6269,6 @@
       }
 
       // ==================== AI 漫畫功能 ====================
-      const imagePanel = document.getElementById('imagePanel');
-      const closeImagePanel = document.getElementById('closeImagePanel');
       const imageStyle = document.getElementById('imageStyle');
       const comicChapterSelect = document.getElementById('comicChapterSelect');
       const panelsPerPage = document.getElementById('panelsPerPage');
@@ -6132,16 +6300,21 @@
         firstPageImage: null     // 第一頁圖片（用於參考）
       };
 
-      // 開啟/關閉漫畫面板
+      // 開啟/關閉漫畫模態視窗
       generateImageBtn.addEventListener('click', () => {
-        imagePanel.style.display = imagePanel.style.display === 'none' ? 'block' : 'none';
-        if (imagePanel.style.display === 'block') {
-          updateComicChapterList();
-        }
+        comicModal.classList.add('open');
+        updateComicChapterList();
       });
 
-      closeImagePanel.addEventListener('click', () => {
-        imagePanel.style.display = 'none';
+      closeComicModal.addEventListener('click', () => {
+        comicModal.classList.remove('open');
+      });
+
+      // 點擊背景關閉模態視窗
+      comicModal.addEventListener('click', (e) => {
+        if (e.target === comicModal) {
+          comicModal.classList.remove('open');
+        }
       });
 
       // 更新章節列表
@@ -7039,8 +7212,8 @@ ALL characters must look IDENTICAL to how they appear in this reference!
           const comicRestored = await restoreComic();
           if (comicRestored) {
             console.log('已恢復上次的漫畫');
-            // 顯示漫畫面板並啟用按鈕
-            imagePanel.style.display = 'block';
+            // 顯示漫畫模態視窗並啟用按鈕
+            comicModal.classList.add('open');
             generateImageBtn.disabled = false;
           }
         } else {
@@ -8132,8 +8305,7 @@ ALL characters must look IDENTICAL to how they appear in this reference!
 
       // 事件綁定
       speakBtn.addEventListener('click', () => {
-        speechPanel.style.display = 'block';
-        speechPanel.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        speechModal.classList.add('open');
         
         // 更新段落資訊
         updateSegmentInputs();
@@ -8146,9 +8318,17 @@ ALL characters must look IDENTICAL to how they appear in this reference!
         }
       });
 
-      closeSpeechPanel.addEventListener('click', () => {
+      closeSpeechModal.addEventListener('click', () => {
         stopSpeech();
-        speechPanel.style.display = 'none';
+        speechModal.classList.remove('open');
+      });
+
+      // 點擊背景關閉模態視窗
+      speechModal.addEventListener('click', (e) => {
+        if (e.target === speechModal) {
+          stopSpeech();
+          speechModal.classList.remove('open');
+        }
       });
 
       playPauseBtn.addEventListener('click', toggleSpeech);
@@ -8239,22 +8419,13 @@ ALL characters must look IDENTICAL to how they appear in this reference!
 
       // 頁面完全載入後，確保按鈕狀態正確
       window.addEventListener('load', () => {
-        console.log('Window load 事件觸發');
         setTimeout(() => {
           // 如果有故事內容，確保按鈕啟用
-          console.log('檢查故事內容，latestStory 長度：', latestStory ? latestStory.length : 0);
           if (latestStory && latestStory.length > 0) {
-            console.log('確認啟用按鈕');
-            const imgBtn = document.getElementById('generateImageBtn');
-            console.log('generateImageBtn 元素：', imgBtn);
-            console.log('目前 disabled 狀態：', imgBtn ? imgBtn.disabled : 'null');
-            
             document.getElementById('downloadBtn').disabled = false;
             document.getElementById('continueBtn').disabled = false;
             document.getElementById('speakBtn').disabled = false;
             document.getElementById('generateImageBtn').disabled = false;
-            
-            console.log('設定後 disabled 狀態：', imgBtn ? imgBtn.disabled : 'null');
           }
         }, 500);
       });
