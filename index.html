@@ -10074,20 +10074,27 @@ ALL characters must look IDENTICAL to how they appear in this reference!
           return;
         }
         
-        if (isSpeaking && !isPaused) {
-          // 暫停
-          speechSynth.pause();
-          isPaused = true;
-          saveSpeechProgress(); // 暫停時儲存進度
-          playPauseBtn.textContent = '▶️ 繼續朗讀';
-          speechProgressText.textContent = '⏸️ 已暫停';
-        } else if (isPaused) {
-          // 繼續
-          speechSynth.resume();
-          isPaused = false;
-          playPauseBtn.textContent = '⏸️ 暫停';
-          speechProgressText.textContent = `正在朗讀 ${currentSegmentIndex + 1}/${speechSegments.length} 段...`;
-        } else {
+        // 🔧 修復：更清晰的狀態判斷
+        if (isSpeaking) {
+          if (!isPaused) {
+            // 正在朗讀 → 暫停
+            speechSynth.pause();
+            isPaused = true;
+            saveSpeechProgress(); // 暫停時儲存進度
+            playPauseBtn.textContent = '▶️ 繼續朗讀';
+            speechProgressText.textContent = '⏸️ 已暫停';
+          } else {
+            // 已暫停 → 繼續
+            speechSynth.resume();
+            isPaused = false;
+            playPauseBtn.textContent = '⏸️ 暫停';
+            speechProgressText.textContent = `正在朗讀 ${currentSegmentIndex + 1}/${speechSegments.length} 段...`;
+          }
+          return;
+        }
+        
+        // 未在朗讀 → 開始新朗讀
+        {
           // 開始新朗讀
           const text = resultDiv.textContent || latestStory;
           const allSegments = splitTextToSegments(text);
@@ -10163,10 +10170,17 @@ ALL characters must look IDENTICAL to how they appear in this reference!
 
       // 停止朗讀
       function stopSpeech() {
+        // 🔧 修復：先恢復再取消，確保語音引擎狀態正確
+        if (isPaused) {
+          speechSynth.resume();
+        }
         speechSynth.cancel();
+        
+        // 重置所有狀態
         isSpeaking = false;
         isPaused = false;
         speechEngineWarmedUp = false; // 重置預熱狀態
+        currentUtterance = null;
         stopSpeechKeepAlive(); // 停止 Chrome bug workaround
         saveSpeechProgress(); // 停止時也儲存進度
         
@@ -10176,6 +10190,7 @@ ALL characters must look IDENTICAL to how they appear in this reference!
         playPauseBtn.textContent = '▶️ 開始朗讀';
         speechProgressFill.style.width = '0%';
         speechProgressText.textContent = '準備就緒';
+        currentSegmentDisplay.textContent = '0 / 0';
         clearHighlight();
         updateNavButtons();
       }
