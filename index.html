@@ -755,156 +755,6 @@
         50% { transform: scale(1.2); }
       }
 
-      /* 生成歷史面板 */
-      .history-panel {
-        position: fixed;
-        top: 0;
-        right: -400px;
-        width: 380px;
-        max-width: 90vw;
-        height: 100vh;
-        background: var(--card-bg);
-        box-shadow: -5px 0 30px rgba(0,0,0,0.2);
-        z-index: 2000;
-        transition: right 0.3s ease;
-        display: flex;
-        flex-direction: column;
-      }
-
-      .history-panel.open {
-        right: 0;
-      }
-
-      .history-header {
-        padding: 20px;
-        background: linear-gradient(135deg, var(--accent) 0%, #ff6b8a 100%);
-        color: white;
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
-      }
-
-      .history-header h3 {
-        margin: 0;
-        font-size: 1.1rem;
-      }
-
-      .history-close {
-        background: rgba(255,255,255,0.2);
-        border: none;
-        color: white;
-        width: 32px;
-        height: 32px;
-        border-radius: 50%;
-        cursor: pointer;
-        font-size: 1.2rem;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        transition: background 0.2s;
-      }
-
-      .history-close:hover {
-        background: rgba(255,255,255,0.3);
-      }
-
-      .history-list {
-        flex: 1;
-        overflow-y: auto;
-        padding: 15px;
-      }
-
-      .history-item {
-        background: var(--section-bg);
-        border-radius: 12px;
-        padding: 15px;
-        margin-bottom: 12px;
-        cursor: pointer;
-        transition: all 0.2s;
-        border: 2px solid transparent;
-      }
-
-      .history-item:hover {
-        border-color: var(--accent);
-        transform: translateX(-5px);
-      }
-
-      .history-item-title {
-        font-weight: 600;
-        color: var(--text);
-        margin-bottom: 5px;
-        display: flex;
-        align-items: center;
-        gap: 8px;
-      }
-
-      .history-item-meta {
-        font-size: 0.8rem;
-        color: var(--text-light);
-        display: flex;
-        gap: 12px;
-        flex-wrap: wrap;
-      }
-
-      .history-item-preview {
-        font-size: 0.85rem;
-        color: var(--text-light);
-        margin-top: 8px;
-        line-height: 1.5;
-        display: -webkit-box;
-        -webkit-line-clamp: 2;
-        -webkit-box-orient: vertical;
-        overflow: hidden;
-      }
-
-      .history-empty {
-        text-align: center;
-        padding: 40px 20px;
-        color: var(--text-light);
-      }
-
-      .history-empty-icon {
-        font-size: 3rem;
-        margin-bottom: 10px;
-        opacity: 0.5;
-      }
-
-      /* 歷史按鈕 */
-      .history-toggle-btn {
-        position: fixed;
-        top: 50%;
-        right: 0;
-        transform: translateY(-50%);
-        background: linear-gradient(135deg, var(--accent) 0%, #ff6b8a 100%);
-        color: white;
-        border: none;
-        padding: 15px 8px;
-        border-radius: 12px 0 0 12px;
-        cursor: pointer;
-        font-size: 1.2rem;
-        box-shadow: -3px 0 15px rgba(0,0,0,0.2);
-        z-index: 1500;
-        transition: all 0.3s;
-        writing-mode: vertical-rl;
-        text-orientation: mixed;
-      }
-
-      .history-toggle-btn:hover {
-        padding-right: 15px;
-      }
-
-      .history-toggle-btn .badge {
-        background: white;
-        color: var(--accent);
-        border-radius: 50%;
-        width: 20px;
-        height: 20px;
-        font-size: 0.7rem;
-        display: inline-flex;
-        align-items: center;
-        justify-content: center;
-        margin-top: 5px;
-      }
 
       /* 首次使用引導 */
       .onboarding-overlay {
@@ -1097,21 +947,6 @@
       @media (max-width: 768px) {
         .stats-grid {
           grid-template-columns: repeat(2, 1fr);
-        }
-        
-        .history-panel {
-          width: 100%;
-          max-width: 100%;
-        }
-        
-        .history-toggle-btn {
-          bottom: 80px;
-          top: auto;
-          right: 20px;
-          transform: none;
-          border-radius: 50%;
-          padding: 15px;
-          writing-mode: horizontal-tb;
         }
       }
 
@@ -4356,24 +4191,6 @@
     <!-- 隱藏的檔案輸入 -->
     <input type="file" id="importFileInput" accept=".json" style="display: none;" />
 
-    <!-- 生成歷史面板 -->
-    <button id="historyToggle" class="history-toggle-btn" title="生成歷史">
-      📜<span id="historyBadge" class="badge" style="display: none;">0</span>
-    </button>
-    
-    <div id="historyPanel" class="history-panel">
-      <div class="history-header">
-        <h3>📜 生成歷史</h3>
-        <button id="historyClose" class="history-close">✕</button>
-      </div>
-      <div id="historyList" class="history-list">
-        <div class="history-empty">
-          <div class="history-empty-icon">📭</div>
-          <p>尚無生成記錄</p>
-          <p style="font-size: 0.85rem;">生成故事後會自動保存到這裡</p>
-        </div>
-      </div>
-    </div>
 
     <!-- 首次使用引導 -->
     <div id="onboardingOverlay" class="onboarding-overlay">
@@ -7064,10 +6881,24 @@
         
         // 章節完結提示
         let chapterEndingHint = '';
+        const targetChapterCount = parseInt(chapters) || 0;
+        const shouldGenerateChapterByChapter = targetChapterCount >= 3; // 3章以上採用逐章生成
+        
         if (chapters) {
-          chapterEndingHint = `
+          if (shouldGenerateChapterByChapter) {
+            // 逐章生成模式：只生成第一章
+            chapterEndingHint = `
+12. ⚠️【重要】故事總共 ${chapters} 章，本次只需生成【第1章】（或序章）
+13. 第1章要有完整的故事開頭（至少2000-3000字），建立世界觀、介紹主要角色、展開初始情節
+14. 第1章結尾要有懸念或轉折，為後續章節做鋪墊
+15. 不要生成第2章及之後的內容，只寫第1章即可
+16. 章節標題格式：### 第1章：標題（或 ### 序章：標題）`;
+          } else {
+            // 一次性生成模式：生成所有章節
+            chapterEndingHint = `
 12. 故事總共 ${chapters} 章，第 ${chapters} 章必須是【完結篇】，要妥善收尾所有劇情線
 13. 在最後一章結束後，加上「（全文完）」或「─ 完 ─」標記`;
+          }
         }
         
         // 人物登場強調
@@ -7105,15 +6936,29 @@
 6. 禁止出現「故事大綱」「章節列表」「故事簡介」「人物設定」等規劃性內容
 7. 禁止使用條列式說明，要用敘事文體
 8. 嚴格遵守指定的敘事視角、故事節奏、情感基調、內容分級${elementsReminder}${settingsReminder}${characterReminder}${chapterEndingHint}
+${shouldGenerateChapterByChapter ? '\n⚠️ 注意：本次只需生成第1章，完成後請使用「繼續生成」按鈕來生成後續章節。' : ''}
 
 現在開始撰寫小說正文：`;
 
-        showStatus('loading', '故事生成中，請稍候...');
+        if (shouldGenerateChapterByChapter) {
+          showStatus('loading', `故事生成中（逐章模式：將生成第1章，共${targetChapterCount}章）...`);
+        } else {
+          showStatus('loading', '故事生成中，請稍候...');
+        }
         generateBtn.disabled = true;
         
         // 顯示生成進度
         showGenerationProgress();
-        document.getElementById('progressChapter').textContent = '正在準備生成...';
+        const totalChaptersForProgress = shouldGenerateChapterByChapter ? targetChapterCount : (parseInt(chapters) || 1);
+        
+        if (shouldGenerateChapterByChapter) {
+          document.getElementById('progressChapter').textContent = `正在生成第1章（共${targetChapterCount}章）...`;
+        } else {
+          document.getElementById('progressChapter').textContent = '正在準備生成...';
+        }
+        
+        // 開始模擬進度條動畫
+        startSimulatedProgress(totalChaptersForProgress);
 
         try {
           const endpoint = `https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(model)}:generateContent`;
@@ -7151,10 +6996,39 @@
             // 更新字數統計
             updateWordCount(latestStory);
             
-            // 隱藏進度條
-            hideGenerationProgress();
+            // 更新真實進度（基於實際生成的章節數）
+            const chapterPattern = /###?\s*第[一二三四五六七八九十百千萬零壹貳參肆伍陸柒捌玖拾佰仟\d]+[章節回卷部集篇]/g;
+            const generatedChapters = (latestStory.match(chapterPattern) || []).length;
+            const wordCount = latestStory.replace(/[\s\n#*_\-]/g, '').length;
             
-            showStatus('success', '生成完成！');
+            // 清除模擬進度，更新真實進度
+            if (progressInterval) {
+              clearInterval(progressInterval);
+              progressInterval = null;
+            }
+            
+            if (generatedChapters > 0) {
+              updateGenerationProgress(generatedChapters, totalChaptersForProgress, wordCount);
+            } else {
+              // 如果沒有檢測到章節，至少更新字數和完成狀態
+              document.getElementById('progressWords').textContent = `已生成 ${wordCount.toLocaleString()} 字`;
+              document.getElementById('progressBarFill').style.width = '100%';
+              document.getElementById('progressPercent').textContent = '100%';
+              document.getElementById('progressTime').textContent = '已完成';
+            }
+            
+            // 短暫延遲後隱藏進度條，讓用戶看到完成狀態
+            setTimeout(() => {
+              hideGenerationProgress();
+            }, 1000);
+            
+            if (shouldGenerateChapterByChapter && generatedChapters >= 1) {
+              showStatus('success', `第1章生成完成！目前 ${generatedChapters}/${targetChapterCount} 章，請點擊「繼續生成」按鈕來生成後續章節`);
+            } else if (shouldGenerateChapterByChapter && generatedChapters === 0) {
+              showStatus('warning', '生成完成，但未檢測到章節標題。請檢查內容或使用「繼續生成」按鈕');
+            } else {
+              showStatus('success', '生成完成！');
+            }
             downloadBtn.disabled = false;
             continueBtn.disabled = false;
             speakBtn.disabled = false;
@@ -7353,6 +7227,16 @@
         }
         continueBtn.disabled = true;
         generateBtn.disabled = true;
+        
+        // 顯示生成進度並開始模擬進度條
+        showGenerationProgress();
+        const currentChapterPattern = /###?\s*第[一二三四五六七八九十百千萬零壹貳參肆伍陸柒捌玖拾佰仟\d]+[章節回卷部集篇]/g;
+        const currentChapters = (latestStory.match(currentChapterPattern) || []).length;
+        const nextChapter = currentChapters + 1;
+        const totalChaptersForContinue = targetChapters > 0 ? targetChapters : (currentChapters + 3); // 預估還會有3章
+        
+        document.getElementById('progressChapter').textContent = `正在生成第${nextChapter}章...`;
+        startSimulatedProgress(totalChaptersForContinue);
 
         try {
           const endpoint = `https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(model)}:generateContent`;
@@ -7380,6 +7264,7 @@
             } else {
               showStatus('error', '錯誤：' + errorMsg);
             }
+            hideGenerationProgress();
             return;
           }
           
@@ -7395,14 +7280,31 @@
                 showStatus('error', '故事內容過長，未能自動儲存');
               }
               
+              // 更新真實進度
+              const chapterPattern = /###?\s*第[一二三四五六七八九十百千萬零壹貳參肆伍陸柒捌玖拾佰仟\d]+[章節回卷部集篇]/g;
+              const currentChapters = (latestStory.match(chapterPattern) || []).length;
+              const wordCount = latestStory.replace(/[\s\n#*_\-]/g, '').length;
+              
+              // 清除模擬進度，更新真實進度
+              if (progressInterval) {
+                clearInterval(progressInterval);
+                progressInterval = null;
+              }
+              
+              if (targetChapters > 0 && currentChapters > 0) {
+                updateGenerationProgress(currentChapters, targetChapters, wordCount);
+              } else if (currentChapters > 0) {
+                document.getElementById('progressWords').textContent = `已生成 ${wordCount.toLocaleString()} 字`;
+                document.getElementById('progressBarFill').style.width = '100%';
+                document.getElementById('progressPercent').textContent = '100%';
+              }
+              
               // 檢查故事是否已完結
               const isCompleted = /[（(](?:全文完|完結|全書完|終|The End)[）)]|【完】|—完—|～完～|（END）|─\s*完\s*─/i.test(latestStory);
               
               // 檢查是否已達到目標章節數
               let storyCompleted = false;
               if (targetChapters > 0) {
-                const chapterPattern = /###?\s*第[一二三四五六七八九十百千萬零壹貳參肆伍陸柒捌玖拾佰仟\d]+[章節回卷部集篇]/g;
-                const currentChapters = (latestStory.match(chapterPattern) || []).length;
                 
                 if (isCompleted) {
                   showStatus('success', `🎉 故事完結！共 ${currentChapters} 章`);
@@ -7430,6 +7332,11 @@
               
               // 更新字數統計
               updateWordCount(latestStory);
+              
+              // 短暫延遲後隱藏進度條
+              setTimeout(() => {
+                hideGenerationProgress();
+              }, 1000);
               
               downloadBtn.disabled = false;
               speakBtn.disabled = false;
@@ -9985,30 +9892,30 @@ ALL characters must look IDENTICAL to how they appear in this reference!
               lastSpeechTime = Date.now();
               speechEngineWarmedUp = true;
             };
-            
-            utterance.onend = () => {
+          
+          utterance.onend = () => {
               lastSpeechTime = Date.now();
-              // 段落間停頓
-              setTimeout(() => {
-                if (isSpeaking && !isPaused) {
-                  speakSegment(index + 1);
-                }
-              }, params.pause);
-            };
-            
-            utterance.onerror = (e) => {
-              // 忽略 interrupted 錯誤（使用者主動停止）
-              if (e.error === 'interrupted' || e.error === 'canceled') {
-                return;
-              }
-              console.warn('朗讀警告：', e.error, '段落：', index);
-              // 嘗試繼續下一段
+            // 段落間停頓
+            setTimeout(() => {
               if (isSpeaking && !isPaused) {
-                setTimeout(() => speakSegment(index + 1), 100);
+                speakSegment(index + 1);
               }
-            };
-            
-            currentUtterance = utterance;
+            }, params.pause);
+          };
+          
+          utterance.onerror = (e) => {
+            // 忽略 interrupted 錯誤（使用者主動停止）
+            if (e.error === 'interrupted' || e.error === 'canceled') {
+              return;
+            }
+            console.warn('朗讀警告：', e.error, '段落：', index);
+            // 嘗試繼續下一段
+            if (isSpeaking && !isPaused) {
+              setTimeout(() => speakSegment(index + 1), 100);
+            }
+          };
+          
+          currentUtterance = utterance;
           }
           
           return utterance;
@@ -10028,18 +9935,18 @@ ALL characters must look IDENTICAL to how they appear in this reference!
               const mainUtterance = createAndPlayUtterance(bufferedText, true);
               speechSynth.speak(mainUtterance);
             }, 50);
-          };
-          
-          warmupUtterance.onerror = () => {
-            // 預熱失敗也繼續播放
+        };
+        
+        warmupUtterance.onerror = () => {
+          // 預熱失敗也繼續播放
             setTimeout(() => {
               const mainUtterance = createAndPlayUtterance(bufferedText, true);
               speechSynth.speak(mainUtterance);
             }, 50);
-          };
-          
-          // 開始預熱
-          speechSynth.speak(warmupUtterance);
+        };
+        
+        // 開始預熱
+        speechSynth.speak(warmupUtterance);
         } else {
           // 已預熱，直接播放（仍然使用緩衝文本）
           const mainUtterance = createAndPlayUtterance(bufferedText, true);
@@ -10078,17 +9985,17 @@ ALL characters must look IDENTICAL to how they appear in this reference!
         if (isSpeaking) {
           if (!isPaused) {
             // 正在朗讀 → 暫停
-            speechSynth.pause();
-            isPaused = true;
-            saveSpeechProgress(); // 暫停時儲存進度
-            playPauseBtn.textContent = '▶️ 繼續朗讀';
-            speechProgressText.textContent = '⏸️ 已暫停';
+          speechSynth.pause();
+          isPaused = true;
+          saveSpeechProgress(); // 暫停時儲存進度
+          playPauseBtn.textContent = '▶️ 繼續朗讀';
+          speechProgressText.textContent = '⏸️ 已暫停';
           } else {
             // 已暫停 → 繼續
-            speechSynth.resume();
-            isPaused = false;
-            playPauseBtn.textContent = '⏸️ 暫停';
-            speechProgressText.textContent = `正在朗讀 ${currentSegmentIndex + 1}/${speechSegments.length} 段...`;
+          speechSynth.resume();
+          isPaused = false;
+          playPauseBtn.textContent = '⏸️ 暫停';
+          speechProgressText.textContent = `正在朗讀 ${currentSegmentIndex + 1}/${speechSegments.length} 段...`;
           }
           return;
         }
@@ -11407,18 +11314,98 @@ ALL characters must look IDENTICAL to how they appear in this reference!
       let generationStartTime = null;
       let lastProgressUpdate = null;
 
+      let progressInterval = null;
+      let estimatedTotalChapters = 1;
+      let simulatedProgress = 0;
+
       function showGenerationProgress() {
         document.getElementById('generationProgress').classList.add('show');
         generationStartTime = Date.now();
         lastProgressUpdate = Date.now();
+        simulatedProgress = 0;
+        
+        // 重置進度條
+        document.getElementById('progressBarFill').style.width = '0%';
+        document.getElementById('progressPercent').textContent = '0%';
+        document.getElementById('progressWords').textContent = '已生成 0 字';
+        document.getElementById('progressTime').textContent = '預估剩餘 --:--';
       }
 
       function hideGenerationProgress() {
         document.getElementById('generationProgress').classList.remove('show');
         generationStartTime = null;
+        simulatedProgress = 0;
+        
+        // 清除進度更新定時器
+        if (progressInterval) {
+          clearInterval(progressInterval);
+          progressInterval = null;
+        }
+      }
+
+      function startSimulatedProgress(totalChapters = 1) {
+        estimatedTotalChapters = totalChapters;
+        simulatedProgress = 0;
+        
+        // 清除舊的定時器
+        if (progressInterval) {
+          clearInterval(progressInterval);
+        }
+        
+        // 開始模擬進度更新
+        progressInterval = setInterval(() => {
+          if (!generationStartTime) return;
+          
+          const elapsed = Date.now() - generationStartTime;
+          const elapsedSeconds = elapsed / 1000;
+          
+          // 基於時間的進度估算
+          // 前30秒：快速增長到30%（連接和準備階段）
+          // 30-120秒：緩慢增長到85%（實際生成階段）
+          // 120秒後：緩慢增長到95%（等待完成）
+          
+          if (elapsedSeconds < 30) {
+            // 前30秒：快速增長
+            simulatedProgress = Math.min(30, (elapsedSeconds / 30) * 30);
+          } else if (elapsedSeconds < 120) {
+            // 30-120秒：緩慢增長
+            simulatedProgress = 30 + ((elapsedSeconds - 30) / 90) * 55;
+          } else {
+            // 120秒後：非常緩慢增長，最高到95%
+            simulatedProgress = Math.min(95, 85 + ((elapsedSeconds - 120) / 60) * 10);
+          }
+          
+          // 更新進度條顯示
+          const progressBarFill = document.getElementById('progressBarFill');
+          const progressPercent = document.getElementById('progressPercent');
+          const progressTime = document.getElementById('progressTime');
+          
+          progressBarFill.style.width = `${simulatedProgress}%`;
+          progressPercent.textContent = `${Math.round(simulatedProgress)}%`;
+          
+          // 估算剩餘時間（基於平均生成速度）
+          // 假設每章需要約30-60秒
+          const avgTimePerChapter = 45; // 秒
+          const estimatedTotalTime = avgTimePerChapter * totalChapters;
+          const remainingSeconds = Math.max(0, estimatedTotalTime - elapsedSeconds);
+          
+          if (remainingSeconds > 0) {
+            const remainingMins = Math.floor(remainingSeconds / 60);
+            const remainingSecs = Math.floor(remainingSeconds % 60);
+            progressTime.textContent = `預估剩餘 ${remainingMins}:${remainingSecs.toString().padStart(2, '0')}`;
+          } else {
+            progressTime.textContent = '即將完成...';
+          }
+        }, 500); // 每0.5秒更新一次
       }
 
       function updateGenerationProgress(currentChapter, totalChapters, currentWords) {
+        // 清除模擬進度
+        if (progressInterval) {
+          clearInterval(progressInterval);
+          progressInterval = null;
+        }
+        
         const progressPercent = Math.round((currentChapter / totalChapters) * 100);
         document.getElementById('progressChapter').textContent = `正在生成第 ${currentChapter}/${totalChapters} 章`;
         document.getElementById('progressPercent').textContent = `${progressPercent}%`;
@@ -11716,136 +11703,6 @@ ${selectedElements.length > 0 ? `\n【特殊元素】\n${selectedElements.join('
         showAutoSaveIndicator();
       };
 
-      // ==================== 生成歷史功能 ====================
-      const historyToggle = document.getElementById('historyToggle');
-      const historyPanel = document.getElementById('historyPanel');
-      const historyClose = document.getElementById('historyClose');
-      const historyList = document.getElementById('historyList');
-      const historyBadge = document.getElementById('historyBadge');
-
-      // 從 localStorage 載入歷史
-      let generationHistory = JSON.parse(localStorage.getItem('novelGenerationHistory') || '[]');
-
-      function updateHistoryBadge() {
-        if (generationHistory.length > 0) {
-          historyBadge.textContent = generationHistory.length;
-          historyBadge.style.display = 'inline-flex';
-        } else {
-          historyBadge.style.display = 'none';
-        }
-      }
-
-      function renderHistoryList() {
-        if (generationHistory.length === 0) {
-          historyList.innerHTML = `
-            <div class="history-empty">
-              <div class="history-empty-icon">📭</div>
-              <p>尚無生成記錄</p>
-              <p style="font-size: 0.85rem;">生成故事後會自動保存到這裡</p>
-            </div>
-          `;
-          return;
-        }
-
-        historyList.innerHTML = generationHistory.map((item, index) => `
-          <div class="history-item" data-index="${index}">
-            <div class="history-item-title">
-              📖 ${item.theme || '未命名故事'}
-            </div>
-            <div class="history-item-meta">
-              <span>📅 ${new Date(item.timestamp).toLocaleDateString('zh-TW')}</span>
-              <span>📝 ${item.wordCount || 0} 字</span>
-              <span>📑 ${item.chapters || '?'} 章</span>
-            </div>
-            <div class="history-item-preview">${item.preview || '無預覽'}</div>
-          </div>
-        `).join('');
-
-        // 添加點擊事件
-        historyList.querySelectorAll('.history-item').forEach(item => {
-          item.addEventListener('click', () => {
-            const index = parseInt(item.dataset.index);
-            loadFromHistory(index);
-          });
-        });
-      }
-
-      function saveToHistory(theme, content, settings = {}) {
-        const wordCount = content.replace(/[\s\n#*_\-]/g, '').length;
-        const chapterMatches = content.match(/###?\s*第[一二三四五六七八九十百千萬零壹貳參肆伍陸柒捌玖拾佰仟\d]+[章節回卷部集篇]/g);
-        const chapters = chapterMatches ? chapterMatches.length : 1;
-        
-        // 取前100字作為預覽
-        const cleanContent = content.replace(/###?\s*第[一二三四五六七八九十百千萬零壹貳參肆伍陸柒捌玖拾佰仟\d]+[章節回卷部集篇][：:].*/g, '').trim();
-        const preview = cleanContent.substring(0, 100).replace(/\n/g, ' ') + '...';
-
-        const historyItem = {
-          timestamp: Date.now(),
-          theme: theme || settings.theme || '未命名故事',
-          content: content,
-          wordCount: wordCount,
-          chapters: chapters,
-          preview: preview,
-          settings: settings
-        };
-
-        // 只保留最近 20 條記錄
-        generationHistory.unshift(historyItem);
-        if (generationHistory.length > 20) {
-          generationHistory = generationHistory.slice(0, 20);
-        }
-
-        localStorage.setItem('novelGenerationHistory', JSON.stringify(generationHistory));
-        updateHistoryBadge();
-        renderHistoryList();
-      }
-
-      function loadFromHistory(index) {
-        const item = generationHistory[index];
-        if (!item) return;
-
-        // 恢復內容
-        latestStory = item.content;
-        resultDiv.innerHTML = formatResult(item.content);
-        resultDiv.style.display = 'block';
-        continueBtn.disabled = false;
-        updateWordCount();
-
-        // 恢復設定
-        if (item.settings) {
-          if (item.settings.theme) themeSelect.value = item.settings.theme;
-          if (item.settings.setting) settingSelect.value = item.settings.setting;
-          if (item.settings.style) styleSelect.value = item.settings.style;
-        }
-
-        // 關閉面板
-        historyPanel.classList.remove('open');
-        
-        showStatus('success', `已載入「${item.theme}」`);
-        setTimeout(hideStatus, 2000);
-      }
-
-      // 歷史面板開關
-      historyToggle.addEventListener('click', () => {
-        historyPanel.classList.toggle('open');
-      });
-
-      historyClose.addEventListener('click', () => {
-        historyPanel.classList.remove('open');
-      });
-
-      // 點擊外部關閉
-      document.addEventListener('click', (e) => {
-        if (historyPanel.classList.contains('open') && 
-            !historyPanel.contains(e.target) && 
-            !historyToggle.contains(e.target)) {
-          historyPanel.classList.remove('open');
-        }
-      });
-
-      // 初始化歷史列表
-      updateHistoryBadge();
-      renderHistoryList();
 
       // ==================== 首次使用引導 ====================
       const onboardingOverlay = document.getElementById('onboardingOverlay');
@@ -11904,39 +11761,10 @@ ${selectedElements.length > 0 ? `\n【特殊元素】\n${selectedElements.join('
         }
       }, true);
 
-      // ==================== 生成完成後保存到歷史 ====================
-      // 擴展原有的生成完成處理
-      const originalUpdateWordCount = updateWordCount;
-      let lastSavedContent = '';
-      
-      updateWordCount = function() {
-        originalUpdateWordCount();
-        
-        // 檢查是否有新內容需要保存到歷史
-        if (latestStory && latestStory !== lastSavedContent && latestStory.length > 500) {
-          // 獲取當前設定
-          const currentSettings = {
-            theme: themeSelect.value,
-            setting: settingSelect.value,
-            style: styleSelect.value,
-            narrative: narrativeSelect.value,
-            era: eraSelect.value
-          };
-          
-          // 延遲保存，避免頻繁更新
-          clearTimeout(window.historySaveTimeout);
-          window.historySaveTimeout = setTimeout(() => {
-            if (latestStory !== lastSavedContent) {
-              saveToHistory(themeSelect.value, latestStory, currentSettings);
-              lastSavedContent = latestStory;
-            }
-          }, 5000);
-        }
-      };
 
       console.log('🎨 AI 小說 & 漫畫工坊已載入完成！');
       console.log('💡 快捷鍵：Ctrl+G 生成 | Ctrl+Shift+R 隨機 | Ctrl+S 儲存 | Ctrl+D 切換主題');
-      console.log('📜 新功能：生成歷史、自動保存指示器、首次引導教程');
+      console.log('💡 新功能：自動保存指示器、首次引導教程');
     </script>
   </body>
 </html>
