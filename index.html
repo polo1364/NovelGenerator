@@ -10057,6 +10057,11 @@ ALL characters must look IDENTICAL to how they appear in this reference!
       let lastSpeechTime = 0;
       
       function speakWithBrowser(processedText, params, index) {
+        // 🔧 修復：確保在開始前檢查狀態
+        if (!isSpeaking) {
+          return;
+        }
+        
         // 設定語音
         const selectedVoice = availableVoices.find(v => v.name === voiceSelect.value);
         
@@ -10126,36 +10131,59 @@ ALL characters must look IDENTICAL to how they appear in this reference!
           return utterance;
         }
         
+        // 🔧 修復：簡化預熱機制，確保第一次播放更可靠
         if (needsWarmup) {
           // 預熱策略：先播放一個靜音的短句
-          const warmupUtterance = new SpeechSynthesisUtterance('準備');
+          const warmupUtterance = new SpeechSynthesisUtterance(' ');
           if (selectedVoice) warmupUtterance.voice = selectedVoice;
           warmupUtterance.rate = 10; // 最快速度
           warmupUtterance.volume = 0; // 完全靜音
           
-          warmupUtterance.onend = () => {
+          let mainUtterancePlayed = false;
+          const playMain = () => {
+            // 🔧 修復：確保只播放一次，並且檢查狀態
+            if (mainUtterancePlayed || !isSpeaking) return;
+            mainUtterancePlayed = true;
             speechEngineWarmedUp = true;
-            // 預熱完成後短暫延遲再播放實際內容
-            setTimeout(() => {
-              const mainUtterance = createAndPlayUtterance(bufferedText, true);
+            
+            const mainUtterance = createAndPlayUtterance(bufferedText, true);
+            if (isSpeaking && !isPaused) {
               speechSynth.speak(mainUtterance);
-            }, 50);
-        };
-        
-        warmupUtterance.onerror = () => {
-          // 預熱失敗也繼續播放
-            setTimeout(() => {
-              const mainUtterance = createAndPlayUtterance(bufferedText, true);
-              speechSynth.speak(mainUtterance);
-            }, 50);
-        };
-        
-        // 開始預熱
-        speechSynth.speak(warmupUtterance);
+            }
+          };
+          
+          warmupUtterance.onstart = () => {
+            // 預熱開始後立即播放實際內容（不等待結束）
+            setTimeout(playMain, 10);
+          };
+          
+          warmupUtterance.onend = () => {
+            playMain();
+          };
+          
+          warmupUtterance.onerror = () => {
+            // 預熱失敗也繼續播放
+            playMain();
+          };
+          
+          // 設置超時保護，確保即使預熱失敗也能播放
+          setTimeout(() => {
+            playMain();
+          }, 100);
+          
+          // 開始預熱
+          try {
+            speechSynth.speak(warmupUtterance);
+          } catch (e) {
+            console.warn('預熱失敗，直接播放：', e);
+            playMain();
+          }
         } else {
           // 已預熱，直接播放（仍然使用緩衝文本）
           const mainUtterance = createAndPlayUtterance(bufferedText, true);
-          speechSynth.speak(mainUtterance);
+          if (isSpeaking && !isPaused) {
+            speechSynth.speak(mainUtterance);
+          }
         }
       }
       
@@ -10267,6 +10295,11 @@ ALL characters must look IDENTICAL to how they appear in this reference!
             }
           }
           
+          // 🔧 修復：確保在開始前清除任何殘留狀態
+          if (speechSynth.speaking || speechSynth.paused) {
+            speechSynth.cancel();
+          }
+          
           isSpeaking = true;
           isPaused = false;
           playPauseBtn.textContent = '⏸️ 暫停';
@@ -10278,9 +10311,16 @@ ALL characters must look IDENTICAL to how they appear in this reference!
           // 顯示朗讀範圍
           if (!isReadingAll) {
             speechProgressText.textContent = `朗讀範圍：第 ${startIdx + 1} - ${endIdx} 段`;
+          } else {
+            speechProgressText.textContent = `準備開始朗讀...`;
           }
           
-          speakSegment(startIndex);
+          // 🔧 修復：使用 setTimeout 確保狀態已設置完成
+          setTimeout(() => {
+            if (isSpeaking && !isPaused) {
+              speakSegment(startIndex);
+            }
+          }, 10);
         }
       }
 
