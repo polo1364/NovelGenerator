@@ -10006,6 +10006,11 @@ ALL characters must look IDENTICAL to how they appear in this reference!
 
       // 朗讀單一段落
       function speakSegment(index) {
+        // 🔧 修復：檢查是否仍在朗讀狀態
+        if (!isSpeaking) {
+          return;
+        }
+        
         if (index >= speechSegments.length) {
           // 朗讀完成
           stopSpeech();
@@ -10031,7 +10036,7 @@ ALL characters must look IDENTICAL to how they appear in this reference!
         // 如果處理後文字為空，跳到下一段
         if (!processedText || processedText.trim().length === 0) {
           if (isSpeaking && !isPaused) {
-            speakSegment(index + 1);
+            setTimeout(() => speakSegment(index + 1), 100);
           }
           return;
         }
@@ -10084,30 +10089,38 @@ ALL characters must look IDENTICAL to how they appear in this reference!
               lastSpeechTime = Date.now();
               speechEngineWarmedUp = true;
             };
-          
-          utterance.onend = () => {
+            
+            utterance.onend = () => {
               lastSpeechTime = Date.now();
-            // 段落間停頓
-            setTimeout(() => {
-              if (isSpeaking && !isPaused) {
-                speakSegment(index + 1);
+              // 🔧 修復：確保在停止後不會繼續播放
+              if (!isSpeaking) {
+                return;
               }
-            }, params.pause);
-          };
-          
-          utterance.onerror = (e) => {
-            // 忽略 interrupted 錯誤（使用者主動停止）
-            if (e.error === 'interrupted' || e.error === 'canceled') {
-              return;
-            }
-            console.warn('朗讀警告：', e.error, '段落：', index);
-            // 嘗試繼續下一段
-            if (isSpeaking && !isPaused) {
-              setTimeout(() => speakSegment(index + 1), 100);
-            }
-          };
-          
-          currentUtterance = utterance;
+              // 段落間停頓
+              setTimeout(() => {
+                if (isSpeaking && !isPaused) {
+                  speakSegment(index + 1);
+                }
+              }, params.pause);
+            };
+            
+            utterance.onerror = (e) => {
+              // 忽略 interrupted 錯誤（使用者主動停止）
+              if (e.error === 'interrupted' || e.error === 'canceled') {
+                return;
+              }
+              console.warn('朗讀警告：', e.error, '段落：', index);
+              // 🔧 修復：確保在停止後不會繼續播放
+              if (!isSpeaking) {
+                return;
+              }
+              // 嘗試繼續下一段
+              if (isSpeaking && !isPaused) {
+                setTimeout(() => speakSegment(index + 1), 100);
+              }
+            };
+            
+            currentUtterance = utterance;
           }
           
           return utterance;
@@ -10177,17 +10190,21 @@ ALL characters must look IDENTICAL to how they appear in this reference!
         if (isSpeaking) {
           if (!isPaused) {
             // 正在朗讀 → 暫停
-          speechSynth.pause();
-          isPaused = true;
-          saveSpeechProgress(); // 暫停時儲存進度
-          playPauseBtn.textContent = '▶️ 繼續朗讀';
-          speechProgressText.textContent = '⏸️ 已暫停';
+            if (speechSynth.speaking) {
+              speechSynth.pause();
+            }
+            isPaused = true;
+            saveSpeechProgress(); // 暫停時儲存進度
+            playPauseBtn.textContent = '▶️ 繼續朗讀';
+            speechProgressText.textContent = '⏸️ 已暫停';
           } else {
             // 已暫停 → 繼續
-          speechSynth.resume();
-          isPaused = false;
-          playPauseBtn.textContent = '⏸️ 暫停';
-          speechProgressText.textContent = `正在朗讀 ${currentSegmentIndex + 1}/${speechSegments.length} 段...`;
+            if (speechSynth.paused) {
+              speechSynth.resume();
+            }
+            isPaused = false;
+            playPauseBtn.textContent = '⏸️ 暫停';
+            speechProgressText.textContent = `正在朗讀 ${currentSegmentIndex + 1}/${speechSegments.length} 段...`;
           }
           return;
         }
@@ -10270,7 +10287,7 @@ ALL characters must look IDENTICAL to how they appear in this reference!
       // 停止朗讀
       function stopSpeech() {
         // 🔧 修復：先恢復再取消，確保語音引擎狀態正確
-        if (isPaused) {
+        if (isPaused && speechSynth.paused) {
           speechSynth.resume();
         }
         speechSynth.cancel();
@@ -10285,11 +10302,10 @@ ALL characters must look IDENTICAL to how they appear in this reference!
         
         // 移除朗讀按鈕視覺提示
         speakBtn.classList.remove('active-task');
-        currentSegmentIndex = 0;
         playPauseBtn.textContent = '▶️ 開始朗讀';
         speechProgressFill.style.width = '0%';
         speechProgressText.textContent = '準備就緒';
-        currentSegmentDisplay.textContent = '0 / 0';
+        currentSegmentDisplay.textContent = '- / -';
         clearHighlight();
         updateNavButtons();
       }
@@ -10312,24 +10328,36 @@ ALL characters must look IDENTICAL to how they appear in this reference!
       // 跳到上一段
       function prevSegment() {
         if (!isSpeaking || currentSegmentIndex <= 0) return;
-        speechSynth.cancel();
+        // 🔧 修復：確保正確停止當前播放
+        if (speechSynth.speaking || speechSynth.paused) {
+          speechSynth.cancel();
+        }
         isPaused = false;
+        currentUtterance = null;
         speakSegment(currentSegmentIndex - 1);
       }
       
       // 跳到下一段
       function nextSegment() {
         if (!isSpeaking || currentSegmentIndex >= speechSegments.length - 1) return;
-        speechSynth.cancel();
+        // 🔧 修復：確保正確停止當前播放
+        if (speechSynth.speaking || speechSynth.paused) {
+          speechSynth.cancel();
+        }
         isPaused = false;
+        currentUtterance = null;
         speakSegment(currentSegmentIndex + 1);
       }
       
       // 跳轉到指定段落（透過進度條點擊）
       function jumpToSegment(segmentIndex) {
         if (!isSpeaking || segmentIndex < 0 || segmentIndex >= speechSegments.length) return;
-        speechSynth.cancel();
+        // 🔧 修復：確保正確停止當前播放
+        if (speechSynth.speaking || speechSynth.paused) {
+          speechSynth.cancel();
+        }
         isPaused = false;
+        currentUtterance = null;
         speakSegment(segmentIndex);
       }
 
