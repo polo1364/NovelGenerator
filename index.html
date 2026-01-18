@@ -9605,6 +9605,7 @@ ALL characters must look IDENTICAL to how they appear in this reference!
       let currentSegmentIndex = 0;
       let availableVoices = [];
       let segmentRanges = []; // 儲存每個段落在原文中的位置
+      let speechInitialized = false; // 追蹤語音是否已初始化
 
       // 朗讀控制元素
       const prevSegmentBtn = document.getElementById('prevSegmentBtn');
@@ -9613,6 +9614,12 @@ ALL characters must look IDENTICAL to how they appear in this reference!
       const speechProgressBar = document.getElementById('speechProgressBar');
       const autoScrollCheck = document.getElementById('autoScrollCheck');
       const highlightCheck = document.getElementById('highlightCheck');
+      
+      // 檢查瀏覽器是否支援語音合成
+      if (!speechSynth) {
+        console.warn('此瀏覽器不支援語音合成');
+        speakBtn.title = '您的瀏覽器不支援朗讀功能';
+      }
       
       // Chrome bug workaround: 防止長時間朗讀自動暫停
       let speechKeepAliveInterval = null;
@@ -9671,7 +9678,13 @@ ALL characters must look IDENTICAL to how they appear in this reference!
 
       // 載入語音列表（只顯示中文語音）
       function loadVoices() {
+        if (!speechSynth) {
+          console.warn('語音合成不可用');
+          return;
+        }
+        
         availableVoices = speechSynth.getVoices();
+        console.log('載入語音列表，找到', availableVoices.length, '個語音');
         voiceSelect.innerHTML = '';
         
         // 篩選中文語音（放寬條件）
@@ -9828,11 +9841,27 @@ ALL characters must look IDENTICAL to how they appear in this reference!
         }
       }
 
-      // 初始化語音
+      // 初始化語音 - 增加延遲重試機制（Windows 系統可能需要更長時間）
       loadVoices();
-      if (speechSynth.onvoiceschanged !== undefined) {
+      if (speechSynth && speechSynth.onvoiceschanged !== undefined) {
         speechSynth.onvoiceschanged = loadVoices;
       }
+      
+      // Windows/Edge 可能需要延遲載入語音
+      setTimeout(() => {
+        if (availableVoices.length === 0) {
+          console.log('延遲重試載入語音...');
+          loadVoices();
+        }
+      }, 100);
+      
+      setTimeout(() => {
+        if (availableVoices.length === 0) {
+          console.log('再次重試載入語音...');
+          loadVoices();
+        }
+        speechInitialized = true;
+      }, 500);
 
       // 情緒分析與參數調整
       function analyzeEmotion(text) {
@@ -10119,8 +10148,12 @@ ALL characters must look IDENTICAL to how they appear in this reference!
           return;
         }
         
-        // 設定語音
-        const selectedVoice = availableVoices.find(v => v.name === voiceSelect.value);
+        // 設定語音（如果找不到選定的語音，使用第一個可用語音）
+        let selectedVoice = availableVoices.find(v => v.name === voiceSelect.value);
+        if (!selectedVoice && availableVoices.length > 0) {
+          selectedVoice = availableVoices[0];
+          console.log('使用預設語音：', selectedVoice.name);
+        }
         
         // 🔧 修復首字被吃掉的多重策略
         // 策略1: 在文本前加入不可見的前導字符（零寬空格 + 逗號）
@@ -10266,9 +10299,26 @@ ALL characters must look IDENTICAL to how they appear in this reference!
 
       // 開始/暫停朗讀
       function toggleSpeech() {
-        if (!latestStory) {
-          showStatus('error', '沒有可朗讀的內容');
+        // 檢查瀏覽器支援
+        if (!speechSynth) {
+          showStatus('error', '您的瀏覽器不支援朗讀功能');
           return;
+        }
+        
+        if (!latestStory) {
+          showStatus('error', '沒有可朗讀的內容，請先生成故事');
+          return;
+        }
+        
+        // 檢查是否有可用語音
+        if (availableVoices.length === 0) {
+          // 嘗試重新載入語音
+          loadVoices();
+          if (availableVoices.length === 0) {
+            showStatus('error', '未找到可用語音，請檢查系統語音設定或重新整理頁面');
+            console.warn('無可用語音。請確認：1) 系統已安裝中文語音 2) 瀏覽器允許語音合成');
+            return;
+          }
         }
         
         // 🔧 修復：更清晰的狀態判斷
@@ -10490,6 +10540,18 @@ ALL characters must look IDENTICAL to how they appear in this reference!
       speakBtn.addEventListener('click', () => {
         speechModal.classList.add('open');
         
+        // 調試：檢查語音狀態
+        console.log('🎙️ 朗讀面板開啟');
+        console.log('  - 可用語音數量:', availableVoices.length);
+        console.log('  - 語音合成支援:', !!speechSynth);
+        console.log('  - 故事內容長度:', (latestStory || '').length);
+        
+        // 如果沒有語音，嘗試重新載入
+        if (availableVoices.length === 0) {
+          console.log('  - 嘗試重新載入語音...');
+          loadVoices();
+        }
+        
         // 更新段落資訊
         updateSegmentInputs();
         updateNavButtons();
@@ -10498,6 +10560,11 @@ ALL characters must look IDENTICAL to how they appear in this reference!
         const savedProgress = loadSpeechProgress();
         if (savedProgress && savedProgress.segmentIndex > 0 && !isSpeaking) {
           speechProgressText.textContent = `📍 上次進度：第 ${savedProgress.segmentIndex + 1} 段`;
+        }
+        
+        // 如果沒有可用語音，顯示提示
+        if (availableVoices.length === 0) {
+          speechProgressText.textContent = '⚠️ 未偵測到語音，請重新整理頁面或檢查系統語音設定';
         }
       });
 
