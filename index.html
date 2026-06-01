@@ -4722,7 +4722,8 @@
             throw new Error('沒有獲得內容');
           }
           recordUsage(data.usage);
-          return { text: (data.choices[0].message && data.choices[0].message.content ? data.choices[0].message.content : '').trim(), gotContent: true };
+          const nonStreamText = (data.choices[0].message && data.choices[0].message.content ? data.choices[0].message.content : '').replace(/\uFFFD/g, '');
+          return { text: nonStreamText.trim(), gotContent: true };
         }
 
         // 串流模式：HTTP 錯誤時，body 會是 JSON 錯誤物件
@@ -4742,28 +4743,35 @@
         let usage = null;
         let gotContent = false;
 
+        const processLine = (line) => {
+          const t = line.trim();
+          if (!t || !t.startsWith('data:')) return;
+          const payload = t.slice(5).trim();
+          if (payload === '[DONE]') return;
+          let json;
+          try { json = JSON.parse(payload); } catch (e) { return; }
+          if (json.usage) usage = json.usage;
+          let delta = json.choices && json.choices[0] && json.choices[0].delta ? (json.choices[0].delta.content || '') : '';
+          // 過濾 DeepSeek 串流偶發的 U+FFFD 取代字元（中文內容不應出現，純屬雜訊）
+          if (delta) delta = delta.replace(/\uFFFD/g, '');
+          if (delta) {
+            fullText += delta;
+            gotContent = true;
+            onChunk(fullText, delta);
+          }
+        };
+
         while (true) {
           const { done, value } = await reader.read();
           if (done) break;
           buffer += decoder.decode(value, { stream: true });
           const lines = buffer.split('\n');
           buffer = lines.pop();
-          for (const line of lines) {
-            const t = line.trim();
-            if (!t || !t.startsWith('data:')) continue;
-            const payload = t.slice(5).trim();
-            if (payload === '[DONE]') continue;
-            let json;
-            try { json = JSON.parse(payload); } catch (e) { continue; }
-            if (json.usage) usage = json.usage;
-            const delta = json.choices && json.choices[0] && json.choices[0].delta ? (json.choices[0].delta.content || '') : '';
-            if (delta) {
-              fullText += delta;
-              gotContent = true;
-              onChunk(fullText, delta);
-            }
-          }
+          for (const line of lines) processLine(line);
         }
+        // 串流結束：flush 解碼器殘留位元組並處理最後一行
+        buffer += decoder.decode();
+        if (buffer) processLine(buffer);
 
         recordUsage(usage);
         return { text: fullText.trim(), gotContent };
@@ -4816,7 +4824,7 @@
       }
 
       // ==================== 載入已儲存的故事 ====================
-      const savedStory = localStorage.getItem('savedStory');
+      const savedStory = (localStorage.getItem('savedStory') || '').replace(/\uFFFD/g, '');
       if (savedStory) {
         latestStory = savedStory;
         resultDiv.textContent = savedStory;
@@ -8665,7 +8673,7 @@ ${truncatedNotice}${storyContext}${settingsReminder}
         
         // 若 localStorage 沒有故事（可能因過長而未存成功），改從 IndexedDB 還原
         if (!latestStory && useIndexedDB) {
-          const dbStory = await loadStoryFromDB();
+          const dbStory = ((await loadStoryFromDB()) || '').replace(/\uFFFD/g, '');
           if (dbStory) {
             latestStory = dbStory;
             resultDiv.textContent = dbStory;
@@ -8807,7 +8815,7 @@ ${truncatedNotice}${storyContext}${settingsReminder}
       
       // 載入書籤內容
       function loadBookmarkContent(bm) {
-        latestStory = bm.content;
+        latestStory = (bm.content || '').replace(/\uFFFD/g, '');
         resultDiv.textContent = latestStory;
         downloadBtn.disabled = !latestStory;
         continueBtn.disabled = !latestStory;
