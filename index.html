@@ -8390,94 +8390,97 @@ ${truncatedNotice}${storyContext}${settingsReminder}
         showStatus('success', `📄 已下載單部小說：${filename}`);
       }
 
-      // 優化 TXT 格式，讓手機閱讀更舒適
-      function optimizeTxtForMobile(text) {
-        const MAX_LINE_WIDTH = 25; // 每行最大字數（適合手機螢幕）
-        
-        let result = '';
-        const paragraphs = text.split(/\n/);
-        
-        for (let i = 0; i < paragraphs.length; i++) {
-          const para = paragraphs[i];
-          const trimmed = para.trim();
-          
-          // 空行保留
-          if (trimmed === '') {
-            result += '\n';
-            continue;
+      // 將小說正文整理為適合 TXT 閱讀／朗讀器的格式：段落分明、段間空行、段內不強制斷行
+      function splitLongTextIntoParagraphs(text) {
+        text = text.trim();
+        if (!text) return [];
+        if (text.length <= 120) return [text];
+
+        const sentences = text.split(/(?<=[。！？…」』】）])/).map(s => s.trim()).filter(Boolean);
+        if (sentences.length <= 1) return [text];
+
+        const paras = [];
+        let buf = '';
+        for (const s of sentences) {
+          const candidate = buf + s;
+          const endCount = (buf.match(/[。！？…]/g) || []).length;
+          if (buf && (candidate.length > 200 || endCount >= 2)) {
+            paras.push(buf.trim());
+            buf = s;
+          } else {
+            buf = candidate;
           }
-          
-          // 檢測是否為標題行（## 或 ### 開頭，或「第X章」等）
-          const isTitle = /^#{1,3}\s/.test(trimmed) || 
-                          /^第[一二三四五六七八九十百千萬零壹貳參肆伍陸柒捌玖拾佰仟\d]+[章節回卷部集篇]/.test(trimmed) ||
-                          /^[序楔終尾番外]/.test(trimmed) ||
-                          /^[-—=]{3,}$/.test(trimmed);
-          
-          if (isTitle) {
-            // 標題：移除 markdown 符號，前後加空行
-            let titleText = trimmed.replace(/^#{1,3}\s*/, '');
-            
-            // 加入分隔線裝飾
-            if (/^第[一二三四五六七八九十百千萬零壹貳參肆伍陸柒捌玖拾佰仟\d]+[章節回卷部集篇]/.test(titleText) ||
-                /^[序楔終尾番外]/.test(titleText)) {
-              result += '\n';
-              result += '═'.repeat(20) + '\n';
-              result += '\n';
-              result += '　　' + titleText + '\n';
-              result += '\n';
-              result += '═'.repeat(20) + '\n';
-            } else {
-              // 主標題
-              result += '\n';
-              result += '★ ' + titleText + ' ★\n';
-            }
-            result += '\n';
-            continue;
-          }
-          
-          // 普通段落：自動換行
-          // 先處理首行縮排
-          let content = trimmed;
-          let lines = [];
-          let currentLine = '　　'; // 首行縮排（兩個全形空格）
-          
-          for (let j = 0; j < content.length; j++) {
-            const char = content[j];
-            currentLine += char;
-            
-            // 檢查是否需要換行
-            // 計算實際寬度（中文字算1，英文字母/數字算0.5）
-            const lineWidth = [...currentLine].reduce((sum, c) => {
-              return sum + (/[\u4e00-\u9fff\u3000-\u303f\uff00-\uffef]/.test(c) ? 1 : 0.5);
-            }, 0);
-            
-            if (lineWidth >= MAX_LINE_WIDTH) {
-              // 嘗試在標點符號處斷行
-              const lastPunctuationIndex = currentLine.search(/[，。！？；：、」』）】…—～\s][^，。！？；：、」』）】…—～\s]*$/);
-              
-              if (lastPunctuationIndex > currentLine.length * 0.5) {
-                // 在標點後斷行
-                lines.push(currentLine.substring(0, lastPunctuationIndex + 1));
-                currentLine = currentLine.substring(lastPunctuationIndex + 1);
-              } else {
-                // 直接斷行
-                lines.push(currentLine);
-                currentLine = '';
-              }
-            }
-          }
-          
-          // 加入最後一行
-          if (currentLine) {
-            lines.push(currentLine);
-          }
-          
-          result += lines.join('\n') + '\n\n';
         }
-        
-        // 清理多餘空行（超過2個連續空行變成2個）
-        result = result.replace(/\n{4,}/g, '\n\n\n');
-        
+        if (buf.trim()) paras.push(buf.trim());
+        return paras.length ? paras : [text];
+      }
+
+      function isChapterHeadingLine(line) {
+        return /^(?:第[一二三四五六七八九十百千萬零壹貳參肆伍陸柒捌玖拾佰仟\d]+[章節回卷部集篇]|序章|楔子|引子|前言|尾聲|終章|番外|後記)/.test(line);
+      }
+
+      function optimizeTxtForMobile(text) {
+        if (!text) return '';
+
+        text = text.replace(/\uFFFD/g, '').replace(/\r\n/g, '\n').trim();
+        const outputParts = [];
+
+        const pushBody = (raw) => {
+          const cleaned = raw.trim();
+          if (!cleaned || /^[-—=─━═]{3,}$/.test(cleaned)) return;
+          if (cleaned.length > 150) {
+            splitLongTextIntoParagraphs(cleaned).forEach(p => outputParts.push({ kind: 'body', text: p }));
+          } else {
+            outputParts.push({ kind: 'body', text: cleaned });
+          }
+        };
+
+        // 先依空行分大段，再依單行拆段；長段無換行時改依句號切分
+        const coarseBlocks = text.split(/\n{2,}/);
+        for (const block of coarseBlocks) {
+          const trimmedBlock = block.trim();
+          if (!trimmedBlock || /^[-—=─━═]{3,}$/.test(trimmedBlock)) continue;
+
+          const lines = trimmedBlock.split('\n')
+            .map(line => line.trim().replace(/^#{1,4}\s*/, '').replace(/\*\*(.+?)\*\*/g, '$1').trim())
+            .filter(Boolean);
+
+          if (lines.length === 0) continue;
+
+          if (lines.length === 1) {
+            const line = lines[0];
+            if (isChapterHeadingLine(line)) {
+              outputParts.push({ kind: 'title', text: line });
+            } else {
+              pushBody(line);
+            }
+            continue;
+          }
+
+          for (const line of lines) {
+            if (isChapterHeadingLine(line)) {
+              outputParts.push({ kind: 'title', text: line });
+            } else {
+              pushBody(line);
+            }
+          }
+        }
+
+        // 全文完全沒有換行時的保底處理
+        if (outputParts.length === 0) {
+          const plain = text.replace(/^#{1,4}\s*/gm, '').replace(/\n+/g, '');
+          splitLongTextIntoParagraphs(plain).forEach(p => outputParts.push({ kind: 'body', text: p }));
+        }
+
+        let result = '';
+        for (const part of outputParts) {
+          if (part.kind === 'title') {
+            result += `\n\n${part.text}\n\n`;
+          } else {
+            result += `　　${part.text}\n\n`;
+          }
+        }
+
         return result.trim();
       }
 
