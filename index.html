@@ -2189,6 +2189,7 @@
 
       .bookmark-nav-list .bookmark-item-actions {
         display: flex;
+        flex-wrap: wrap;
         gap: 6px;
         margin-top: 8px;
         padding-top: 8px;
@@ -2209,6 +2210,12 @@
       .bookmark-nav-list .bookmark-item-actions button:hover {
         border-color: var(--gold);
         background: rgba(244, 162, 97, 0.1);
+      }
+
+      .bookmark-nav-list .bookmark-item-actions button.download-btn:hover {
+        border-color: #3b82f6;
+        background: rgba(59, 130, 246, 0.1);
+        color: #2563eb;
       }
 
       .bookmark-nav-list .bookmark-item-actions button.delete-btn:hover {
@@ -8363,6 +8370,26 @@ ${truncatedNotice}${storyContext}${settingsReminder}
         showStatus('success', `📱 已下載 ${filename}（手機閱讀版）`);
       }
 
+      function generateSingleNovelFilename(bookmark, extension = 'txt') {
+        const content = bookmark.content || '';
+        const headingMatch = content.match(/^\s*#{1,4}\s*([^\n#]+)/m);
+        let title = (bookmark.title || (headingMatch && headingMatch[1]) || '單部小說').trim();
+        title = title.replace(/\s+/g, ' ').replace(/[\\/:*?"<>|]/g, '_').substring(0, 80);
+        return `${title || '單部小說'}.${extension}`;
+      }
+
+      function downloadSingleNovel(bookmark) {
+        const content = (bookmark.content || '').replace(/\uFFFD/g, '');
+        if (!content.trim()) {
+          showStatus('error', '這部小說沒有可下載的內容');
+          return;
+        }
+        const optimizedTxt = optimizeTxtForMobile(content);
+        const filename = generateSingleNovelFilename(bookmark, 'txt');
+        downloadFile(filename, optimizedTxt, 'text/plain');
+        showStatus('success', `📄 已下載單部小說：${filename}`);
+      }
+
       // 優化 TXT 格式，讓手機閱讀更舒適
       function optimizeTxtForMobile(text) {
         const MAX_LINE_WIDTH = 25; // 每行最大字數（適合手機螢幕）
@@ -8768,6 +8795,7 @@ ${truncatedNotice}${storyContext}${settingsReminder}
             <div class="bookmark-item-preview">${(bm.content || '').substring(0, 80).replace(/\n/g, ' ')}...</div>
             <div class="bookmark-item-actions">
               <button type="button" data-action="load">📖 載入</button>
+              <button type="button" class="download-btn" data-action="download">⬇️ 下載</button>
               <button type="button" data-action="edit">✏️ 編輯</button>
               <button type="button" class="delete-btn" data-action="delete">🗑️</button>
             </div>
@@ -8785,6 +8813,13 @@ ${truncatedNotice}${storyContext}${settingsReminder}
             e.stopPropagation();
             e.preventDefault();
             loadBookmarkContent(bm);
+          });
+
+          // 下載單部小說
+          li.querySelector('[data-action="download"]').addEventListener('click', (e) => {
+            e.stopPropagation();
+            e.preventDefault();
+            downloadSingleNovel(bm);
           });
 
           // 編輯
