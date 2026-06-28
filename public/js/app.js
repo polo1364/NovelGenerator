@@ -5804,6 +5804,8 @@ ${truncatedNotice}${storyContext}${settingsReminder}
       let currentSegmentIndex = 0;
       let segmentRanges = [];
       let speechPlayQueue = [];
+      let speechHighlightSegments = [];
+      let speechHighlightRanges = [];
       let speechInitialized = false;
 
       const roleVoiceEnabled = document.getElementById('roleVoiceEnabled');
@@ -6029,89 +6031,115 @@ ${truncatedNotice}${storyContext}${settingsReminder}
         return processed;
       }
 
-      // 分割文字為段落（保持情緒連貫），同時記錄位置
+      // 分割文字為段落（保持情緒連貫），同時記錄原文中的精確位置
       function splitTextToSegments(text) {
-        // 按段落和句號分割
-        const paragraphs = text.split(/\n\n+/);
         const segments = [];
-        segmentRanges = []; // 重置位置記錄
-        
-        let currentPos = 0;
-        
-        paragraphs.forEach(para => {
-          if (!para.trim()) {
-            currentPos += para.length + 2; // +2 for \n\n
-            return;
-          }
-          
-          const paraStart = text.indexOf(para, currentPos);
-          
-          // 較長段落再細分
-          if (para.length > 200) {
-            const sentences = para.split(/(?<=[。！？])/);
+        segmentRanges = [];
+        if (!text) return segments;
+
+        let searchFrom = 0;
+        const paragraphs = text.split(/\n\n+/);
+
+        for (const para of paragraphs) {
+          const trimmed = para.trim();
+          if (!trimmed) continue;
+
+          const paraStart = text.indexOf(trimmed, searchFrom);
+          if (paraStart === -1) continue;
+
+          if (trimmed.length > 200) {
+            const sentences = trimmed.split(/(?<=[。！？])/);
             let chunk = '';
-            let chunkStart = paraStart;
-            
-            sentences.forEach(s => {
-              if ((chunk + s).length > 150) {
-                if (chunk) {
-                  segments.push(chunk.trim());
-                  segmentRanges.push({ start: chunkStart, end: chunkStart + chunk.length, text: chunk.trim() });
+            let chunkSearch = paraStart;
+
+            for (const sentence of sentences) {
+              if ((chunk + sentence).length > 150 && chunk.trim()) {
+                const chunkTrim = chunk.trim();
+                const chunkStart = text.indexOf(chunkTrim, chunkSearch);
+                if (chunkStart !== -1) {
+                  segments.push(chunkTrim);
+                  segmentRanges.push({
+                    start: chunkStart,
+                    end: chunkStart + chunkTrim.length,
+                    text: chunkTrim
+                  });
+                  chunkSearch = chunkStart + chunkTrim.length;
                 }
-                chunkStart = chunkStart + chunk.length;
-                chunk = s;
+                chunk = sentence;
               } else {
-                chunk += s;
+                chunk += sentence;
               }
-            });
-            if (chunk) {
-              segments.push(chunk.trim());
-              segmentRanges.push({ start: chunkStart, end: chunkStart + chunk.length, text: chunk.trim() });
+            }
+
+            if (chunk.trim()) {
+              const chunkTrim = chunk.trim();
+              const chunkStart = text.indexOf(chunkTrim, chunkSearch);
+              if (chunkStart !== -1) {
+                segments.push(chunkTrim);
+                segmentRanges.push({
+                  start: chunkStart,
+                  end: chunkStart + chunkTrim.length,
+                  text: chunkTrim
+                });
+              }
             }
           } else {
-            segments.push(para.trim());
-            segmentRanges.push({ start: paraStart, end: paraStart + para.length, text: para.trim() });
+            segments.push(trimmed);
+            segmentRanges.push({
+              start: paraStart,
+              end: paraStart + trimmed.length,
+              text: trimmed
+            });
           }
-          
-          currentPos = paraStart + para.length;
-        });
-        
-        return segments.filter(s => s.length > 0);
+
+          searchFrom = paraStart + trimmed.length;
+        }
+
+        return segments.filter((s) => s.length > 0);
       }
 
-      function findHighlightRange(index) {
-        const item = speechPlayQueue[index];
-        if (!item) return null;
+      function escapeHighlightHtml(text) {
+        return String(text || '')
+          .replace(/&/g, '&amp;')
+          .replace(/</g, '&lt;')
+          .replace(/>/g, '&gt;')
+          .replace(/\n/g, '<br>');
+      }
 
+      function getHighlightSearchText(item) {
+        if (!item) return '';
+        if (item.sourceSegmentIndex != null && speechHighlightSegments[item.sourceSegmentIndex]) {
+          return speechHighlightSegments[item.sourceSegmentIndex];
+        }
+        return item.sourceText || item.highlightText || '';
+      }
+
+      function getHighlightRangeForQueueIndex(queueIndex) {
+        const item = speechPlayQueue[queueIndex];
         const fullText = latestStory || '';
-        if (!fullText) return null;
+        if (!item || !fullText) return null;
 
-        if (Number.isInteger(item.highlightStart) && item.highlightEnd != null) {
+        if (Number.isInteger(item.highlightStart) && item.highlightEnd > item.highlightStart) {
           const text = fullText.substring(item.highlightStart, item.highlightEnd);
           if (text) {
             return { start: item.highlightStart, end: item.highlightEnd, text };
           }
         }
 
-        const segmentText = item.sourceText || item.highlightText || item.text;
+        if (item.sourceSegmentIndex != null && speechHighlightRanges[item.sourceSegmentIndex]) {
+          const r = speechHighlightRanges[item.sourceSegmentIndex];
+          return { start: r.start, end: r.end, text: r.text };
+        }
+
+        const segmentText = getHighlightSearchText(item);
         if (!segmentText) return null;
 
         let searchStart = 0;
-        for (let i = 0; i < index; i++) {
-          const prev = speechPlayQueue[i];
-          if (
-            Number.isInteger(prev.highlightStart) &&
-            prev.highlightStart === item.highlightStart &&
-            prev.highlightEnd === item.highlightEnd
-          ) {
-            continue;
-          }
-          const prevText = prev.sourceText || prev.highlightText || prev.text;
+        for (let i = 0; i < queueIndex; i++) {
+          const prevText = getHighlightSearchText(speechPlayQueue[i]);
           if (!prevText) continue;
           const foundPos = fullText.indexOf(prevText, searchStart);
-          if (foundPos !== -1) {
-            searchStart = foundPos + prevText.length;
-          }
+          if (foundPos !== -1) searchStart = foundPos + prevText.length;
         }
 
         const segmentStart = fullText.indexOf(segmentText, searchStart);
@@ -6124,60 +6152,56 @@ ${truncatedNotice}${storyContext}${settingsReminder}
         };
       }
 
-      // 高亮目前朗讀的段落
+      // 高亮目前朗讀的段落（沿用 Edge 改版前 innerHTML 方式，直排可用）
       function highlightCurrentSegment(index) {
-        // 移除舊的高亮
         clearHighlight();
-        
+
         if (!highlightCheck || !highlightCheck.checked) return;
         if (index < 0 || index >= speechPlayQueue.length) return;
 
-        const range = findHighlightRange(index);
+        const range = getHighlightRangeForQueueIndex(index);
         if (!range) return;
 
         const fullText = latestStory || '';
-        const beforeText = fullText.substring(0, range.start);
-        const afterText = fullText.substring(range.end);
-        
-        const escapeForHighlight = (text) => {
-          return text.replace(/&/g, '&amp;')
-                     .replace(/</g, '&lt;')
-                     .replace(/>/g, '&gt;')
-                     .replace(/\n/g, '<br>');
-        };
-        
-        resultDiv.innerHTML = escapeForHighlight(beforeText) + 
-          '<span class="speaking-segment" id="currentSpeakingSegment">' + escapeForHighlight(range.text) + '</span>' + 
-          escapeForHighlight(afterText);
-        
-        // 自動捲動到高亮的段落
+        resultDiv.innerHTML =
+          escapeHighlightHtml(fullText.substring(0, range.start)) +
+          '<span class="speaking-segment" id="currentSpeakingSegment">' + escapeHighlightHtml(range.text) + '</span>' +
+          escapeHighlightHtml(fullText.substring(range.end));
+
+        if (isVerticalWriting()) syncVerticalLayout();
+
         if (autoScrollCheck && autoScrollCheck.checked) {
-          // 使用 setTimeout 確保 DOM 已更新
           setTimeout(() => {
             const highlightedEl = document.getElementById('currentSpeakingSegment');
-            if (highlightedEl) {
-              // 計算元素位置並捲動
+            if (!highlightedEl) return;
+
+            if (isVerticalWriting()) {
+              const scroller = getVerticalScroller();
+              if (!scroller) return;
               const rect = highlightedEl.getBoundingClientRect();
-              const viewportHeight = window.innerHeight;
-              
-              // 如果元素不在可視範圍內，才捲動
-              if (rect.top < 100 || rect.bottom > viewportHeight - 100) {
-                highlightedEl.scrollIntoView({ 
-                  behavior: 'smooth', 
-                  block: 'center' 
-                });
+              const viewRect = scroller.getBoundingClientRect();
+              if (rect.right > viewRect.right - 80) {
+                scroller.scrollLeft += rect.right - viewRect.right + 80;
+              } else if (rect.left < viewRect.left + 80) {
+                scroller.scrollLeft -= viewRect.left + 80 - rect.left;
               }
+              return;
+            }
+
+            const rect = highlightedEl.getBoundingClientRect();
+            const viewportHeight = window.innerHeight;
+            if (rect.top < 100 || rect.bottom > viewportHeight - 100) {
+              highlightedEl.scrollIntoView({ behavior: 'smooth', block: 'center' });
             }
           }, 50);
         }
       }
-      
-      // 清除高亮
+
       function clearHighlight() {
         const highlightedEl = document.getElementById('currentSpeakingSegment');
         if (highlightedEl || resultDiv.innerHTML.includes('speaking-segment')) {
-          // 恢復純文字
           resultDiv.textContent = latestStory || '';
+          if (isVerticalWriting()) syncVerticalLayout();
         }
       }
       
@@ -6211,7 +6235,7 @@ ${truncatedNotice}${storyContext}${settingsReminder}
         highlightCurrentSegment(index);
 
         const queueItem = speechPlayQueue[index] || {};
-        const rawText = queueItem.text || speechSegments[index];
+        const rawText = queueItem.text || '';
         const params = speechPlayQueue.length
           ? { rate: queueItem.rate, pitch: queueItem.pitch, style: queueItem.style, pause: queueItem.pause || 300 }
           : analyzeEmotion(rawText);
@@ -6289,7 +6313,7 @@ ${truncatedNotice}${storyContext}${settingsReminder}
 
       // 更新段落範圍輸入的最大值
       function updateSegmentInputs() {
-        const text = resultDiv.textContent || latestStory || '';
+        const text = latestStory || resultDiv.textContent || '';
         const segments = splitTextToSegments(text);
         const total = segments.length;
         
@@ -6342,7 +6366,7 @@ ${truncatedNotice}${storyContext}${settingsReminder}
           return;
         }
 
-        const text = resultDiv.textContent || latestStory;
+        const text = latestStory || resultDiv.textContent || '';
         const allSegments = splitTextToSegments(text);
 
         if (allSegments.length === 0) {
@@ -6421,9 +6445,12 @@ ${truncatedNotice}${storyContext}${settingsReminder}
           return;
         }
 
+        speechHighlightSegments = allSegments.slice(startIdx, endIdx);
+        speechHighlightRanges = segmentRanges.slice(startIdx, endIdx);
+
         speechPlayQueue = queue.map((item) => {
           if (item.sourceSegmentIndex != null) {
-            const range = segmentRanges[startIdx + item.sourceSegmentIndex];
+            const range = speechHighlightRanges[item.sourceSegmentIndex];
             if (range) {
               return {
                 ...item,
@@ -6435,7 +6462,7 @@ ${truncatedNotice}${storyContext}${settingsReminder}
           }
           return { ...item };
         });
-        speechSegments = speechPlayQueue.map((q) => q.text);
+        speechSegments = speechHighlightSegments;
 
         let startIndex = 0;
         const savedProgress = loadSpeechProgress();

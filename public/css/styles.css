@@ -3025,6 +3025,16 @@
         border-radius: 0 8px 8px 0;
         position: relative;
         animation: pulse-highlight 2s ease-in-out infinite;
+        box-decoration-break: clone;
+        -webkit-box-decoration-break: clone;
+      }
+
+      .output-wrap.vertical-scroll .vertical-viewport > .output .speaking-segment {
+        border-left: none;
+        border-top: 4px solid var(--accent);
+        margin: -8px -8px;
+        padding: 8px 12px;
+        border-radius: 8px 8px 0 0;
       }
       
       @keyframes pulse-highlight {
@@ -3039,6 +3049,12 @@
         top: 50%;
         transform: translateY(-50%);
         font-size: 1rem;
+      }
+
+      .output-wrap.vertical-scroll .vertical-viewport > .output .speaking-segment::before {
+        left: 50%;
+        top: -28px;
+        transform: translateX(-50%);
       }
       
       /* 輸出區域需要 relative 定位 */
