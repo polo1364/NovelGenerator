@@ -4602,6 +4602,7 @@
         display: flex;
         align-items: center;
         justify-content: center;
+        background: linear-gradient(90deg, var(--c1, #555) 0%, var(--c2, #333) 100%);
         box-shadow:
           inset -3px 0 6px rgba(0,0,0,0.35),
           inset 3px 0 4px rgba(255,255,255,0.18),
@@ -4609,6 +4610,94 @@
         transition: transform 0.18s ease, box-shadow 0.18s ease;
         overflow: hidden;
       }
+
+      /* ===== 書本粗細變化 ===== */
+      .book-spine.bk-w-thin { width: 42px; }
+      .book-spine.bk-w-std { width: 52px; }
+      .book-spine.bk-w-thick { width: 64px; }
+
+      /* ===== 書本造型（裝幀）變化 ===== */
+      /* 皮革精裝：皮面明暗 + 上下燙金壓線（書脊綁帶），燙金書名 */
+      .book-spine.bk-leather {
+        background:
+          linear-gradient(90deg, rgba(0,0,0,0.22), transparent 16%, transparent 84%, rgba(0,0,0,0.30)),
+          linear-gradient(90deg, var(--c1) 0%, var(--c2) 100%);
+        box-shadow:
+          inset 0 0 0 1px rgba(0,0,0,0.25),
+          inset -3px 0 6px rgba(0,0,0,0.4),
+          2px 6px 12px rgba(0,0,0,0.45);
+      }
+      .book-spine.bk-leather::after {
+        content: '';
+        position: absolute;
+        inset: 0;
+        pointer-events: none;
+        background: linear-gradient(to bottom,
+          transparent 24px, rgba(0,0,0,0.4) 24px 28px, rgba(212,175,55,0.55) 28px 29px, transparent 29px,
+          transparent 130px, rgba(0,0,0,0.4) 130px 134px, rgba(212,175,55,0.55) 134px 135px, transparent 135px);
+      }
+      .book-spine.bk-leather .book-spine-title { color: #f3e3c8; }
+
+      /* 布面貼標：布紋底 + 中央米色書名標籤 */
+      .book-spine.bk-cloth {
+        background:
+          linear-gradient(90deg, rgba(255,255,255,0.06), rgba(0,0,0,0.10)),
+          linear-gradient(90deg, var(--c1) 0%, var(--c2) 100%);
+      }
+      .book-spine.bk-cloth .book-spine-title {
+        background: rgba(245,238,222,0.94);
+        color: #3a2c1a;
+        padding: 12px 5px;
+        border-radius: 3px;
+        box-shadow: inset 0 0 0 1px rgba(0,0,0,0.18);
+        text-shadow: none;
+        max-height: 116px;
+      }
+
+      /* 雙色條紋：上下深色頁眉/頁腳帶 + 燙金細線 */
+      .book-spine.bk-stripe::after {
+        content: '';
+        position: absolute;
+        inset: 0;
+        pointer-events: none;
+        background: linear-gradient(to bottom,
+          rgba(0,0,0,0.32) 0 20px,
+          rgba(212,175,55,0.5) 20px 21px,
+          transparent 21px,
+          transparent calc(100% - 21px),
+          rgba(212,175,55,0.5) calc(100% - 21px) calc(100% - 20px),
+          rgba(0,0,0,0.32) calc(100% - 20px));
+      }
+
+      /* 現代簡約：平塗單色 + 頂部白色細橫線，無內側高光 */
+      .book-spine.bk-modern {
+        background: linear-gradient(90deg, var(--c1) 0%, var(--c1) 100%);
+        box-shadow:
+          inset -2px 0 5px rgba(0,0,0,0.3),
+          2px 6px 12px rgba(0,0,0,0.4);
+      }
+      .book-spine.bk-modern::before {
+        left: 8px;
+        right: 8px;
+        top: 16px;
+        bottom: auto;
+        width: auto;
+        height: 2px;
+        background: rgba(255,255,255,0.65);
+      }
+      .book-spine.bk-modern::after { display: none; }
+
+      /* 復古燙金框：書脊內側金色雙線外框 */
+      .book-spine.bk-vintage::after {
+        content: '';
+        position: absolute;
+        inset: 7px 6px;
+        pointer-events: none;
+        border: 1px solid rgba(212,175,55,0.7);
+        border-radius: 2px;
+        box-shadow: inset 0 0 0 3px rgba(0,0,0,0.12), inset 0 0 0 4px rgba(212,175,55,0.35);
+      }
+      .book-spine.bk-vintage .book-spine-title { color: #f4e4c1; }
 
       .book-spine::before {
         content: '';

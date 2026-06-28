@@ -5180,11 +5180,37 @@ ${truncatedNotice}${storyContext}${settingsReminder}
         ['#6d214f', '#4f1638'], ['#3d5a4c', '#2a4035'], ['#925e26', '#6e451a']
       ];
 
-      function shelfColor(id) {
+      function shelfHash(id) {
         let h = 0;
         const s = String(id);
         for (let i = 0; i < s.length; i++) h = (h * 131 + s.charCodeAt(i)) >>> 0;
-        return SHELF_COLORS[h % SHELF_COLORS.length];
+        return h;
+      }
+
+      function shelfColor(id) {
+        return SHELF_COLORS[shelfHash(id) % SHELF_COLORS.length];
+      }
+
+      // 書本造型（裝幀）與粗細，依 ID 穩定分配，讓書櫃有多種類書本
+      const SHELF_STYLE_CLASSES = ['bk-classic', 'bk-leather', 'bk-cloth', 'bk-stripe', 'bk-modern', 'bk-vintage'];
+      // 粗細權重：一般較多，偶爾薄/厚，模擬真實書架
+      const SHELF_WIDTH_CLASSES = ['bk-w-thin', 'bk-w-std', 'bk-w-std', 'bk-w-std', 'bk-w-thick'];
+
+      function shelfVariant(id) {
+        const h = shelfHash(id);
+        return {
+          style: SHELF_STYLE_CLASSES[h % SHELF_STYLE_CLASSES.length],
+          width: SHELF_WIDTH_CLASSES[Math.floor(h / 7) % SHELF_WIDTH_CLASSES.length]
+        };
+      }
+
+      function shelfColorIndex(id) { return shelfHash(id) % SHELF_COLORS.length; }
+      function shelfStyleIndex(id) { return shelfHash(id) % SHELF_STYLE_CLASSES.length; }
+
+      // 套用書本配色（CSS 變數）讓各造型可在其上疊加裝飾
+      function applyShelfColors(el, c1, c2) {
+        el.style.setProperty('--c1', c1);
+        el.style.setProperty('--c2', c2);
       }
 
       // 從書籤抽出乾淨的「書名」
@@ -5251,10 +5277,14 @@ ${truncatedNotice}${storyContext}${settingsReminder}
             (b.tags && b.tags.some(t => t.toLowerCase().includes(term)))
           );
         }
+        // 以顯示書名（字首）排序，繁中依筆畫／注音；同組時用書名當次序
+        const byName = (a, b) => getBookName(a).localeCompare(getBookName(b), 'zh-Hant');
         switch (sortBy) {
           case 'oldest': books.sort((a, b) => a.id - b.id); break;
-          case 'name': books.sort((a, b) => (a.title || '').localeCompare(b.title || '')); break;
+          case 'name': books.sort(byName); break;
           case 'length': books.sort((a, b) => (b.content?.length || 0) - (a.content?.length || 0)); break;
+          case 'color': books.sort((a, b) => shelfColorIndex(a.id) - shelfColorIndex(b.id) || byName(a, b)); break;
+          case 'style': books.sort((a, b) => shelfStyleIndex(a.id) - shelfStyleIndex(b.id) || byName(a, b)); break;
           default: books.sort((a, b) => b.id - a.id);
         }
         return books;
@@ -5275,9 +5305,10 @@ ${truncatedNotice}${storyContext}${settingsReminder}
         body.style.display = 'flex';
         books.forEach(bm => {
           const [c1, c2] = shelfColor(bm.id);
+          const { style, width } = shelfVariant(bm.id);
           const div = document.createElement('div');
-          div.className = 'book-spine';
-          div.style.background = `linear-gradient(90deg, ${c1} 0%, ${c2} 100%)`;
+          div.className = `book-spine ${style} ${width}`;
+          applyShelfColors(div, c1, c2);
           const name = getBookName(bm);
           div.innerHTML = `<span class="book-spine-title">${escapeHtml(name.substring(0, 14))}</span>`;
           div.title = name;
@@ -5289,6 +5320,12 @@ ${truncatedNotice}${storyContext}${settingsReminder}
       function openBookshelf() {
         const modal = document.getElementById('bookshelfModal');
         if (!modal) return;
+        // 還原上次選用的排列方式
+        const sortEl = document.getElementById('bookshelfSort');
+        if (sortEl) {
+          const saved = localStorage.getItem('bookshelfSort');
+          if (saved && [...sortEl.options].some(o => o.value === saved)) sortEl.value = saved;
+        }
         renderBookshelf();
         modal.classList.add('open');
       }
@@ -5325,7 +5362,10 @@ ${truncatedNotice}${storyContext}${settingsReminder}
       // 書櫃事件接線
       document.getElementById('bookshelfCloseBtn').addEventListener('click', closeBookshelf);
       document.getElementById('bookshelfSearch').addEventListener('input', renderBookshelf);
-      document.getElementById('bookshelfSort').addEventListener('change', renderBookshelf);
+      document.getElementById('bookshelfSort').addEventListener('change', (e) => {
+        try { localStorage.setItem('bookshelfSort', e.target.value); } catch (err) {}
+        renderBookshelf();
+      });
       document.getElementById('bookshelfSaveBtn').addEventListener('click', () => addBookmarkBtn.click());
       document.getElementById('bookshelfExportBtn').addEventListener('click', () => exportBookmarksBtn.click());
       document.getElementById('bookshelfImportBtn').addEventListener('click', () => importBookmarksBtn.click());
