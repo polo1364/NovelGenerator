@@ -17,8 +17,14 @@ const DEEPSEEK_URL = process.env.DEEPSEEK_URL || 'https://api.deepseek.com/chat/
 // 故事 prompt 可能很長，放寬 JSON body 上限
 app.use(express.json({ limit: '8mb' }));
 
-// 提供前端靜態檔
-app.use(express.static(path.join(__dirname, 'public')));
+// 提供前端靜態檔（HTML/JS/CSS 不快取，確保 PWA 能取得最新版）
+app.use(express.static(path.join(__dirname, 'public'), {
+  setHeaders(res, filePath) {
+    if (/\.(html|js|css|webmanifest)$/.test(filePath)) {
+      res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
+    }
+  },
+}));
 
 /**
  * DeepSeek 代理端點

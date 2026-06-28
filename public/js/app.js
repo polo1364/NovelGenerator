@@ -55,12 +55,55 @@
         setTimeout(updateOnlineStatus, 500);
       }
 
-      // ==================== PWA：註冊 Service Worker ====================
+      // ==================== PWA：註冊 Service Worker + 自動更新 ====================
       if ('serviceWorker' in navigator) {
-        window.addEventListener('load', () => {
-          navigator.serviceWorker.register('sw.js').catch((err) => {
-            console.warn('Service Worker 註冊失敗：', err);
+        let swRefreshing = false;
+
+        navigator.serviceWorker.addEventListener('controllerchange', () => {
+          if (swRefreshing) return;
+          swRefreshing = true;
+          window.location.reload();
+        });
+
+        function promptSwUpdate(reg) {
+          const waiting = reg.waiting;
+          if (!waiting || !navigator.serviceWorker.controller) return;
+          // 已有新版在等候 → 通知 SW 立即啟用，controllerchange 會觸發 reload
+          if (typeof showStatus === 'function') {
+            showStatus('loading', '🔄 發現新版本，正在更新…');
+          }
+          waiting.postMessage({ type: 'SKIP_WAITING' });
+        }
+
+        function watchSwUpdate(reg) {
+          reg.addEventListener('updatefound', () => {
+            const nw = reg.installing;
+            if (!nw) return;
+            nw.addEventListener('statechange', () => {
+              if (nw.state === 'installed') promptSwUpdate(reg);
+            });
           });
+        }
+
+        async function checkSwUpdate() {
+          try {
+            const reg = await navigator.serviceWorker.getRegistration();
+            if (reg) await reg.update();
+          } catch (e) { /* 離線時略過 */ }
+        }
+
+        window.addEventListener('load', () => {
+          navigator.serviceWorker.register('sw.js')
+            .then((reg) => {
+              watchSwUpdate(reg);
+              if (reg.waiting) promptSwUpdate(reg);
+              // 每次開啟 / 回到前景時檢查更新（PWA 從主畫面開啟也會觸發）
+              checkSwUpdate();
+              document.addEventListener('visibilitychange', () => {
+                if (document.visibilityState === 'visible') checkSwUpdate();
+              });
+            })
+            .catch((err) => console.warn('Service Worker 註冊失敗：', err));
         });
       }
 
