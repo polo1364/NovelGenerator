@@ -121,21 +121,192 @@
       const continueBtn = document.getElementById('continueBtn');
       const statusDiv = document.getElementById('status');
       const resultDiv = document.getElementById('result');
+      const outputWrap = document.getElementById('outputWrap');
+      const verticalViewport = document.getElementById('verticalViewport');
 
-      // 生成時自動跟隨：若使用者目前停在頁面底部，更新內容後就捲到底；
-      // 若使用者往上捲看前文，則不強制移動（捲回底部會自動恢復跟隨）。
+      const VERTICAL_BLOCK_HEIGHT = () => Math.min(window.innerHeight * 0.72, 680);
+
+      function getContentScroller() {
+        return verticalViewport || outputWrap;
+      }
+
+      // 生成時自動跟隨最新段落：橫排往下捲、直排往左捲（右→左書寫）
+      function isVerticalWriting() {
+        return Boolean(outputWrap && outputWrap.classList.contains('vertical-scroll'));
+      }
+      function getVerticalScroller() {
+        return verticalViewport || outputWrap;
+      }
+      function getVerticalScrollMax() {
+        const scroller = getVerticalScroller();
+        if (!scroller) return 0;
+        return Math.max(0, scroller.scrollWidth - scroller.clientWidth);
+      }
+      function syncVerticalLayout() {
+        if (!isVerticalWriting() || !resultDiv || !verticalViewport) return;
+        const blockHeight = VERTICAL_BLOCK_HEIGHT();
+        resultDiv.style.height = blockHeight + 'px';
+        resultDiv.style.width = 'max-content';
+        resultDiv.style.display = 'inline-block';
+        void resultDiv.offsetWidth;
+        const contentWidth = resultDiv.scrollWidth;
+        const minWidth = Math.max(contentWidth, verticalViewport.clientWidth);
+        resultDiv.style.minWidth = minWidth + 'px';
+      }
       function isNearPageBottom(threshold = 140) {
         const scrollPos = window.innerHeight + window.scrollY;
         const docHeight = document.documentElement.scrollHeight;
         return scrollPos >= docHeight - threshold;
       }
-      function setResultStreaming(text) {
-        const stick = isNearPageBottom();
-        resultDiv.textContent = text;
-        if (stick) {
+      let verticalScrollToStartPending = false;
+      let verticalStartResizeObserver = null;
+
+      function isNearOutputEnd(threshold = 140) {
+        if (isVerticalWriting()) {
+          return getVerticalScroller().scrollLeft <= threshold;
+        }
+        if (!outputWrap) return isNearPageBottom(threshold);
+        if (outputWrap.classList.contains('horizontal-scroll')) {
+          const scroller = getContentScroller();
+          const scrollPos = scroller.scrollTop + scroller.clientHeight;
+          return scrollPos >= scroller.scrollHeight - threshold;
+        }
+        return isNearPageBottom(threshold);
+      }
+      function alignVerticalScrollToStart() {
+        const scroller = getVerticalScroller();
+        if (!scroller || !resultDiv) return false;
+        syncVerticalLayout();
+        const max = getVerticalScrollMax();
+        if (max > 0) {
+          scroller.scrollLeft = max;
+          return true;
+        }
+        const textNode = resultDiv.firstChild;
+        if (textNode && textNode.nodeType === Node.TEXT_NODE && textNode.length > 0) {
+          const range = document.createRange();
+          range.setStart(textNode, 0);
+          range.setEnd(textNode, Math.min(1, textNode.length));
+          const startRect = range.getBoundingClientRect();
+          const viewRect = scroller.getBoundingClientRect();
+          if (startRect.width > 0 || startRect.height > 0) {
+            scroller.scrollLeft += startRect.right - viewRect.right;
+            return true;
+          }
+        }
+        return false;
+      }
+      function unbindVerticalStartScrollObserver() {
+        if (verticalStartResizeObserver) {
+          verticalStartResizeObserver.disconnect();
+          verticalStartResizeObserver = null;
+        }
+      }
+      function scrollVerticalToStart(useRetry = true) {
+        if (!isVerticalWriting()) return;
+        verticalScrollToStartPending = true;
+        unbindVerticalStartScrollObserver();
+        if (alignVerticalScrollToStart()) {
+          verticalScrollToStartPending = false;
+          return;
+        }
+        if (!useRetry || !resultDiv) {
+          verticalScrollToStartPending = false;
+          return;
+        }
+        let attempts = 0;
+        const tick = () => {
+          if (!verticalScrollToStartPending || attempts >= 20) {
+            verticalScrollToStartPending = false;
+            return;
+          }
+          attempts += 1;
+          if (alignVerticalScrollToStart()) {
+            verticalScrollToStartPending = false;
+            return;
+          }
+          requestAnimationFrame(tick);
+        };
+        requestAnimationFrame(tick);
+        verticalStartResizeObserver = new ResizeObserver(() => {
+          if (!verticalScrollToStartPending || document.body.classList.contains('is-generating')) return;
+          if (alignVerticalScrollToStart()) {
+            verticalScrollToStartPending = false;
+            unbindVerticalStartScrollObserver();
+          }
+        });
+        verticalStartResizeObserver.observe(resultDiv);
+      }
+      function scrollOutputToEnd() {
+        if (isVerticalWriting()) {
+          getVerticalScroller().scrollLeft = 0;
+          return;
+        }
+        if (!outputWrap) {
+          window.scrollTo({ top: document.documentElement.scrollHeight });
+          return;
+        }
+        if (outputWrap.classList.contains('horizontal-scroll')) {
+          getContentScroller().scrollTop = getContentScroller().scrollHeight;
+        } else {
           window.scrollTo({ top: document.documentElement.scrollHeight });
         }
       }
+      function scrollOutputHorizontal(delta) {
+        if (!isVerticalWriting()) return;
+        const scroller = getVerticalScroller();
+        const maxScroll = getVerticalScrollMax();
+        scroller.scrollLeft = Math.max(0, Math.min(maxScroll, scroller.scrollLeft + delta));
+      }
+      function handleVerticalScrollWheel(e) {
+        if (!isVerticalWriting() || !verticalViewport) return;
+        const rect = verticalViewport.getBoundingClientRect();
+        if (e.clientX < rect.left || e.clientX > rect.right || e.clientY < rect.top || e.clientY > rect.bottom) {
+          return;
+        }
+        // 滾輪往下（deltaY > 0）→ 文字區往右滑
+        const delta = Math.abs(e.deltaX) > Math.abs(e.deltaY) ? e.deltaX : e.deltaY;
+        if (!delta) return;
+        e.preventDefault();
+        e.stopPropagation();
+        scrollOutputHorizontal(-delta);
+      }
+      function setResultStreaming(text) {
+        const generating = document.body.classList.contains('is-generating');
+        const stick = generating || isNearOutputEnd();
+        resultDiv.textContent = text;
+        if (isVerticalWriting()) syncVerticalLayout();
+        if (stick) {
+          requestAnimationFrame(() => scrollOutputToEnd());
+        }
+      }
+
+      // 直排：只在文字區攔截滾輪，往下＝往右滑
+      if (verticalViewport) {
+        verticalViewport.addEventListener('wheel', handleVerticalScrollWheel, { passive: false });
+      }
+      if (resultDiv) {
+        resultDiv.addEventListener('wheel', handleVerticalScrollWheel, { passive: false });
+      }
+      window.addEventListener('resize', () => {
+        if (isVerticalWriting()) syncVerticalLayout();
+      });
+      if (resultDiv) {
+        new MutationObserver(() => {
+          if (!isVerticalWriting()) return;
+          syncVerticalLayout();
+          if (verticalScrollToStartPending) alignVerticalScrollToStart();
+        }).observe(resultDiv, { childList: true, characterData: true, subtree: true });
+      }
+      window.addEventListener('load', () => {
+        if (!isVerticalWriting()) return;
+        const run = () => scrollVerticalToStart(true);
+        if (document.fonts && document.fonts.ready) {
+          document.fonts.ready.then(run).catch(run);
+        } else {
+          run();
+        }
+      });
 
       const charactersContainer = document.getElementById('charactersContainer');
       const characterTabs = document.getElementById('characterTabs');
@@ -6808,6 +6979,38 @@ ${truncatedNotice}${storyContext}${settingsReminder}
         setFontSize(fontSizeSlider.value);
       });
 
+      // ==================== 排版方向（橫排 / 直排）====================
+      const horizontalWritingBtn = document.getElementById('horizontalWritingBtn');
+      const verticalWritingBtn = document.getElementById('verticalWritingBtn');
+
+      function setWritingMode(mode) {
+        const vertical = mode === 'vertical';
+        resultDiv.classList.toggle('vertical-writing', vertical);
+        if (outputWrap) {
+          outputWrap.classList.toggle('vertical-scroll', vertical);
+          outputWrap.classList.toggle('horizontal-scroll', !vertical);
+        }
+        if (horizontalWritingBtn) horizontalWritingBtn.classList.toggle('active', !vertical);
+        if (verticalWritingBtn) verticalWritingBtn.classList.toggle('active', vertical);
+        try { localStorage.setItem('writingMode', mode); } catch (e) {}
+        if (vertical) {
+          scrollVerticalToStart(true);
+        } else if (resultDiv) {
+          verticalScrollToStartPending = false;
+          unbindVerticalStartScrollObserver();
+          resultDiv.style.height = '';
+          resultDiv.style.width = '';
+          resultDiv.style.minWidth = '';
+          resultDiv.style.display = '';
+        }
+      }
+
+      if (horizontalWritingBtn && verticalWritingBtn) {
+        horizontalWritingBtn.addEventListener('click', () => setWritingMode('horizontal'));
+        verticalWritingBtn.addEventListener('click', () => setWritingMode('vertical'));
+        setWritingMode(localStorage.getItem('writingMode') || 'horizontal');
+      }
+
       // ==================== 章節計算（全域統一）====================
       // 只計算「行首」的章節標題（可含 # 標記），避免內文提到「第N章」被誤算，
       // 讓自動生成、繼續生成與結果面板的章節數一致。
@@ -8081,37 +8284,6 @@ ${truncatedNotice}${storyContext}${settingsReminder}
         });
       }
 
-      // ==================== 鍵盤快捷鍵 ====================
-      document.addEventListener('keydown', (e) => {
-        // Ctrl + G: 開始生成
-        if (e.ctrlKey && e.key.toLowerCase() === 'g') {
-          e.preventDefault();
-          if (!generateBtn.disabled && isOnline) {
-            generateBtn.click();
-          }
-        }
-        
-        // Ctrl + R: 隨機填充（避免與瀏覽器刷新衝突，改用 Shift）
-        if (e.ctrlKey && e.shiftKey && e.key.toLowerCase() === 'r') {
-          e.preventDefault();
-          randomBtn.click();
-        }
-        
-        // Ctrl + S: 儲存書籤
-        if (e.ctrlKey && e.key.toLowerCase() === 's') {
-          e.preventDefault();
-          if (latestStory) {
-            addBookmarkBtn.click();
-          }
-        }
-        
-        // Ctrl + D: 切換深色模式
-        if (e.ctrlKey && e.key.toLowerCase() === 'd') {
-          e.preventDefault();
-          const currentTheme = document.documentElement.getAttribute('data-theme') || 'light';
-          setTheme(currentTheme === 'light' ? 'dark' : 'light');
-        }
-      });
 
       // ==================== 生成進度追蹤 ====================
       let generationStartTime = null;
@@ -9472,5 +9644,4 @@ ${chapterListTemplate}
       updateStepper();
 
       console.log('🎨 AI 小說工坊已載入完成！');
-      console.log('💡 快捷鍵：Ctrl+G 生成 | Ctrl+Shift+R 隨機 | Ctrl+S 儲存 | Ctrl+D 切換主題');
       console.log('💡 新功能：流程列、右側工具收合、AI 人物設計');

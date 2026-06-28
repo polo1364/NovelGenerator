@@ -454,6 +454,7 @@
 
         <!-- ==================== 閱讀區：圖書館 / 咖啡廳 ==================== -->
         <div class="reading-scene" id="readingScene" data-ambiance="library">
+          <div class="reading-scene-bg" aria-hidden="true"></div>
           <div class="ambiance-toggle">
             <span class="ambiance-label">閱讀氛圍</span>
             <button type="button" class="ambiance-btn active" data-ambiance="library">📚 圖書館</button>
@@ -477,7 +478,11 @@
             </div>
           </div>
         </div>
-        <div id="result" class="output"></div>
+        <div class="output-wrap" id="outputWrap">
+          <div class="vertical-viewport" id="verticalViewport">
+            <div id="result" class="output"></div>
+          </div>
+        </div>
         </div>
         <!-- ==================== 閱讀區結束 ==================== -->
       </div>
@@ -711,33 +716,45 @@
         <div id="settingsDropdown" class="settings-dropdown">
           <div class="settings-header">
             <span class="settings-title">⚙️ 顯示設定</span>
-            <button id="settingsClose" class="settings-close">✕</button>
+            <button id="settingsClose" class="settings-close" type="button" aria-label="關閉">✕</button>
           </div>
-          
-          <!-- 主題切換 -->
-          <div class="settings-item">
-            <label>🎨 主題模式</label>
-            <div class="theme-toggle">
-              <button id="lightThemeBtn" class="active" data-theme="light">☀️ 淺色</button>
-              <button id="darkThemeBtn" data-theme="dark">🌙 深色</button>
+
+          <section class="settings-section" aria-label="閱讀外觀">
+            <h3 class="settings-section-title">閱讀外觀</h3>
+
+            <div class="settings-item settings-item--inline">
+              <label for="lightThemeBtn">🎨 主題</label>
+              <div class="theme-toggle theme-toggle--full">
+                <button id="lightThemeBtn" type="button" class="active" data-theme="light">☀️ 淺色</button>
+                <button id="darkThemeBtn" type="button" data-theme="dark">🌙 深色</button>
+              </div>
             </div>
-          </div>
-          
-          <!-- 字體大小 -->
-          <div class="settings-item">
-            <label>📝 閱讀字體大小</label>
-            <div class="font-size-control">
-              <span style="font-size: 0.8rem;">A</span>
-              <input type="range" id="fontSizeSlider" min="14" max="24" value="18" step="1" />
-              <span style="font-size: 1.2rem;">A</span>
-              <span id="fontSizeValue" class="font-size-value">18px</span>
+
+            <div class="settings-item">
+              <label for="fontSizeSlider">📝 字體大小</label>
+              <div class="font-size-control">
+                <span class="font-size-icon font-size-icon--sm" aria-hidden="true">A</span>
+                <input type="range" id="fontSizeSlider" min="14" max="24" value="18" step="1" />
+                <span class="font-size-icon font-size-icon--lg" aria-hidden="true">A</span>
+                <span id="fontSizeValue" class="font-size-value">18px</span>
+              </div>
             </div>
-          </div>
-          
-          <!-- 快速模板 -->
-          <div class="settings-item">
-            <label>📚 快速模板</label>
-            <select id="quickTemplateSelect" class="template-select">
+
+            <div class="settings-item settings-item--inline">
+              <label for="horizontalWritingBtn">📜 排版</label>
+              <div class="theme-toggle theme-toggle--full">
+                <button type="button" id="horizontalWritingBtn" class="active">↔️ 橫排</button>
+                <button type="button" id="verticalWritingBtn">📜 直排</button>
+              </div>
+              <p class="settings-hint">橫排自動往下捲；直排時在文字區滾輪往下＝往右滑</p>
+            </div>
+          </section>
+
+          <section class="settings-section settings-section--templates" aria-label="快速模板">
+            <h3 class="settings-section-title">快速模板</h3>
+            <div class="settings-item settings-item--flush">
+              <label for="quickTemplateSelect" class="visually-hidden">選擇模板</label>
+              <select id="quickTemplateSelect" class="template-select">
               <option value="">── 請選擇模板 ──</option>
               <optgroup label="🐉 玄幻仙俠">
                 <option value="fantasy">⚔️ 玄幻修仙 - 升級打怪逆襲</option>
@@ -852,17 +869,7 @@
                 🧹 清除當前模組
               </button>
             </div>
-          </div>
-          
-          <!-- 快捷鍵提示 -->
-          <div class="shortcuts-hint">
-            <strong>快捷鍵：</strong><br>
-            <kbd>Ctrl</kbd>+<kbd>G</kbd> 開始生成<br>
-            <kbd>Ctrl</kbd>+<kbd>R</kbd> 隨機填充<br>
-            <kbd>Ctrl</kbd>+<kbd>S</kbd> 儲存書籤<br>
-            <kbd>Ctrl</kbd>+<kbd>D</kbd> 切換深色模式<br>
-            <kbd>Esc</kbd> 關閉彈窗
-          </div>
+          </section>
         </div>
       </div>
 

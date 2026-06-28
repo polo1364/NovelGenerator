@@ -1237,6 +1237,82 @@
       }
 
       /* 輸出區 */
+      .output-wrap {
+        margin-top: 20px;
+        width: 100%;
+      }
+
+      .output-wrap > .vertical-viewport > .output {
+        margin-top: 0;
+      }
+
+      .vertical-viewport {
+        width: 100%;
+      }
+
+      /* 直排：只有紙張文字區橫向捲動，背景／標題不動 */
+      .output-wrap.vertical-scroll .vertical-viewport {
+        overflow-x: auto;
+        overflow-y: hidden;
+        height: min(72vh, 680px);
+        width: 100%;
+        -webkit-overflow-scrolling: touch;
+        overscroll-behavior-x: contain;
+        scrollbar-width: thin;
+        scrollbar-color: rgba(120, 95, 55, 0.55) rgba(120, 95, 55, 0.12);
+      }
+
+      .output-wrap.vertical-scroll .vertical-viewport::-webkit-scrollbar {
+        height: 12px;
+      }
+
+      .output-wrap.vertical-scroll .vertical-viewport::-webkit-scrollbar-thumb {
+        background: rgba(120, 95, 55, 0.55);
+        border-radius: 6px;
+      }
+
+      .output-wrap.vertical-scroll .vertical-viewport::-webkit-scrollbar-track {
+        background: rgba(120, 95, 55, 0.12);
+        border-radius: 6px;
+      }
+
+      .output-wrap.vertical-scroll .vertical-viewport > .output {
+        writing-mode: vertical-rl;
+        text-orientation: upright;
+        display: inline-block;
+        vertical-align: top;
+        height: 100%;
+        width: max-content;
+        min-width: 100%;
+        max-width: none;
+        box-sizing: border-box;
+        white-space: pre-wrap;
+        word-break: break-all;
+        letter-spacing: 0.06em;
+        line-height: 2;
+        background-image: linear-gradient(90deg, var(--paper-line) 1px, transparent 1px);
+        background-size: 2.1em 100%;
+      }
+
+      .output-wrap.vertical-scroll .vertical-viewport > .output:empty::before {
+        writing-mode: horizontal-tb;
+        text-orientation: mixed;
+        display: inline-block;
+      }
+
+      .output-wrap.horizontal-scroll .vertical-viewport {
+        overflow-y: auto;
+        overflow-x: hidden;
+        max-height: min(72vh, 680px);
+        -webkit-overflow-scrolling: touch;
+        overscroll-behavior-y: contain;
+      }
+
+      .output-wrap.horizontal-scroll {
+        overflow: visible;
+        max-height: none;
+      }
+
       .output {
         margin-top: 20px;
         padding: 40px 42px;
@@ -3670,8 +3746,10 @@
         background: var(--card-bg);
         border-radius: 16px;
         box-shadow: 0 10px 40px rgba(0, 0, 0, 0.15);
-        padding: 20px;
-        width: 280px;
+        padding: 16px 18px 18px;
+        width: min(320px, calc(100vw - 32px));
+        max-height: min(78vh, 640px);
+        overflow-y: auto;
         opacity: 0;
         visibility: hidden;
         transform: translateY(10px);
@@ -3688,9 +3766,92 @@
         display: flex;
         justify-content: space-between;
         align-items: center;
-        margin-bottom: 16px;
-        padding-bottom: 12px;
+        margin-bottom: 14px;
+        padding-bottom: 10px;
         border-bottom: 1px solid var(--border);
+      }
+
+      .settings-section {
+        margin-bottom: 14px;
+      }
+
+      .settings-section:last-child {
+        margin-bottom: 0;
+      }
+
+      .settings-section--templates {
+        padding-top: 14px;
+        border-top: 1px solid var(--border);
+      }
+
+      .settings-section-title {
+        margin: 0 0 10px;
+        font-size: 0.72rem;
+        font-weight: 600;
+        letter-spacing: 0.08em;
+        text-transform: uppercase;
+        color: var(--text-light);
+      }
+
+      .settings-item {
+        margin-bottom: 14px;
+      }
+
+      .settings-item:last-child {
+        margin-bottom: 0;
+      }
+
+      .settings-item--inline label {
+        margin-bottom: 6px;
+      }
+
+      .settings-item--flush {
+        margin-bottom: 0;
+      }
+
+      .visually-hidden {
+        position: absolute;
+        width: 1px;
+        height: 1px;
+        padding: 0;
+        margin: -1px;
+        overflow: hidden;
+        clip: rect(0, 0, 0, 0);
+        white-space: nowrap;
+        border: 0;
+      }
+
+      .font-size-icon {
+        color: var(--text-light);
+        flex-shrink: 0;
+        line-height: 1;
+      }
+
+      .font-size-icon--sm { font-size: 0.8rem; }
+      .font-size-icon--lg { font-size: 1.15rem; }
+
+      .theme-toggle--full {
+        width: 100%;
+      }
+
+      .theme-toggle--full button {
+        flex: 1;
+      }
+
+      .settings-item label {
+        display: block;
+        font-size: 0.9rem;
+        font-weight: 500;
+        color: var(--text);
+        margin-bottom: 8px;
+      }
+
+      .settings-hint {
+        display: block;
+        margin: 6px 0 0;
+        font-size: 0.75rem;
+        color: var(--text-light);
+        line-height: 1.45;
       }
 
       .settings-title {
@@ -3707,22 +3868,6 @@
         padding: 4px;
         font-size: 1.2rem;
         line-height: 1;
-      }
-
-      .settings-item {
-        margin-bottom: 16px;
-      }
-
-      .settings-item:last-child {
-        margin-bottom: 0;
-      }
-
-      .settings-item label {
-        display: block;
-        font-size: 0.9rem;
-        font-weight: 500;
-        color: var(--text);
-        margin-bottom: 8px;
       }
 
       .settings-row {
@@ -3931,27 +4076,6 @@
       [data-theme="dark"] .clear-template-btn {
         background: rgba(255, 255, 255, 0.06);
         border-color: rgba(255, 255, 255, 0.14);
-      }
-
-      /* 快捷鍵提示 */
-      .shortcuts-hint {
-        font-size: 0.8rem;
-        color: var(--text-light);
-        padding: 10px;
-        background: var(--section-bg);
-        border-radius: 8px;
-        margin-top: 12px;
-      }
-
-      .shortcuts-hint kbd {
-        display: inline-block;
-        padding: 2px 6px;
-        background: var(--card-bg);
-        border: 1px solid var(--border);
-        border-radius: 4px;
-        font-family: monospace;
-        font-size: 0.75rem;
-        margin: 0 2px;
       }
 
       /* 進度估算顯示 */
@@ -4905,25 +5029,12 @@
         display: flex;
         justify-content: center;
         background-color: #2a1a0e;
-        box-shadow: inset 0 14px 30px rgba(0,0,0,0.35), inset 0 -14px 30px rgba(0,0,0,0.35);
-        overflow: hidden;
-      }
-
-      /* 桌面木紋：固定一屏高度，不隨表單變長而放大 */
-      .desk-scene::before {
-        content: '';
-        position: absolute;
-        top: 0;
-        left: 0;
-        right: 0;
-        height: 100dvh;
-        height: 100vh;
-        z-index: 0;
-        pointer-events: none;
         background-image: url("../assets/desk-wood.webp");
         background-size: cover;
         background-position: center 30%;
-        background-repeat: no-repeat;
+        background-attachment: fixed;
+        box-shadow: inset 0 14px 30px rgba(0,0,0,0.35), inset 0 -14px 30px rgba(0,0,0,0.35);
+        overflow-x: hidden;
       }
 
       /* 桌面暗角，讓紙張更突出 */
@@ -5062,32 +5173,30 @@
         display: flex;
         flex-direction: column;
         align-items: center;
-        overflow: hidden;
-        background-color: #141008;
+        overflow-x: hidden;
+        /* 不可 overflow:hidden，否則 sticky 背景失效 */
       }
-      .reading-scene[data-ambiance="library"] { background-color: #141008; }
-      .reading-scene[data-ambiance="cafe"] { background-color: #1a120c; }
 
-      /* 氛圍底圖：固定一屏高度，不隨生成文字變長而 zoom in */
-      .reading-scene::after {
-        content: '';
-        position: absolute;
+      /* 氛圍底圖：sticky 黏在視窗，捲動長文時始終可見，又不隨內容變高 zoom in */
+      .reading-scene-bg {
+        position: sticky;
         top: 0;
-        left: 0;
-        right: 0;
-        height: 100dvh;
+        width: 100%;
         height: 100vh;
+        height: 100dvh;
+        margin-bottom: calc(-100vh);
+        margin-bottom: calc(-100dvh);
+        flex-shrink: 0;
         z-index: 0;
         pointer-events: none;
         background-size: cover;
         background-position: center;
         background-repeat: no-repeat;
-        transition: opacity 0.4s ease;
       }
-      .reading-scene[data-ambiance="library"]::after {
+      .reading-scene[data-ambiance="library"] .reading-scene-bg {
         background-image: url("../assets/library.webp");
       }
-      .reading-scene[data-ambiance="cafe"]::after {
+      .reading-scene[data-ambiance="cafe"] .reading-scene-bg {
         background-image: url("../assets/cafe.webp");
       }
 
@@ -5170,6 +5279,12 @@
         font-weight: 700;
         text-shadow: 0 1px 6px rgba(0, 0, 0, 0.7);
       }
+      .reading-scene .output-wrap {
+        position: relative;
+        z-index: 2;
+        width: 100%;
+        max-width: 860px;
+      }
       .reading-scene .output {
         position: relative;
         z-index: 2;
@@ -5178,6 +5293,13 @@
         box-shadow:
           0 2px 6px rgba(0,0,0,0.25),
           0 26px 64px rgba(0,0,0,0.5);
+      }
+      .reading-scene .output-wrap .output {
+        max-width: none;
+      }
+      .reading-scene .output-wrap.vertical-scroll .vertical-viewport > .output {
+        width: max-content;
+        min-width: 100%;
       }
 
       /* 保持桌上紙張的浮起陰影（覆蓋全域 .card:hover） */
@@ -5212,6 +5334,12 @@
         .desk-lamp { transform: scale(0.8); transform-origin: top left; left: 22px; }
         .reading-scene { padding: 54px 14px 56px; }
         .reading-scene .output { padding: 28px 22px; }
+        .output-wrap.vertical-scroll .vertical-viewport {
+          height: min(65vh, 560px);
+        }
+        .output-wrap.horizontal-scroll .vertical-viewport {
+          max-height: min(65vh, 560px);
+        }
       }
       @media (max-width: 600px) {
         .ambiance-toggle { top: 10px; right: 10px; padding: 5px 6px; gap: 4px; }
