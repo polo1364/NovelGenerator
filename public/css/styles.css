@@ -3487,6 +3487,107 @@
         color: var(--text-light);
       }
 
+      /* DeepSeek 角色分析進度 */
+      .role-analyze-panel {
+        margin: 12px 0 14px;
+        padding: 14px 16px;
+        border-radius: 12px;
+        background: linear-gradient(135deg, rgba(233, 69, 96, 0.08), rgba(244, 162, 97, 0.06));
+        border: 1px solid rgba(233, 69, 96, 0.18);
+      }
+
+      .role-analyze-header {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        margin-bottom: 10px;
+        font-size: 0.9rem;
+        font-weight: 600;
+        color: var(--text);
+      }
+
+      .role-analyze-spinner {
+        width: 16px;
+        height: 16px;
+        border: 2px solid rgba(233, 69, 96, 0.25);
+        border-top-color: var(--accent);
+        border-radius: 50%;
+        animation: role-analyze-spin 0.8s linear infinite;
+        flex-shrink: 0;
+      }
+
+      @keyframes role-analyze-spin {
+        to { transform: rotate(360deg); }
+      }
+
+      .role-analyze-bar {
+        height: 8px;
+        background: rgba(0, 0, 0, 0.08);
+        border-radius: 999px;
+        overflow: hidden;
+        margin-bottom: 10px;
+      }
+
+      .role-analyze-fill {
+        height: 100%;
+        width: 0%;
+        border-radius: 999px;
+        background: linear-gradient(90deg, var(--accent), var(--gold));
+        transition: width 0.35s ease;
+      }
+
+      .role-analyze-blocks {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 6px;
+        margin-bottom: 8px;
+      }
+
+      .role-analyze-block {
+        min-width: 28px;
+        height: 28px;
+        padding: 0 6px;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        border-radius: 8px;
+        font-size: 0.75rem;
+        font-weight: 600;
+        border: 1px solid transparent;
+        transition: background 0.25s, border-color 0.25s, transform 0.25s;
+      }
+
+      .role-analyze-block.pending {
+        background: rgba(0, 0, 0, 0.06);
+        color: var(--text-light);
+        border-color: rgba(0, 0, 0, 0.08);
+      }
+
+      .role-analyze-block.active {
+        background: rgba(233, 69, 96, 0.15);
+        color: var(--accent);
+        border-color: rgba(233, 69, 96, 0.35);
+        animation: role-block-pulse 1.2s ease-in-out infinite;
+      }
+
+      .role-analyze-block.done {
+        background: rgba(46, 204, 113, 0.15);
+        color: #1e8449;
+        border-color: rgba(46, 204, 113, 0.35);
+      }
+
+      @keyframes role-block-pulse {
+        0%, 100% { transform: scale(1); }
+        50% { transform: scale(1.06); }
+      }
+
+      .role-analyze-hint {
+        margin: 0;
+        font-size: 0.78rem;
+        color: var(--text-light);
+        line-height: 1.4;
+      }
+
       /* ==================== 模態視窗通用樣式 ==================== */
       .modal-overlay {
         position: fixed;
@@ -5161,7 +5262,7 @@
       }
 
       /* ============================================================
-         閱讀區：圖書館 / 咖啡廳氛圍
+         閱讀區：多種氛圍背景
          ============================================================ */
       .reading-scene {
         position: relative;
@@ -5193,14 +5294,60 @@
         background-position: center;
         background-repeat: no-repeat;
       }
+
+      /* —— 照片背景 —— */
       .reading-scene[data-ambiance="library"] .reading-scene-bg {
         background-image: url("../assets/library.webp");
       }
       .reading-scene[data-ambiance="cafe"] .reading-scene-bg {
         background-image: url("../assets/cafe.webp");
       }
+      .reading-scene[data-ambiance="moon"] .reading-scene-bg {
+        background-image: url("../assets/moon.webp");
+      }
+      .reading-scene[data-ambiance="rain"] .reading-scene-bg {
+        background-image: url("../assets/rain.webp");
+      }
+      .reading-scene[data-ambiance="study"] .reading-scene-bg {
+        background-image: url("../assets/study.webp");
+      }
+      .reading-scene[data-ambiance="bamboo"] .reading-scene-bg {
+        background-image: url("../assets/bamboo.webp");
+      }
+      .reading-scene[data-ambiance="sea"] .reading-scene-bg {
+        background-image: url("../assets/sea.webp");
+      }
+      .reading-scene[data-ambiance="hearth"] .reading-scene-bg {
+        background-image: url("../assets/hearth.webp");
+      }
+      .reading-scene[data-ambiance="sakura"] .reading-scene-bg {
+        background-image: url("../assets/sakura.webp");
+      }
+      .reading-scene[data-ambiance="mountain"] .reading-scene-bg {
+        background-image: url("../assets/mountain.webp");
+      }
 
-      /* 氛圍遮罩，確保文字與書頁對比（覆蓋整個閱讀區高度） */
+      /* 雨夜動效 */
+      .reading-scene[data-ambiance="rain"] .reading-scene-bg::after {
+        content: '';
+        position: absolute;
+        inset: 0;
+        background-image: repeating-linear-gradient(
+          118deg,
+          transparent 0,
+          transparent 18px,
+          rgba(255, 255, 255, 0.025) 18px,
+          rgba(255, 255, 255, 0.06) 19px
+        );
+        animation: ambiance-rain 0.75s linear infinite;
+        pointer-events: none;
+      }
+      @keyframes ambiance-rain {
+        from { transform: translateY(-24px); }
+        to { transform: translateY(24px); }
+      }
+
+      /* 氛圍遮罩（依主題微調，確保文字可讀） */
       .reading-scene::before {
         content: '';
         position: absolute;
@@ -5209,47 +5356,88 @@
         z-index: 1;
         background: linear-gradient(180deg, rgba(20,14,6,0.34) 0%, rgba(20,14,6,0.20) 50%, rgba(20,14,6,0.40) 100%);
       }
+      .reading-scene[data-ambiance="moon"]::before {
+        background: linear-gradient(180deg, rgba(8,12,24,0.52) 0%, rgba(8,12,24,0.32) 50%, rgba(8,12,24,0.55) 100%);
+      }
+      .reading-scene[data-ambiance="rain"]::before {
+        background: linear-gradient(180deg, rgba(12,16,28,0.55) 0%, rgba(12,16,28,0.38) 50%, rgba(12,16,28,0.58) 100%);
+      }
+      .reading-scene[data-ambiance="study"]::before {
+        background: linear-gradient(180deg, rgba(20,12,4,0.48) 0%, rgba(20,12,4,0.28) 50%, rgba(20,12,4,0.50) 100%);
+      }
+      .reading-scene[data-ambiance="bamboo"]::before {
+        background: linear-gradient(180deg, rgba(8,20,12,0.50) 0%, rgba(8,20,12,0.30) 50%, rgba(8,20,12,0.52) 100%);
+      }
+      .reading-scene[data-ambiance="sea"]::before {
+        background: linear-gradient(180deg, rgba(10,30,45,0.42) 0%, rgba(10,30,45,0.22) 50%, rgba(10,30,45,0.48) 100%);
+      }
+      .reading-scene[data-ambiance="hearth"]::before {
+        background: linear-gradient(180deg, rgba(24,10,4,0.50) 0%, rgba(24,10,4,0.30) 50%, rgba(24,10,4,0.52) 100%);
+      }
+      .reading-scene[data-ambiance="sakura"]::before {
+        background: linear-gradient(180deg, rgba(30,16,24,0.48) 0%, rgba(30,16,24,0.28) 50%, rgba(30,16,24,0.50) 100%);
+      }
+      .reading-scene[data-ambiance="mountain"]::before {
+        background: linear-gradient(180deg, rgba(16,24,36,0.45) 0%, rgba(16,24,36,0.25) 50%, rgba(16,24,36,0.48) 100%);
+      }
 
-      /* 氛圍切換 */
-      .ambiance-toggle {
-        position: absolute;
-        top: 16px;
-        right: 16px;
-        z-index: 3;
+      /* 氛圍切換（嵌在 output-header 內，避免被右側工具列遮擋） */
+      .reading-scene .output-header-row {
         display: flex;
         align-items: center;
-        gap: 6px;
-        padding: 6px 8px;
+        justify-content: space-between;
+        gap: 12px;
+        flex-wrap: wrap;
+        width: 100%;
+        margin-bottom: 12px;
+        padding-right: 84px;
+      }
+
+      .ambiance-toggle {
+        position: relative;
+        z-index: 5;
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        padding: 6px 10px 6px 12px;
         border-radius: 30px;
         background: rgba(28, 18, 8, 0.55);
         backdrop-filter: blur(8px);
         border: 1px solid rgba(255,255,255,0.18);
+        flex-shrink: 0;
+        max-width: 100%;
       }
       .ambiance-label {
         color: #f3e3c8;
         font-size: 0.78rem;
         letter-spacing: 0.05em;
-        padding: 0 4px;
+        white-space: nowrap;
+        flex-shrink: 0;
       }
-      .ambiance-btn {
-        background: transparent;
-        color: #f3e3c8;
+      .ambiance-select {
+        appearance: none;
+        -webkit-appearance: none;
+        min-width: 0;
+        max-width: 148px;
+        padding: 6px 28px 6px 10px;
         border: 1px solid rgba(255,255,255,0.28);
-        padding: 6px 12px;
         border-radius: 20px;
-        font-size: 0.82rem;
+        background: rgba(255,255,255,0.1) url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%23f3e3c8' stroke-width='2.5'%3E%3Cpolyline points='6 9 12 15 18 9'/%3E%3C/svg%3E") no-repeat right 8px center;
+        color: #fffdf8;
         font-family: inherit;
+        font-size: 0.82rem;
         cursor: pointer;
-        transition: all 0.2s ease;
+        transition: background 0.2s ease, border-color 0.2s ease;
       }
-      .ambiance-btn::after { content: none; }
-      .ambiance-btn:hover { background: rgba(255,255,255,0.16); }
-      .ambiance-btn.active {
+      .ambiance-select:hover,
+      .ambiance-select:focus {
+        background-color: rgba(255,255,255,0.18);
+        border-color: rgba(255,255,255,0.45);
+        outline: none;
+      }
+      .ambiance-select option {
+        color: #2a2620;
         background: #fffdf8;
-        color: var(--accent);
-        border-color: #fffdf8;
-        font-weight: 700;
-        box-shadow: 0 2px 10px rgba(0,0,0,0.3);
       }
 
       /* 結果頭部與書頁浮在氛圍之上 */
@@ -5260,6 +5448,11 @@
         max-width: 860px;
         margin-top: 26px;
         border-bottom-color: rgba(255,255,255,0.25);
+        flex-direction: column;
+        align-items: stretch;
+      }
+      .reading-scene .output-header .word-count-display {
+        margin-top: 0;
       }
       .reading-scene .output-title {
         color: #fff;
@@ -5326,6 +5519,11 @@
       [data-theme="dark"] .reading-scene::before {
         background: linear-gradient(180deg, rgba(4,3,1,0.68) 0%, rgba(4,3,1,0.56) 50%, rgba(4,3,1,0.72) 100%);
       }
+      [data-theme="dark"] .reading-scene[data-ambiance="moon"]::before,
+      [data-theme="dark"] .reading-scene[data-ambiance="rain"]::before,
+      [data-theme="dark"] .reading-scene[data-ambiance="mountain"]::before {
+        background: linear-gradient(180deg, rgba(2,4,8,0.72) 0%, rgba(2,4,8,0.58) 50%, rgba(2,4,8,0.76) 100%);
+      }
 
       /* ---------- 場景 RWD ---------- */
       @media (max-width: 768px) {
@@ -5341,10 +5539,28 @@
           max-height: min(65vh, 560px);
         }
       }
+      @media (max-width: 768px) {
+        .reading-scene .output-header-row {
+          padding-right: 0;
+          flex-direction: column;
+          align-items: stretch;
+        }
+        .reading-scene .output-title {
+          text-align: center;
+        }
+        .ambiance-toggle {
+          justify-content: center;
+          width: 100%;
+        }
+        .ambiance-select {
+          flex: 1;
+          max-width: none;
+        }
+      }
       @media (max-width: 600px) {
-        .ambiance-toggle { top: 10px; right: 10px; padding: 5px 6px; gap: 4px; }
-        .ambiance-label { display: none; }
-        .ambiance-btn { padding: 5px 10px; font-size: 0.78rem; }
+        .ambiance-toggle { padding: 5px 8px 5px 10px; gap: 6px; }
+        .ambiance-label { font-size: 0.72rem; }
+        .ambiance-select { font-size: 0.76rem; padding: 5px 24px 5px 8px; }
         .desk-lamp { transform: scale(0.64); left: 8px; }
         .desk-scene .card { margin-top: 60px; }
       }

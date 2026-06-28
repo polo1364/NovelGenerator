@@ -9,6 +9,8 @@ require('dotenv').config();
 const path = require('path');
 const express = require('express');
 const { Readable } = require('stream');
+const { synthesizeEdgeTts, RECOMMENDED_VOICES } = require('./lib/edge-tts');
+const { analyzeDialogueRoles, splitTextIntoBlocks } = require('./lib/analyze-roles');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -84,6 +86,104 @@ app.post('/api/chat', async (req, res) => {
 // 健康檢查
 app.get('/api/health', (req, res) => {
   res.json({ ok: true, keyConfigured: Boolean(process.env.DEEPSEEK_API_KEY) });
+});
+
+/** Edge 神經語音：語音清單 */
+app.get('/api/tts/voices', (req, res) => {
+  res.json({ voices: RECOMMENDED_VOICES });
+});
+
+/** Edge 神經語音：合成 MP3（依情緒風格、語速、音調） */
+app.post('/api/tts', async (req, res) => {
+  const { text, voice, style, rate, pitch } = req.body || {};
+  const trimmed = String(text || '').trim();
+  if (!trimmed) {
+    return res.status(400).json({ error: '缺少可朗讀的文字' });
+  }
+  if (trimmed.length > 5000) {
+    return res.status(400).json({ error: '單段文字過長（上限 5000 字），請縮短朗讀範圍' });
+  }
+
+  try {
+    const audio = await synthesizeEdgeTts(trimmed, { voice, style, rate, pitch });
+    res.setHeader('Content-Type', 'audio/mpeg');
+    res.setHeader('Cache-Control', 'no-store');
+    res.send(audio);
+  } catch (err) {
+    res.status(502).json({
+      error: err?.message || 'Edge 語音合成失敗'
+    });
+  }
+});
+
+function validateAnalyzeRolesText(text) {
+  const trimmed = String(text || '').trim();
+  if (!trimmed) return { error: '缺少可分析的文字' };
+  if (trimmed.length > 50000) return { error: '文字過長（上限 50000 字）' };
+  return { text: trimmed };
+}
+
+function writeSse(res, payload) {
+  res.write(`data: ${JSON.stringify(payload)}\n\n`);
+}
+
+/** DeepSeek 角色／情緒分析（供 Edge 多角色朗讀） */
+app.post('/api/analyze-roles', async (req, res) => {
+  const apiKey = process.env.DEEPSEEK_API_KEY;
+  if (!apiKey) {
+    return res.status(500).json({ error: '伺服器尚未設定 DEEPSEEK_API_KEY，無法分析角色語音' });
+  }
+  const validated = validateAnalyzeRolesText(req.body?.text);
+  if (validated.error) {
+    return res.status(400).json({ error: validated.error });
+  }
+  try {
+    const { segments, usage } = await analyzeDialogueRoles(apiKey, validated.text);
+    res.json({ ok: true, segments, usage });
+  } catch (err) {
+    res.status(502).json({ error: err?.message || '角色分析失敗' });
+  }
+});
+
+/** 角色分析 SSE 串流（回報區塊進度 done/total） */
+app.post('/api/analyze-roles/stream', async (req, res) => {
+  const apiKey = process.env.DEEPSEEK_API_KEY;
+  if (!apiKey) {
+    return res.status(500).json({ error: '伺服器尚未設定 DEEPSEEK_API_KEY，無法分析角色語音' });
+  }
+  const validated = validateAnalyzeRolesText(req.body?.text);
+  if (validated.error) {
+    return res.status(400).json({ error: validated.error });
+  }
+
+  res.setHeader('Content-Type', 'text/event-stream; charset=utf-8');
+  res.setHeader('Cache-Control', 'no-cache, no-transform');
+  res.setHeader('Connection', 'keep-alive');
+  res.flushHeaders?.();
+
+  const blocks = splitTextIntoBlocks(validated.text, 1800);
+
+  const send = (payload) => {
+    if (res.writableEnded) return;
+    try {
+      writeSse(res, payload);
+    } catch {
+      /* client disconnected */
+    }
+  };
+
+  send({ type: 'start', total: blocks.length });
+
+  try {
+    const { segments, usage } = await analyzeDialogueRoles(apiKey, validated.text, (done, total) => {
+      send({ type: 'progress', done, total });
+    });
+    send({ type: 'complete', segments, usage });
+    if (!res.writableEnded) res.end();
+  } catch (err) {
+    send({ type: 'error', error: err?.message || '角色分析失敗' });
+    if (!res.writableEnded) res.end();
+  }
 });
 
 app.listen(PORT, () => {

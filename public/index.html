@@ -452,17 +452,18 @@
         </div>
         <!-- ==================== 撰寫狀態區結束 ==================== -->
 
-        <!-- ==================== 閱讀區：圖書館 / 咖啡廳 ==================== -->
+        <!-- ==================== 閱讀區 ==================== -->
         <div class="reading-scene" id="readingScene" data-ambiance="library">
           <div class="reading-scene-bg" aria-hidden="true"></div>
-          <div class="ambiance-toggle">
-            <span class="ambiance-label">閱讀氛圍</span>
-            <button type="button" class="ambiance-btn active" data-ambiance="library">📚 圖書館</button>
-            <button type="button" class="ambiance-btn" data-ambiance="cafe">☕ 咖啡廳</button>
-          </div>
         <!-- 輸出區 -->
-        <div class="output-header" style="margin-top: 30px;">
-          <span class="output-title">📜 生成結果</span>
+        <div class="output-header">
+          <div class="output-header-row">
+            <span class="output-title">📜 生成結果</span>
+            <div class="ambiance-toggle">
+              <label class="ambiance-label" for="ambianceSelect">閱讀氛圍</label>
+              <select id="ambianceSelect" class="ambiance-select" aria-label="閱讀氛圍"></select>
+            </div>
+          </div>
           <div id="wordCountDisplay" class="word-count-display" style="display: none;">
             <div class="word-count-item">
               <span class="label">總字數</span>
@@ -497,9 +498,10 @@
         <div class="modal-body">
           <div class="speech-controls">
             <div class="speech-row">
-              <label>語音：</label>
+              <label>Edge 語音：</label>
               <select id="voiceSelect"></select>
             </div>
+            <p class="segment-info" style="margin-top:-4px;margin-bottom:10px;">使用 Microsoft Edge 神經語音，依情緒模式自動切換語調風格</p>
             <div class="speech-row">
               <label>語速：</label>
               <div class="speed-control">
@@ -531,6 +533,17 @@
               </select>
             </div>
             <div class="speech-row">
+              <label class="checkbox-label" style="display:flex;align-items:center;gap:8px;cursor:pointer;">
+                <input type="checkbox" id="roleVoiceEnabled" />
+                <span>角色語音（DeepSeek 分析旁白／男／女＋情緒起伏）</span>
+              </label>
+            </div>
+            <div class="speech-row role-voice-row" id="roleVoiceRow" hidden>
+              <label>旁白 <select id="narratorVoice"></select></label>
+              <label>男角 <select id="maleVoice"></select></label>
+              <label>女角 <select id="femaleVoice"></select></label>
+            </div>
+            <div class="speech-row">
               <label>朗讀範圍：</label>
               <div class="range-selector">
                 <span>從第</span>
@@ -557,6 +570,19 @@
               <button id="nextSegmentBtn" class="btn-outline" disabled title="下一段">下一段 ⏭️</button>
             </div>
             
+            <!-- DeepSeek 角色分析進度（僅角色語音模式） -->
+            <div id="roleAnalyzePanel" class="role-analyze-panel" hidden>
+              <div class="role-analyze-header">
+                <span class="role-analyze-spinner" aria-hidden="true"></span>
+                <span id="roleAnalyzeStatus">DeepSeek 分析角色與情緒中…</span>
+              </div>
+              <div class="role-analyze-bar" role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0" id="roleAnalyzeBar">
+                <div id="roleAnalyzeFill" class="role-analyze-fill"></div>
+              </div>
+              <div id="roleAnalyzeBlocks" class="role-analyze-blocks"></div>
+              <p class="role-analyze-hint">長文會切成多個區塊並行分析，完成後自動開始朗讀</p>
+            </div>
+
             <!-- 進度條（可點擊跳轉） -->
             <div class="speech-progress">
               <div class="speech-progress-bar" id="speechProgressBar" title="點擊跳轉到指定位置">
@@ -747,6 +773,12 @@
                 <button type="button" id="verticalWritingBtn">📜 直排</button>
               </div>
               <p class="settings-hint">橫排自動往下捲；直排時在文字區滾輪往下＝往右滑</p>
+            </div>
+
+            <div class="settings-item settings-item--flush">
+              <label for="settingsAmbianceSelect">🌅 閱讀氛圍</label>
+              <select id="settingsAmbianceSelect" class="template-select"></select>
+              <p class="settings-hint">切換閱讀區背景：圖書館、雨夜、書齋等</p>
             </div>
           </section>
 
@@ -1005,6 +1037,7 @@
     <datalist id="secret-list"></datalist>
     <datalist id="relation-list"></datalist>
 
+    <script src="js/edge-tts-speech.js"></script>
     <script src="js/app.js"></script>
   </body>
 </html>

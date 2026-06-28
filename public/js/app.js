@@ -5792,48 +5792,121 @@ ${truncatedNotice}${storyContext}${settingsReminder}
         e.target.value = '';
       });
 
-      // ==================== 情緒朗讀功能 ====================
-      let speechSynth = window.speechSynthesis;
-      let currentUtterance = null;
+      // ==================== Edge 情緒朗讀功能 ====================
+      let edgeCurrentAudio = null;
+      let edgeAudioUrl = null;
+      let edgeSynthAbort = null;
+      let edgeSpeechSession = 0;
+      let edgeTtsReady = false;
       let isSpeaking = false;
       let isPaused = false;
       let speechSegments = [];
       let currentSegmentIndex = 0;
-      let availableVoices = [];
-      let segmentRanges = []; // 儲存每個段落在原文中的位置
-      let speechInitialized = false; // 追蹤語音是否已初始化
+      let segmentRanges = [];
+      let speechPlayQueue = [];
+      let speechInitialized = false;
+
+      const roleVoiceEnabled = document.getElementById('roleVoiceEnabled');
+      const roleVoiceRow = document.getElementById('roleVoiceRow');
+      const narratorVoice = document.getElementById('narratorVoice');
+      const maleVoice = document.getElementById('maleVoice');
+      const femaleVoice = document.getElementById('femaleVoice');
 
       // 朗讀控制元素
       const prevSegmentBtn = document.getElementById('prevSegmentBtn');
       const nextSegmentBtn = document.getElementById('nextSegmentBtn');
       const currentSegmentDisplay = document.getElementById('currentSegmentDisplay');
       const speechProgressBar = document.getElementById('speechProgressBar');
+      const roleAnalyzePanel = document.getElementById('roleAnalyzePanel');
+      const roleAnalyzeStatus = document.getElementById('roleAnalyzeStatus');
+      const roleAnalyzeFill = document.getElementById('roleAnalyzeFill');
+      const roleAnalyzeBar = document.getElementById('roleAnalyzeBar');
+      const roleAnalyzeBlocks = document.getElementById('roleAnalyzeBlocks');
       const autoScrollCheck = document.getElementById('autoScrollCheck');
       const highlightCheck = document.getElementById('highlightCheck');
       
-      // 檢查瀏覽器是否支援語音合成
-      if (!speechSynth) {
-        console.warn('此瀏覽器不支援語音合成');
-        speakBtn.title = '您的瀏覽器不支援朗讀功能';
-      }
-      
-      // Chrome bug workaround: 防止長時間朗讀自動暫停
-      let speechKeepAliveInterval = null;
-      
-      function startSpeechKeepAlive() {
-        if (speechKeepAliveInterval) return;
-        speechKeepAliveInterval = setInterval(() => {
-          if (isSpeaking && !isPaused && speechSynth.speaking) {
-            speechSynth.pause();
-            speechSynth.resume();
+      function showRoleAnalyzeUI(total) {
+        if (!roleAnalyzePanel) return;
+        roleAnalyzePanel.hidden = false;
+        if (roleAnalyzeBlocks) {
+          roleAnalyzeBlocks.innerHTML = '';
+          const count = Math.max(1, total || 1);
+          for (let i = 0; i < count; i++) {
+            const el = document.createElement('span');
+            el.className = 'role-analyze-block pending';
+            el.title = `區塊 ${i + 1}`;
+            el.textContent = String(i + 1);
+            roleAnalyzeBlocks.appendChild(el);
           }
-        }, 10000); // 每 10 秒
+        }
+        updateRoleAnalyzeUI(0, total || 1);
       }
+
+      function updateRoleAnalyzeUI(done, total) {
+        const safeTotal = Math.max(1, total || 1);
+        const safeDone = Math.min(Math.max(0, done || 0), safeTotal);
+        const pct = Math.round((safeDone / safeTotal) * 100);
+
+        if (roleAnalyzeFill) roleAnalyzeFill.style.width = `${pct}%`;
+        if (roleAnalyzeBar) {
+          roleAnalyzeBar.setAttribute('aria-valuenow', String(pct));
+          roleAnalyzeBar.setAttribute('aria-valuemax', '100');
+        }
+        if (roleAnalyzeStatus) {
+          roleAnalyzeStatus.textContent = safeDone === 0
+            ? `DeepSeek 分析角色與情緒中…（共 ${safeTotal} 區塊）`
+            : `DeepSeek 分析中 ${safeDone}/${safeTotal} 區塊（${pct}%）`;
+        }
+        if (roleAnalyzeBlocks && roleAnalyzeBlocks.children.length !== safeTotal) {
+          showRoleAnalyzeUI(safeTotal);
+        }
+        if (roleAnalyzeBlocks) {
+          for (let i = 0; i < roleAnalyzeBlocks.children.length; i++) {
+            const el = roleAnalyzeBlocks.children[i];
+            let state = 'pending';
+            if (i < safeDone) state = 'done';
+            else if (i === safeDone && safeDone < safeTotal) state = 'active';
+            el.className = `role-analyze-block ${state}`;
+          }
+        }
+        if (speechProgressText) {
+          speechProgressText.textContent = safeDone === 0
+            ? `DeepSeek 分析角色與情緒中…（${safeTotal} 區塊）`
+            : `DeepSeek 分析中 ${safeDone}/${safeTotal} 區塊…`;
+        }
+        if (speechProgressFill) speechProgressFill.style.width = `${pct}%`;
+      }
+
+      function hideRoleAnalyzeUI() {
+        if (roleAnalyzePanel) roleAnalyzePanel.hidden = true;
+        if (roleAnalyzeBlocks) roleAnalyzeBlocks.innerHTML = '';
+        if (roleAnalyzeFill) roleAnalyzeFill.style.width = '0%';
+        if (roleAnalyzeBar) roleAnalyzeBar.setAttribute('aria-valuenow', '0');
+      }
+
+      // 檢查 Edge TTS 是否可用（需透過本機伺服器 /api/tts）
+      EdgeTtsSpeech.checkAvailable().then((ok) => {
+        edgeTtsReady = ok;
+        if (!ok) {
+          speakBtn.title = '朗讀需啟動 npm start 伺服器';
+        }
+      });
       
-      function stopSpeechKeepAlive() {
-        if (speechKeepAliveInterval) {
-          clearInterval(speechKeepAliveInterval);
-          speechKeepAliveInterval = null;
+      function stopEdgeAudio() {
+        if (edgeCurrentAudio) {
+          edgeCurrentAudio.onended = null;
+          edgeCurrentAudio.onerror = null;
+          edgeCurrentAudio.pause();
+          edgeCurrentAudio.src = '';
+          edgeCurrentAudio = null;
+        }
+        if (edgeAudioUrl) {
+          URL.revokeObjectURL(edgeAudioUrl);
+          edgeAudioUrl = null;
+        }
+        if (edgeSynthAbort) {
+          edgeSynthAbort.abort();
+          edgeSynthAbort = null;
         }
       }
 
@@ -5872,249 +5945,55 @@ ${truncatedNotice}${storyContext}${settingsReminder}
         } catch (e) {}
       }
 
-      // 載入語音列表（只顯示中文語音）
-      function loadVoices() {
-        if (!speechSynth) {
-          console.warn('語音合成不可用');
-          return;
-        }
-        
-        availableVoices = speechSynth.getVoices();
-        console.log('載入語音列表，找到', availableVoices.length, '個語音');
-        voiceSelect.innerHTML = '';
-        
-        // 篩選中文語音（放寬條件）
-        const zhVoices = availableVoices.filter(v => 
-          v.lang.includes('zh') || 
-          v.lang.includes('TW') || 
-          v.lang.includes('CN') ||
-          v.lang.includes('HK') ||
-          v.lang.includes('cmn') ||  // 普通話
-          v.lang.includes('yue') ||  // 粵語
-          v.lang.includes('wuu') ||  // 吳語
-          v.name.includes('中文') ||
-          v.name.includes('Chinese') ||
-          v.name.includes('Mandarin') ||
-          v.name.includes('Cantonese') ||
-          v.name.includes('Taiwan') ||
-          v.name.includes('Hong Kong') ||
-          v.name.includes('Taiwanese') ||
-          v.name.toLowerCase().includes('xiaoxiao') ||
-          v.name.toLowerCase().includes('yunyang') ||
-          v.name.toLowerCase().includes('xiaoyi')
-        );
-        
-        // 取得所有非中文語音（備用）
-        const otherVoices = availableVoices.filter(v => !zhVoices.includes(v));
-        
-        // 按語言分類
-        const twVoices = zhVoices.filter(v => 
-          v.lang.includes('TW') || 
-          v.lang.includes('zh-Hant') || 
-          v.name.includes('台') ||
-          v.name.includes('Taiwan')
-        );
-        const cnVoices = zhVoices.filter(v => 
-          (v.lang.includes('CN') || v.lang.includes('zh-Hans') || v.lang === 'zh' || v.lang.includes('cmn')) && 
-          !twVoices.includes(v)
-        );
-        const hkVoices = zhVoices.filter(v => 
-          v.lang.includes('HK') || 
-          v.lang.includes('yue') ||
-          v.name.includes('粵') || 
-          v.name.includes('Cantonese') ||
-          v.name.includes('Hong Kong')
-        );
-        const otherZhVoices = zhVoices.filter(v => 
-          !twVoices.includes(v) && !cnVoices.includes(v) && !hkVoices.includes(v)
-        );
-        
-        // 簡化語音名稱顯示
-        function formatVoiceName(voice, showLang = false) {
-          let name = voice.name;
-          // 移除常見的冗長前綴
-          name = name.replace(/Microsoft /gi, '');
-          name = name.replace(/Google /gi, '');
-          name = name.replace(/Apple /gi, '');
-          name = name.replace(/ Online \(Natural\)/gi, '');
-          name = name.replace(/ - Chinese \(.*\)/gi, '');
-          name = name.replace(/ - .*$/gi, ''); // 移除最後的語言標記
-          
-          // 添加語言標記
-          if (voice.lang.includes('TW') || voice.lang.includes('zh-Hant')) {
-            return `🇹🇼 ${name}`;
-          } else if (voice.lang.includes('HK') || voice.lang.includes('yue')) {
-            return `🇭🇰 ${name}`;
-          } else if (voice.lang.includes('CN') || voice.lang.includes('zh-Hans') || voice.lang === 'zh' || voice.lang.includes('cmn')) {
-            return `🇨🇳 ${name}`;
-          }
-          
-          if (showLang) {
-            return `${name} (${voice.lang})`;
-          }
-          return name;
-        }
-        
-        // 繁體中文（台灣）
-        if (twVoices.length > 0) {
-          const group = document.createElement('optgroup');
-          group.label = '🇹🇼 繁體中文（台灣）';
-          twVoices.forEach((voice, i) => {
-            const option = document.createElement('option');
-            option.value = voice.name;
-            option.textContent = formatVoiceName(voice);
-            if (i === 0) option.selected = true;
-            group.appendChild(option);
-          });
-          voiceSelect.appendChild(group);
-        }
-        
-        // 簡體中文（中國）
-        if (cnVoices.length > 0) {
-          const group = document.createElement('optgroup');
-          group.label = '🇨🇳 簡體中文（中國）';
-          cnVoices.forEach(voice => {
-            const option = document.createElement('option');
-            option.value = voice.name;
-            option.textContent = formatVoiceName(voice);
-            group.appendChild(option);
-          });
-          voiceSelect.appendChild(group);
-        }
-        
-        // 粵語（香港）
-        if (hkVoices.length > 0) {
-          const group = document.createElement('optgroup');
-          group.label = '🇭🇰 粵語（香港）';
-          hkVoices.forEach(voice => {
-            const option = document.createElement('option');
-            option.value = voice.name;
-            option.textContent = formatVoiceName(voice);
-            group.appendChild(option);
-          });
-          voiceSelect.appendChild(group);
-        }
-        
-        // 其他中文
-        if (otherZhVoices.length > 0) {
-          const group = document.createElement('optgroup');
-          group.label = '🌏 其他中文';
-          otherZhVoices.forEach(voice => {
-            const option = document.createElement('option');
-            option.value = voice.name;
-            option.textContent = formatVoiceName(voice);
-            group.appendChild(option);
-          });
-          voiceSelect.appendChild(group);
-        }
-        
-        // 如果完全沒有中文語音，顯示所有可用語音
-        if (zhVoices.length === 0 && otherVoices.length > 0) {
-          const group = document.createElement('optgroup');
-          group.label = '🌐 其他語音（無中文語音可用）';
-          otherVoices.slice(0, 20).forEach((voice, i) => { // 最多顯示 20 個
-            const option = document.createElement('option');
-            option.value = voice.name;
-            option.textContent = formatVoiceName(voice, true);
-            if (i === 0) option.selected = true;
-            group.appendChild(option);
-          });
-          voiceSelect.appendChild(group);
-        }
-        
-        // 如果完全沒有語音
-        if (availableVoices.length === 0) {
-          const option = document.createElement('option');
-          option.textContent = '⚠️ 未找到任何語音';
-          option.disabled = true;
-          voiceSelect.appendChild(option);
-          
-          // 顯示提示
-          const hint = document.createElement('option');
-          hint.textContent = '請在系統設定中安裝中文語音';
-          hint.disabled = true;
-          voiceSelect.appendChild(hint);
-        }
-      }
-
-      // 初始化語音 - 增加延遲重試機制（Windows 系統可能需要更長時間）
-      loadVoices();
-      if (speechSynth && speechSynth.onvoiceschanged !== undefined) {
-        speechSynth.onvoiceschanged = loadVoices;
-      }
-      
-      // Windows/Edge 可能需要延遲載入語音
-      setTimeout(() => {
-        if (availableVoices.length === 0) {
-          console.log('延遲重試載入語音...');
-          loadVoices();
-        }
-      }, 100);
-      
-      setTimeout(() => {
-        if (availableVoices.length === 0) {
-          console.log('再次重試載入語音...');
-          loadVoices();
-        }
+      // 載入 Edge 語音清單
+      async function loadVoices() {
+        await EdgeTtsSpeech.fetchVoices();
+        EdgeTtsSpeech.populateVoiceSelect(voiceSelect);
+        EdgeTtsSpeech.populateRoleSelects(narratorVoice, maleVoice, femaleVoice, {
+          narratorVoice: localStorage.getItem('speechNarratorVoice') || EdgeTtsSpeech.DEFAULT_VOICE,
+          maleVoice: localStorage.getItem('speechMaleVoice') || 'zh-CN-YunxiNeural',
+          femaleVoice: localStorage.getItem('speechFemaleVoice') || 'zh-CN-XiaoxiaoNeural'
+        });
         speechInitialized = true;
-      }, 500);
+      }
 
-      // 情緒分析與參數調整
+      if (roleVoiceEnabled && roleVoiceRow) {
+        roleVoiceEnabled.addEventListener('change', () => {
+          roleVoiceRow.hidden = !roleVoiceEnabled.checked;
+        });
+        roleVoiceEnabled.checked = localStorage.getItem('speechRoleEnabled') === '1';
+        roleVoiceRow.hidden = !roleVoiceEnabled.checked;
+      }
+      for (const sel of [narratorVoice, maleVoice, femaleVoice]) {
+        if (sel) {
+          sel.addEventListener('change', () => {
+            try {
+              if (narratorVoice?.value) localStorage.setItem('speechNarratorVoice', narratorVoice.value);
+              if (maleVoice?.value) localStorage.setItem('speechMaleVoice', maleVoice.value);
+              if (femaleVoice?.value) localStorage.setItem('speechFemaleVoice', femaleVoice.value);
+            } catch { /* ignore */ }
+          });
+        }
+      }
+
+      loadVoices();
+
       function analyzeEmotion(text) {
         const mode = emotionMode.value;
-        if (mode !== 'auto') {
-          return getEmotionParams(mode);
-        }
-        
-        // 自動偵測情緒
-        const sadKeywords = ['悲傷', '哭泣', '淚水', '死亡', '離別', '痛苦', '絕望', '心碎', '哀傷', '悼念', '嘆息', '憂愁'];
-        const excitedKeywords = ['激動', '興奮', '勝利', '衝刺', '爆發', '熱血', '燃燒', '戰鬥', '吶喊', '奮起', '怒吼', '突破'];
-        const mysteriousKeywords = ['神秘', '陰森', '詭異', '黑暗', '未知', '秘密', '隱藏', '恐怖', '懸疑', '謎團', '幽暗', '詛咒'];
-        const gentleKeywords = ['溫柔', '輕聲', '微笑', '愛情', '甜蜜', '擁抱', '親吻', '溫暖', '呢喃', '柔情', '浪漫', '心動'];
-        const dramaticKeywords = ['震驚', '揭露', '轉折', '意外', '真相', '背叛', '復仇', '命運', '對決', '高潮', '決戰'];
-        
-        let sadScore = sadKeywords.filter(k => text.includes(k)).length;
-        let excitedScore = excitedKeywords.filter(k => text.includes(k)).length;
-        let mysteriousScore = mysteriousKeywords.filter(k => text.includes(k)).length;
-        let gentleScore = gentleKeywords.filter(k => text.includes(k)).length;
-        let dramaticScore = dramaticKeywords.filter(k => text.includes(k)).length;
-        
-        // 檢查標點符號
-        if ((text.match(/！/g) || []).length > 2) excitedScore += 2;
-        if ((text.match(/？/g) || []).length > 2) mysteriousScore += 1;
-        if ((text.match(/⋯|…/g) || []).length > 1) sadScore += 1;
-        
-        const maxScore = Math.max(sadScore, excitedScore, mysteriousScore, gentleScore, dramaticScore);
-        
-        if (maxScore === 0) return getEmotionParams('narration');
-        if (sadScore === maxScore) return getEmotionParams('sad');
-        if (excitedScore === maxScore) return getEmotionParams('excited');
-        if (mysteriousScore === maxScore) return getEmotionParams('mysterious');
-        if (gentleScore === maxScore) return getEmotionParams('gentle');
-        if (dramaticScore === maxScore) return getEmotionParams('dramatic');
-        
-        return getEmotionParams('narration');
+        const voiceId = voiceSelect.value || EdgeTtsSpeech.DEFAULT_VOICE;
+        const baseRate = parseFloat(speechRate.value);
+        const basePitch = parseFloat(speechPitch.value);
+        const emotion = mode === 'auto'
+          ? EdgeTtsSpeech.detectEmotionFromText(text)
+          : mode;
+        return EdgeTtsSpeech.buildEmotionParams(emotion, baseRate, basePitch, voiceId);
       }
 
       function getEmotionParams(emotion) {
+        const voiceId = voiceSelect.value || EdgeTtsSpeech.DEFAULT_VOICE;
         const baseRate = parseFloat(speechRate.value);
         const basePitch = parseFloat(speechPitch.value);
-        
-        switch (emotion) {
-          case 'sad':
-            return { rate: baseRate * 0.8, pitch: basePitch * 0.85, volume: 0.85, pause: 500 };
-          case 'excited':
-            return { rate: baseRate * 1.15, pitch: basePitch * 1.1, volume: 1.0, pause: 200 };
-          case 'mysterious':
-            return { rate: baseRate * 0.85, pitch: basePitch * 0.9, volume: 0.9, pause: 450 };
-          case 'gentle':
-            return { rate: baseRate * 0.9, pitch: basePitch * 1.05, volume: 0.85, pause: 350 };
-          case 'dramatic':
-            return { rate: baseRate * 1.0, pitch: basePitch * 1.0, volume: 1.0, pause: 400 };
-          case 'narration':
-          default:
-            return { rate: baseRate, pitch: basePitch, volume: 0.95, pause: 300 };
-        }
+        return EdgeTtsSpeech.buildEmotionParams(emotion, baseRate, basePitch, voiceId);
       }
       
       // 處理文字以改善朗讀效果
@@ -6200,48 +6079,76 @@ ${truncatedNotice}${storyContext}${settingsReminder}
         return segments.filter(s => s.length > 0);
       }
 
+      function findHighlightRange(index) {
+        const item = speechPlayQueue[index];
+        if (!item) return null;
+
+        const fullText = latestStory || '';
+        if (!fullText) return null;
+
+        if (Number.isInteger(item.highlightStart) && item.highlightEnd != null) {
+          const text = fullText.substring(item.highlightStart, item.highlightEnd);
+          if (text) {
+            return { start: item.highlightStart, end: item.highlightEnd, text };
+          }
+        }
+
+        const segmentText = item.sourceText || item.highlightText || item.text;
+        if (!segmentText) return null;
+
+        let searchStart = 0;
+        for (let i = 0; i < index; i++) {
+          const prev = speechPlayQueue[i];
+          if (
+            Number.isInteger(prev.highlightStart) &&
+            prev.highlightStart === item.highlightStart &&
+            prev.highlightEnd === item.highlightEnd
+          ) {
+            continue;
+          }
+          const prevText = prev.sourceText || prev.highlightText || prev.text;
+          if (!prevText) continue;
+          const foundPos = fullText.indexOf(prevText, searchStart);
+          if (foundPos !== -1) {
+            searchStart = foundPos + prevText.length;
+          }
+        }
+
+        const segmentStart = fullText.indexOf(segmentText, searchStart);
+        if (segmentStart === -1) return null;
+
+        return {
+          start: segmentStart,
+          end: segmentStart + segmentText.length,
+          text: segmentText
+        };
+      }
+
       // 高亮目前朗讀的段落
       function highlightCurrentSegment(index) {
         // 移除舊的高亮
         clearHighlight();
         
         if (!highlightCheck || !highlightCheck.checked) return;
-        if (index < 0 || index >= speechSegments.length) return;
-        
-        const segmentText = speechSegments[index];
-        if (!segmentText) return;
-        
-        // 在 resultDiv 中找到對應的文字
+        if (index < 0 || index >= speechPlayQueue.length) return;
+
+        const range = findHighlightRange(index);
+        if (!range) return;
+
         const fullText = latestStory || '';
+        const beforeText = fullText.substring(0, range.start);
+        const afterText = fullText.substring(range.end);
         
-        // 找到這個段落在原文中的位置
-        // 由於段落可能重複，我們需要追蹤已經處理過的位置
-        let searchStart = 0;
-        for (let i = 0; i < index; i++) {
-          const prevSegment = speechSegments[i];
-          const foundPos = fullText.indexOf(prevSegment, searchStart);
-          if (foundPos !== -1) {
-            searchStart = foundPos + prevSegment.length;
-          }
-        }
-        
-        const segmentStart = fullText.indexOf(segmentText, searchStart);
-        if (segmentStart === -1) return;
-        
-        const beforeText = fullText.substring(0, segmentStart);
-        const afterText = fullText.substring(segmentStart + segmentText.length);
-        
-        // 使用 innerHTML 來高亮（需要轉義 HTML）
-        const escapeHtml = (text) => {
+        const escapeForHighlight = (text) => {
           return text.replace(/&/g, '&amp;')
                      .replace(/</g, '&lt;')
                      .replace(/>/g, '&gt;')
                      .replace(/\n/g, '<br>');
         };
         
-        resultDiv.innerHTML = escapeHtml(beforeText) + 
-          '<span class="speaking-segment" id="currentSpeakingSegment">' + escapeHtml(segmentText) + '</span>' + 
-          escapeHtml(afterText);
+        resultDiv.innerHTML = escapeForHighlight(beforeText) + 
+          '<span class="speaking-segment" id="currentSpeakingSegment">' + escapeForHighlight(range.text) + '</span>' + 
+          escapeForHighlight(afterText);
         
         // 自動捲動到高亮的段落
         if (autoScrollCheck && autoScrollCheck.checked) {
@@ -6277,202 +6184,108 @@ ${truncatedNotice}${storyContext}${settingsReminder}
       // 更新段落控制按鈕狀態
       function updateNavButtons() {
         prevSegmentBtn.disabled = !isSpeaking || currentSegmentIndex <= 0;
-        nextSegmentBtn.disabled = !isSpeaking || currentSegmentIndex >= speechSegments.length - 1;
+        nextSegmentBtn.disabled = !isSpeaking || currentSegmentIndex >= speechPlayQueue.length - 1;
         
-        if (isSpeaking && speechSegments.length > 0) {
-          currentSegmentDisplay.textContent = `${currentSegmentIndex + 1} / ${speechSegments.length}`;
+        if (isSpeaking && speechPlayQueue.length > 0) {
+          currentSegmentDisplay.textContent = `${currentSegmentIndex + 1} / ${speechPlayQueue.length}`;
         } else {
           currentSegmentDisplay.textContent = '- / -';
         }
       }
 
-      // 朗讀單一段落
+      // 朗讀單一段落（Edge 神經語音）
       function speakSegment(index) {
-        // 🔧 修復：檢查是否仍在朗讀狀態
-        if (!isSpeaking) {
-          return;
-        }
-        
-        if (index >= speechSegments.length) {
-          // 朗讀完成
+        if (!isSpeaking) return;
+
+        if (index >= speechPlayQueue.length) {
           stopSpeech();
           clearSpeechProgress();
           clearHighlight();
           speechProgressText.textContent = '✅ 朗讀完成';
           return;
         }
-        
+
         currentSegmentIndex = index;
-        saveSpeechProgress(); // 儲存當前進度
+        saveSpeechProgress();
         updateNavButtons();
-        
-        // 高亮目前段落
         highlightCurrentSegment(index);
-        
-        const text = speechSegments[index];
-        const params = analyzeEmotion(text);
-        
-        // 前處理文字以改善朗讀效果
-        const processedText = preprocessTextForSpeech(text);
-        
-        // 如果處理後文字為空，跳到下一段
-        if (!processedText || processedText.trim().length === 0) {
-          if (isSpeaking && !isPaused) {
-            setTimeout(() => speakSegment(index + 1), 100);
-          }
+
+        const queueItem = speechPlayQueue[index] || {};
+        const rawText = queueItem.text || speechSegments[index];
+        const params = speechPlayQueue.length
+          ? { rate: queueItem.rate, pitch: queueItem.pitch, style: queueItem.style, pause: queueItem.pause || 300 }
+          : analyzeEmotion(rawText);
+
+        const processedText = EdgeTtsSpeech.sanitizeTtsText(
+          queueItem.text || preprocessTextForSpeech(rawText)
+        );
+
+        if (!processedText || !processedText.trim()) {
+          if (isSpeaking && !isPaused) setTimeout(() => speakSegment(index + 1), 100);
           return;
         }
-        
-        // 更新進度
-        const progress = ((index + 1) / speechSegments.length) * 100;
+
+        const progress = ((index + 1) / speechPlayQueue.length) * 100;
         speechProgressFill.style.width = progress + '%';
-        speechProgressText.textContent = `正在朗讀 ${index + 1}/${speechSegments.length} 段...`;
-        currentSegmentDisplay.textContent = `${index + 1} / ${speechSegments.length}`;
-        
-        // 使用瀏覽器內建語音
-        speakWithBrowser(processedText, params, index);
+        speechProgressText.textContent = `正在合成 ${index + 1}/${speechPlayQueue.length} 段…`;
+        currentSegmentDisplay.textContent = `${index + 1} / ${speechPlayQueue.length}`;
+
+        speakWithEdge(processedText, params, index, queueItem);
       }
       
-      // 使用瀏覽器內建語音朗讀
-      // 追蹤是否已經預熱過語音引擎
-      let speechEngineWarmedUp = false;
-      let lastSpeechTime = 0;
-      
-      function speakWithBrowser(processedText, params, index) {
-        // 🔧 修復：確保在開始前檢查狀態
-        if (!isSpeaking) {
-          return;
-        }
-        
-        // 設定語音（如果找不到選定的語音，使用第一個可用語音）
-        let selectedVoice = availableVoices.find(v => v.name === voiceSelect.value);
-        if (!selectedVoice && availableVoices.length > 0) {
-          selectedVoice = availableVoices[0];
-          console.log('使用預設語音：', selectedVoice.name);
-        }
-        
-        // 🔧 修復首字被吃掉的多重策略
-        // 策略1: 在文本前加入不可見的前導字符（零寬空格 + 逗號）
-        // 策略2: 確保語音引擎已預熱
-        // 策略3: 添加微小延遲讓引擎準備好
-        
-        const now = Date.now();
-        const timeSinceLastSpeech = now - lastSpeechTime;
-        
-        // 如果距離上次朗讀超過 3 秒，需要重新預熱
-        const needsWarmup = !speechEngineWarmedUp || timeSinceLastSpeech > 3000;
-        
-        // 在文本前加入緩衝字符
-        // 使用空格作為緩衝，不會被朗讀出聲音但能保護首字
-        // 多個零寬空格 + 普通空格組合效果最佳
-        const bufferedText = '\u200B\u200B \u200B' + processedText;
-        
-        function createAndPlayUtterance(text, isMain = true) {
-          const utterance = new SpeechSynthesisUtterance(text);
-          if (selectedVoice) utterance.voice = selectedVoice;
-          
-          utterance.rate = params.rate;
-          utterance.pitch = params.pitch;
-          utterance.volume = isMain ? params.volume : 0.01;
-          
-          if (isMain) {
-            utterance.onstart = () => {
-              lastSpeechTime = Date.now();
-              speechEngineWarmedUp = true;
-            };
-            
-            utterance.onend = () => {
-              lastSpeechTime = Date.now();
-              // 🔧 修復：確保在停止後不會繼續播放
-              if (!isSpeaking) {
-                return;
-              }
-              // 段落間停頓
-              setTimeout(() => {
-                if (isSpeaking && !isPaused) {
-                  speakSegment(index + 1);
-                }
-              }, params.pause);
-            };
-            
-            utterance.onerror = (e) => {
-              // 忽略 interrupted 錯誤（使用者主動停止）
-              if (e.error === 'interrupted' || e.error === 'canceled') {
-                return;
-              }
-              console.warn('朗讀警告：', e.error, '段落：', index);
-              // 🔧 修復：確保在停止後不會繼續播放
-              if (!isSpeaking) {
-                return;
-              }
-              // 嘗試繼續下一段
-              if (isSpeaking && !isPaused) {
-                setTimeout(() => speakSegment(index + 1), 100);
-              }
-            };
-            
-            currentUtterance = utterance;
-          }
-          
-          return utterance;
-        }
-        
-        // 🔧 修復：簡化預熱機制，確保第一次播放更可靠
-        if (needsWarmup) {
-          // 預熱策略：先播放一個靜音的短句
-          const warmupUtterance = new SpeechSynthesisUtterance(' ');
-          if (selectedVoice) warmupUtterance.voice = selectedVoice;
-          warmupUtterance.rate = 10; // 最快速度
-          warmupUtterance.volume = 0; // 完全靜音
-          
-          let mainUtterancePlayed = false;
-          const playMain = () => {
-            // 🔧 修復：確保只播放一次，並且檢查狀態
-            if (mainUtterancePlayed || !isSpeaking) return;
-            mainUtterancePlayed = true;
-            speechEngineWarmedUp = true;
-            
-            const mainUtterance = createAndPlayUtterance(bufferedText, true);
+      async function speakWithEdge(processedText, params, index, queueItem = {}) {
+        if (!isSpeaking) return;
+        const session = edgeSpeechSession;
+        stopEdgeAudio();
+        edgeSynthAbort = new AbortController();
+
+        const voice = queueItem.voice || voiceSelect.value || EdgeTtsSpeech.DEFAULT_VOICE;
+        const style = queueItem.style || params.style || 'general';
+        const rate = queueItem.rate ?? params.rate ?? 1;
+        const pitch = queueItem.pitch ?? params.pitch ?? 1;
+        const pause = queueItem.pause ?? params.pause ?? 300;
+
+        try {
+          const buf = await EdgeTtsSpeech.synthesize({
+            text: processedText,
+            voice,
+            style,
+            rate,
+            pitch,
+            signal: edgeSynthAbort.signal
+          });
+          if (!isSpeaking || session !== edgeSpeechSession) return;
+
+          edgeAudioUrl = URL.createObjectURL(new Blob([buf], { type: 'audio/mpeg' }));
+          edgeCurrentAudio = new Audio(edgeAudioUrl);
+
+          edgeCurrentAudio.onended = () => {
+            stopEdgeAudio();
             if (isSpeaking && !isPaused) {
-              speechSynth.speak(mainUtterance);
+              setTimeout(() => speakSegment(index + 1), pause);
             }
           };
-          
-          warmupUtterance.onstart = () => {
-            // 預熱開始後立即播放實際內容（不等待結束）
-            setTimeout(playMain, 10);
+          edgeCurrentAudio.onerror = () => {
+            stopEdgeAudio();
+            if (isSpeaking && !isPaused) setTimeout(() => speakSegment(index + 1), 100);
           };
-          
-          warmupUtterance.onend = () => {
-            playMain();
-          };
-          
-          warmupUtterance.onerror = () => {
-            // 預熱失敗也繼續播放
-            playMain();
-          };
-          
-          // 設置超時保護，確保即使預熱失敗也能播放
-          setTimeout(() => {
-            playMain();
-          }, 100);
-          
-          // 開始預熱
-          try {
-            speechSynth.speak(warmupUtterance);
-          } catch (e) {
-            console.warn('預熱失敗，直接播放：', e);
-            playMain();
-          }
-        } else {
-          // 已預熱，直接播放（仍然使用緩衝文本）
-          const mainUtterance = createAndPlayUtterance(bufferedText, true);
+
+          speechProgressText.textContent = `正在朗讀 ${index + 1}/${speechPlayQueue.length} 段…`;
+          await edgeCurrentAudio.play();
+        } catch (err) {
+          if (err?.name === 'AbortError') return;
+          console.warn('Edge 朗讀失敗:', err);
+          speechProgressText.textContent = `第 ${index + 1} 段合成失敗，跳過…`;
           if (isSpeaking && !isPaused) {
-            speechSynth.speak(mainUtterance);
+            setTimeout(() => speakSegment(index + 1), 200);
           }
         }
       }
-      
+
+      function stopEdgePlaybackOnly() {
+        edgeSpeechSession++;
+        stopEdgeAudio();
+      }
 
       // 更新段落範圍輸入的最大值
       function updateSegmentInputs() {
@@ -6493,163 +6306,189 @@ ${truncatedNotice}${storyContext}${settingsReminder}
         return segments;
       }
 
-      // 開始/暫停朗讀
-      function toggleSpeech() {
-        // 檢查瀏覽器支援
-        if (!speechSynth) {
-          showStatus('error', '您的瀏覽器不支援朗讀功能');
-          return;
+      // 開始/暫停朗讀（Edge 神經語音）
+      async function toggleSpeech() {
+        if (!edgeTtsReady) {
+          const ok = await EdgeTtsSpeech.checkAvailable();
+          edgeTtsReady = ok;
+          if (!ok) {
+            showStatus('error', 'Edge 朗讀需啟動本機伺服器（npm start）');
+            return;
+          }
         }
-        
+
         if (!latestStory) {
           showStatus('error', '沒有可朗讀的內容，請先生成故事');
           return;
         }
-        
-        // 檢查是否有可用語音
-        if (availableVoices.length === 0) {
-          // 嘗試重新載入語音
-          loadVoices();
-          if (availableVoices.length === 0) {
-            showStatus('error', '未找到可用語音，請檢查系統語音設定或重新整理頁面');
-            console.warn('無可用語音。請確認：1) 系統已安裝中文語音 2) 瀏覽器允許語音合成');
-            return;
-          }
-        }
-        
-        // 🔧 修復：更清晰的狀態判斷
+
         if (isSpeaking) {
           if (!isPaused) {
-            // 正在朗讀 → 暫停
-            if (speechSynth.speaking) {
-              speechSynth.pause();
-            }
+            edgeCurrentAudio?.pause();
             isPaused = true;
-            saveSpeechProgress(); // 暫停時儲存進度
+            saveSpeechProgress();
             playPauseBtn.textContent = '▶️ 繼續朗讀';
             speechProgressText.textContent = '⏸️ 已暫停';
           } else {
-            // 已暫停 → 繼續
-            if (speechSynth.paused) {
-              speechSynth.resume();
-            }
             isPaused = false;
             playPauseBtn.textContent = '⏸️ 暫停';
-            speechProgressText.textContent = `正在朗讀 ${currentSegmentIndex + 1}/${speechSegments.length} 段...`;
+            speechProgressText.textContent = `正在朗讀 ${currentSegmentIndex + 1}/${speechPlayQueue.length} 段…`;
+            if (edgeCurrentAudio) {
+              edgeCurrentAudio.play().catch(() => speakSegment(currentSegmentIndex));
+            } else {
+              speakSegment(currentSegmentIndex);
+            }
           }
           return;
         }
-        
-        // 未在朗讀 → 開始新朗讀
-        {
-          // 開始新朗讀
-          const text = resultDiv.textContent || latestStory;
-          const allSegments = splitTextToSegments(text);
-          
-          if (allSegments.length === 0) {
-            showStatus('error', '沒有可朗讀的內容');
-            return;
-          }
-          
-          // 獲取段落範圍
-          const startInput = document.getElementById('startSegment');
-          const endInput = document.getElementById('endSegment');
-          let startIdx = parseInt(startInput.value) - 1 || 0;
-          let endIdx = parseInt(endInput.value) || allSegments.length;
-          
-          // 驗證範圍
-          startIdx = Math.max(0, Math.min(startIdx, allSegments.length - 1));
-          endIdx = Math.max(startIdx + 1, Math.min(endIdx, allSegments.length));
-          
-          // 只選取指定範圍的段落
-          speechSegments = allSegments.slice(startIdx, endIdx);
-          
-          if (speechSegments.length === 0) {
-            showStatus('error', '沒有可朗讀的內容');
-            return;
-          }
-          
-          // 檢查是否有儲存的進度（只在朗讀全部時檢查）
-          const savedProgress = loadSpeechProgress();
-          let startIndex = 0;
-          
-          const isReadingAll = startIdx === 0 && endIdx === allSegments.length;
-          
-          if (isReadingAll && savedProgress && savedProgress.segmentIndex > 0 && savedProgress.segmentIndex < speechSegments.length) {
-            // 詢問是否從上次位置繼續
-            const resumeFromSaved = confirm(`發現上次朗讀進度（第 ${savedProgress.segmentIndex + 1}/${speechSegments.length} 段）\n\n點擊「確定」從上次位置繼續\n點擊「取消」從頭開始`);
-            
-            if (resumeFromSaved) {
-              startIndex = savedProgress.segmentIndex;
-              // 恢復設定
-              if (savedProgress.rate) speechRate.value = savedProgress.rate;
-              if (savedProgress.pitch) speechPitch.value = savedProgress.pitch;
-              if (savedProgress.emotion) emotionMode.value = savedProgress.emotion;
-              rateValue.textContent = speechRate.value + 'x';
-              pitchValue.textContent = speechPitch.value;
-              // 語音需要在語音列表載入後設定
-              setTimeout(() => {
-                if (savedProgress.voice && availableVoices.find(v => v.name === savedProgress.voice)) {
-                  voiceSelect.value = savedProgress.voice;
-                }
-              }, 100);
-            } else {
-              clearSpeechProgress();
-            }
-          }
-          
-          // 🔧 修復：確保在開始前清除任何殘留狀態
-          if (speechSynth.speaking || speechSynth.paused) {
-            speechSynth.cancel();
-          }
-          
-          isSpeaking = true;
-          isPaused = false;
-          playPauseBtn.textContent = '⏸️ 暫停';
-          startSpeechKeepAlive(); // 啟動 Chrome bug workaround
-          
-          // 給朗讀按鈕添加視覺提示
-          speakBtn.classList.add('active-task');
-          
-          // 顯示朗讀範圍
-          if (!isReadingAll) {
-            speechProgressText.textContent = `朗讀範圍：第 ${startIdx + 1} - ${endIdx} 段`;
-          } else {
-            speechProgressText.textContent = `準備開始朗讀...`;
-          }
-          
-          // 🔧 修復：使用 setTimeout 確保狀態已設置完成
-          setTimeout(() => {
-            if (isSpeaking && !isPaused) {
-              speakSegment(startIndex);
-            }
-          }, 10);
+
+        const text = resultDiv.textContent || latestStory;
+        const allSegments = splitTextToSegments(text);
+
+        if (allSegments.length === 0) {
+          showStatus('error', '沒有可朗讀的內容');
+          return;
         }
+
+        const startInput = document.getElementById('startSegment');
+        const endInput = document.getElementById('endSegment');
+        let startIdx = parseInt(startInput.value, 10) - 1 || 0;
+        let endIdx = parseInt(endInput.value, 10) || allSegments.length;
+        startIdx = Math.max(0, Math.min(startIdx, allSegments.length - 1));
+        endIdx = Math.max(startIdx + 1, Math.min(endIdx, allSegments.length));
+
+        const rangeText = allSegments.slice(startIdx, endIdx).join('\n\n');
+        const baseRate = parseFloat(speechRate.value) || 1;
+        const basePitch = parseFloat(speechPitch.value) || 1;
+        const voiceId = voiceSelect.value || EdgeTtsSpeech.DEFAULT_VOICE;
+        const useRole = roleVoiceEnabled?.checked;
+
+        try {
+          localStorage.setItem('speechRoleEnabled', useRole ? '1' : '0');
+        } catch { /* ignore */ }
+
+        speechProgressText.textContent = useRole
+          ? 'DeepSeek 分析角色與情緒中…'
+          : '準備 Edge 語音…';
+        playPauseBtn.disabled = true;
+        if (useRole) showRoleAnalyzeUI(1);
+        else hideRoleAnalyzeUI();
+
+        let queue;
+        try {
+          if (useRole) {
+            queue = await EdgeTtsSpeech.buildRolePlayQueue(rangeText, {
+              narratorVoice: narratorVoice?.value || voiceId,
+              maleVoice: maleVoice?.value || 'zh-CN-YunxiNeural',
+              femaleVoice: femaleVoice?.value || 'zh-CN-XiaoxiaoNeural',
+              baseRate,
+              basePitch,
+              dramaMode: true,
+              onProgress: (phase, done, total) => {
+                if (phase === 'start') {
+                  showRoleAnalyzeUI(1);
+                } else if (phase === 'progress') {
+                  updateRoleAnalyzeUI(done, total);
+                } else if (phase === 'done') {
+                  updateRoleAnalyzeUI(total || 1, total || 1);
+                }
+              }
+            });
+          } else {
+            queue = EdgeTtsSpeech.buildSimplePlayQueue(
+              allSegments.slice(startIdx, endIdx),
+              voiceId,
+              emotionMode.value,
+              baseRate,
+              basePitch
+            );
+          }
+        } catch (err) {
+          hideRoleAnalyzeUI();
+          playPauseBtn.disabled = false;
+          showStatus('error', err.message || '建立朗讀佇列失敗');
+          speechProgressText.textContent = '準備就緒';
+          speechProgressFill.style.width = '0%';
+          return;
+        }
+
+        hideRoleAnalyzeUI();
+
+        if (!queue.length) {
+          playPauseBtn.disabled = false;
+          showStatus('error', '沒有可朗讀的內容');
+          speechProgressFill.style.width = '0%';
+          return;
+        }
+
+        speechPlayQueue = queue.map((item) => {
+          if (item.sourceSegmentIndex != null) {
+            const range = segmentRanges[startIdx + item.sourceSegmentIndex];
+            if (range) {
+              return {
+                ...item,
+                highlightStart: range.start,
+                highlightEnd: range.end,
+                highlightText: range.text
+              };
+            }
+          }
+          return { ...item };
+        });
+        speechSegments = speechPlayQueue.map((q) => q.text);
+
+        let startIndex = 0;
+        const savedProgress = loadSpeechProgress();
+        const isReadingAll = startIdx === 0 && endIdx === allSegments.length;
+
+        if (isReadingAll && savedProgress?.segmentIndex > 0 && savedProgress.segmentIndex < speechPlayQueue.length) {
+          const resumeFromSaved = confirm(
+            `發現上次朗讀進度（第 ${savedProgress.segmentIndex + 1}/${speechPlayQueue.length} 段）\n\n` +
+            `確定 = 從這裡繼續\n取消 = 從頭開始`
+          );
+          if (resumeFromSaved) {
+            startIndex = savedProgress.segmentIndex;
+            if (savedProgress.rate) speechRate.value = savedProgress.rate;
+            if (savedProgress.pitch) speechPitch.value = savedProgress.pitch;
+            if (savedProgress.emotion) emotionMode.value = savedProgress.emotion;
+            rateValue.textContent = parseFloat(speechRate.value).toFixed(1) + 'x';
+            pitchValue.textContent = parseFloat(speechPitch.value).toFixed(1);
+            if (savedProgress.voice) voiceSelect.value = savedProgress.voice;
+          } else {
+            clearSpeechProgress();
+          }
+        }
+
+        stopEdgePlaybackOnly();
+        isSpeaking = true;
+        isPaused = false;
+        playPauseBtn.disabled = false;
+        playPauseBtn.textContent = '⏸️ 暫停';
+        speakBtn.classList.add('active-task');
+
+        if (!isReadingAll) {
+          speechProgressText.textContent = `朗讀範圍：第 ${startIdx + 1} - ${endIdx} 段`;
+        }
+
+        setTimeout(() => {
+          if (isSpeaking && !isPaused) speakSegment(startIndex);
+        }, 10);
       }
 
-      // 停止朗讀
       function stopSpeech() {
-        // 🔧 修復：先恢復再取消，確保語音引擎狀態正確
-        if (isPaused && speechSynth.paused) {
-          speechSynth.resume();
-        }
-        speechSynth.cancel();
-        
-        // 重置所有狀態
+        stopEdgePlaybackOnly();
         isSpeaking = false;
         isPaused = false;
-        speechEngineWarmedUp = false; // 重置預熱狀態
-        currentUtterance = null;
-        stopSpeechKeepAlive(); // 停止 Chrome bug workaround
-        saveSpeechProgress(); // 停止時也儲存進度
-        
-        // 移除朗讀按鈕視覺提示
+        speechPlayQueue = [];
+        saveSpeechProgress();
         speakBtn.classList.remove('active-task');
         playPauseBtn.textContent = '▶️ 開始朗讀';
+        playPauseBtn.disabled = false;
         speechProgressFill.style.width = '0%';
         speechProgressText.textContent = '準備就緒';
         currentSegmentDisplay.textContent = '- / -';
         clearHighlight();
+        hideRoleAnalyzeUI();
         updateNavButtons();
       }
       
@@ -6668,39 +6507,24 @@ ${truncatedNotice}${storyContext}${settingsReminder}
         updateSegmentInputs();
       }
       
-      // 跳到上一段
       function prevSegment() {
         if (!isSpeaking || currentSegmentIndex <= 0) return;
-        // 🔧 修復：確保正確停止當前播放
-        if (speechSynth.speaking || speechSynth.paused) {
-          speechSynth.cancel();
-        }
+        stopEdgePlaybackOnly();
         isPaused = false;
-        currentUtterance = null;
         speakSegment(currentSegmentIndex - 1);
       }
-      
-      // 跳到下一段
+
       function nextSegment() {
-        if (!isSpeaking || currentSegmentIndex >= speechSegments.length - 1) return;
-        // 🔧 修復：確保正確停止當前播放
-        if (speechSynth.speaking || speechSynth.paused) {
-          speechSynth.cancel();
-        }
+        if (!isSpeaking || currentSegmentIndex >= speechPlayQueue.length - 1) return;
+        stopEdgePlaybackOnly();
         isPaused = false;
-        currentUtterance = null;
         speakSegment(currentSegmentIndex + 1);
       }
-      
-      // 跳轉到指定段落（透過進度條點擊）
+
       function jumpToSegment(segmentIndex) {
-        if (!isSpeaking || segmentIndex < 0 || segmentIndex >= speechSegments.length) return;
-        // 🔧 修復：確保正確停止當前播放
-        if (speechSynth.speaking || speechSynth.paused) {
-          speechSynth.cancel();
-        }
+        if (!isSpeaking || segmentIndex < 0 || segmentIndex >= speechPlayQueue.length) return;
+        stopEdgePlaybackOnly();
         isPaused = false;
-        currentUtterance = null;
         speakSegment(segmentIndex);
       }
 
@@ -6733,34 +6557,20 @@ ${truncatedNotice}${storyContext}${settingsReminder}
       }
 
       // 事件綁定
-      speakBtn.addEventListener('click', () => {
+      speakBtn.addEventListener('click', async () => {
         speechModal.classList.add('open');
-        
-        // 調試：檢查語音狀態
-        console.log('🎙️ 朗讀面板開啟');
-        console.log('  - 可用語音數量:', availableVoices.length);
-        console.log('  - 語音合成支援:', !!speechSynth);
-        console.log('  - 故事內容長度:', (latestStory || '').length);
-        
-        // 如果沒有語音，嘗試重新載入
-        if (availableVoices.length === 0) {
-          console.log('  - 嘗試重新載入語音...');
-          loadVoices();
-        }
-        
-        // 更新段落資訊
+        if (!speechInitialized) await loadVoices();
         updateSegmentInputs();
         updateNavButtons();
-        
-        // 檢查是否有儲存的進度，顯示提示
         const savedProgress = loadSpeechProgress();
-        if (savedProgress && savedProgress.segmentIndex > 0 && !isSpeaking) {
+        if (savedProgress?.segmentIndex > 0 && !isSpeaking) {
           speechProgressText.textContent = `📍 上次進度：第 ${savedProgress.segmentIndex + 1} 段`;
         }
-        
-        // 如果沒有可用語音，顯示提示
-        if (availableVoices.length === 0) {
-          speechProgressText.textContent = '⚠️ 未偵測到語音，請重新整理頁面或檢查系統語音設定';
+        if (!edgeTtsReady) {
+          edgeTtsReady = await EdgeTtsSpeech.checkAvailable();
+          if (!edgeTtsReady) {
+            speechProgressText.textContent = '⚠️ 請先執行 npm start 啟動伺服器以使用 Edge 朗讀';
+          }
         }
       });
 
@@ -6793,14 +6603,14 @@ ${truncatedNotice}${storyContext}${settingsReminder}
       
       // 進度條點擊跳轉
       speechProgressBar.addEventListener('click', (e) => {
-        if (!isSpeaking || speechSegments.length === 0) return;
+        if (!isSpeaking || speechPlayQueue.length === 0) return;
         
         const rect = speechProgressBar.getBoundingClientRect();
         const clickX = e.clientX - rect.left;
         const percentage = clickX / rect.width;
-        const targetIndex = Math.floor(percentage * speechSegments.length);
+        const targetIndex = Math.floor(percentage * speechPlayQueue.length);
         
-        jumpToSegment(Math.max(0, Math.min(targetIndex, speechSegments.length - 1)));
+        jumpToSegment(Math.max(0, Math.min(targetIndex, speechPlayQueue.length - 1)));
       });
       
       // 語速微調按鈕
@@ -6866,7 +6676,7 @@ ${truncatedNotice}${storyContext}${settingsReminder}
         if (isSpeaking || currentSegmentIndex > 0) {
           saveSpeechProgress();
         }
-        speechSynth.cancel();
+        stopEdgeAudio();
       });
 
       // 頁面完全載入後，確保按鈕狀態正確
@@ -6944,21 +6754,49 @@ ${truncatedNotice}${storyContext}${settingsReminder}
         });
       }
 
-      // ==================== 閱讀區氛圍切換（圖書館 / 咖啡廳） ====================
+      // ==================== 閱讀區氛圍 ====================
+      const READING_AMBIANCES = [
+        { id: 'library', label: '📚 圖書館' },
+        { id: 'cafe', label: '☕ 咖啡廳' },
+        { id: 'moon', label: '🌙 月夜' },
+        { id: 'rain', label: '🌧️ 雨夜' },
+        { id: 'study', label: '🏮 書齋' },
+        { id: 'bamboo', label: '🎋 竹林' },
+        { id: 'sea', label: '🌊 海邊' },
+        { id: 'hearth', label: '🔥 壁爐' },
+        { id: 'sakura', label: '🌸 櫻花' },
+        { id: 'mountain', label: '🏔️ 雲山' },
+      ];
+      const VALID_AMBIANCE_IDS = new Set(READING_AMBIANCES.map((a) => a.id));
+
       const readingScene = document.getElementById('readingScene');
+      const ambianceSelect = document.getElementById('ambianceSelect');
+      const settingsAmbianceSelect = document.getElementById('settingsAmbianceSelect');
+
+      function buildAmbianceOptions() {
+        return READING_AMBIANCES.map((a) =>
+          `<option value="${a.id}">${a.label}</option>`
+        ).join('');
+      }
+
+      function applyAmbiance(mode) {
+        const value = VALID_AMBIANCE_IDS.has(mode) ? mode : 'library';
+        if (readingScene) readingScene.dataset.ambiance = value;
+        if (ambianceSelect) ambianceSelect.value = value;
+        if (settingsAmbianceSelect) settingsAmbianceSelect.value = value;
+        try { localStorage.setItem('readingAmbiance', value); } catch (e) {}
+      }
+
       if (readingScene) {
-        const ambianceBtns = readingScene.querySelectorAll('.ambiance-btn');
-        const applyAmbiance = (mode) => {
-          const value = (mode === 'cafe') ? 'cafe' : 'library';
-          readingScene.dataset.ambiance = value;
-          ambianceBtns.forEach(btn => {
-            btn.classList.toggle('active', btn.dataset.ambiance === value);
-          });
-          try { localStorage.setItem('readingAmbiance', value); } catch (e) {}
-        };
-        ambianceBtns.forEach(btn => {
-          btn.addEventListener('click', () => applyAmbiance(btn.dataset.ambiance));
-        });
+        const optionsHtml = buildAmbianceOptions();
+        if (ambianceSelect) ambianceSelect.innerHTML = optionsHtml;
+        if (settingsAmbianceSelect) settingsAmbianceSelect.innerHTML = optionsHtml;
+        if (ambianceSelect) {
+          ambianceSelect.addEventListener('change', () => applyAmbiance(ambianceSelect.value));
+        }
+        if (settingsAmbianceSelect) {
+          settingsAmbianceSelect.addEventListener('change', () => applyAmbiance(settingsAmbianceSelect.value));
+        }
         applyAmbiance(localStorage.getItem('readingAmbiance') || 'library');
       }
 
