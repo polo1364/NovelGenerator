@@ -1,0 +1,18 @@
+{
+  "name": "ai-novel-workshop",
+  "version": "1.0.0",
+  "description": "AI 小說工坊 — DeepSeek 驅動的長篇小說生成工具（金鑰後端代理）",
+  "type": "commonjs",
+  "main": "server.js",
+  "engines": {
+    "node": ">=18"
+  },
+  "scripts": {
+    "start": "node server.js",
+    "dev": "node --watch server.js"
+  },
+  "dependencies": {
+    "dotenv": "^16.4.5",
+    "express": "^4.19.2"
+  }
+}
