@@ -2180,16 +2180,21 @@
           align-items: center;
           justify-content: flex-start;
           width: 100%;
-          gap: 6px;
-          padding: 8px 12px;
+          gap: 10px;
+          /* 預留 iPhone 底部 home indicator 安全區，避免最底一排文字被擋住、不好點 */
+          padding: 10px 16px calc(10px + env(safe-area-inset-bottom, 0px));
           border-radius: 0;
           overflow-x: auto;
+          overscroll-behavior-x: contain;
+          scroll-snap-type: x proximity;
           -webkit-overflow-scrolling: touch;
+          scrollbar-width: none;
           background: var(--card-bg, #fff);
           border-top: 1px solid var(--border);
           box-shadow: 0 -4px 18px rgba(0, 0, 0, 0.18);
           z-index: 3600;
         }
+        .floating-toolbar::-webkit-scrollbar { display: none; }
         [data-theme="dark"] .floating-toolbar { background: #1f2430; }
 
         /* 手機隱藏側邊收合把手，並強制工具列恆顯（忽略 dock 收合狀態） */
@@ -2200,19 +2205,22 @@
           pointer-events: auto;
         }
 
-        /* 內容底部留白，避免被固定工具列遮住 */
-        body { padding-bottom: 76px; }
+        /* 內容底部留白，避免被固定工具列遮住（含安全區） */
+        body { padding-bottom: calc(96px + env(safe-area-inset-bottom, 0px)); }
 
         .toolbar-btn {
           flex: 0 0 auto;
-          width: 52px;
-          height: 52px;
-          border-radius: 10px;
-          padding: 5px;
+          width: 60px;
+          height: 60px;
+          border-radius: 14px;
+          padding: 7px;
+          scroll-snap-align: center;
         }
+        /* 觸控裝置取消 hover 放大，避免誤觸時跳動 */
+        .toolbar-btn:hover { transform: none; }
 
         .toolbar-btn .text-char {
-          font-size: 0.7rem;
+          font-size: 0.78rem;
         }
 
         .toolbar-btn .toolbar-tooltip {
@@ -2222,8 +2230,8 @@
         .toolbar-divider {
           flex: 0 0 auto;
           width: 1px;
-          height: 34px;
-          margin: 0 2px;
+          height: 38px;
+          margin: 0 1px;
         }
 
         .api-panel {
@@ -2231,7 +2239,7 @@
           left: 10px;
           width: auto;
           top: auto;
-          bottom: 84px;
+          bottom: calc(96px + env(safe-area-inset-bottom, 0px));
           transform: none;
           max-height: 60vh;
         }
@@ -2242,43 +2250,43 @@
 
         .toolbar-download-menu {
           right: auto;
-          left: 12px;
-          bottom: 70px;
+          left: 16px;
+          bottom: calc(82px + env(safe-area-inset-bottom, 0px));
         }
 
         /* 生成進度條浮於底部工具列上方 */
-        .generation-progress.show { bottom: 84px; }
-        body.is-generating { padding-bottom: 280px; }
+        .generation-progress.show { bottom: calc(96px + env(safe-area-inset-bottom, 0px)); }
+        body.is-generating { padding-bottom: calc(300px + env(safe-area-inset-bottom, 0px)); }
       }
 
-      /* 超小螢幕（手機直向）：沿用底部橫向工具列 */
+      /* 超小螢幕（手機直向）：沿用底部橫向工具列，按鈕仍維持好點的尺寸 */
       @media (max-width: 480px) {
         .floating-toolbar {
-          gap: 4px;
-          padding: 7px 10px;
+          gap: 9px;
+          padding: 9px 12px calc(9px + env(safe-area-inset-bottom, 0px));
         }
 
         .toolbar-btn {
-          width: 48px;
-          height: 48px;
-          border-radius: 8px;
-          padding: 4px;
+          width: 56px;
+          height: 56px;
+          border-radius: 12px;
+          padding: 6px;
         }
 
         .toolbar-btn .text-char {
-          font-size: 0.65rem;
+          font-size: 0.74rem;
         }
 
         .toolbar-divider {
-          height: 30px;
+          height: 34px;
         }
 
-        body { padding-bottom: 70px; }
+        body { padding-bottom: calc(90px + env(safe-area-inset-bottom, 0px)); }
 
         .toolbar-download-menu {
           right: auto;
-          left: 10px;
-          bottom: 64px;
+          left: 12px;
+          bottom: calc(76px + env(safe-area-inset-bottom, 0px));
           min-width: 150px;
         }
 
@@ -2583,7 +2591,7 @@
       @media (max-width: 768px) {
         .bookmark-nav-container {
           top: auto;
-          bottom: 140px;
+          bottom: calc(168px + env(safe-area-inset-bottom, 0px));
           right: 16px;
           z-index: 1000;
         }
@@ -2611,7 +2619,7 @@
 
       @media (max-width: 480px) {
         .bookmark-nav-container {
-          bottom: 140px;
+          bottom: calc(168px + env(safe-area-inset-bottom, 0px));
           right: 12px;
         }
 
@@ -2631,7 +2639,7 @@
         }
 
         .chapter-nav-container {
-          bottom: 16px;
+          bottom: calc(232px + env(safe-area-inset-bottom, 0px));
           right: 12px;
         }
 
@@ -2649,7 +2657,7 @@
       @media (max-width: 768px) {
         .chapter-nav-container {
           top: auto;
-          bottom: 20px;
+          bottom: calc(232px + env(safe-area-inset-bottom, 0px));
           right: 16px;
           z-index: 1000;
         }
@@ -4060,6 +4068,37 @@
         overflow-y: auto;
       }
 
+      /* AI 擬定書名 */
+      .outline-title-box {
+        display: flex;
+        align-items: center;
+        flex-wrap: wrap;
+        gap: 10px;
+        margin: 4px 0 0;
+        padding: 14px 16px;
+        background: linear-gradient(135deg, rgba(212, 175, 55, 0.14), rgba(156, 58, 68, 0.10));
+        border: 1px solid var(--gold);
+        border-radius: 12px;
+      }
+      .outline-title-box .otb-label {
+        font-size: 0.82rem;
+        color: var(--text-light);
+        flex-shrink: 0;
+      }
+      .outline-title-box .otb-title {
+        flex: 1;
+        min-width: 120px;
+        font-family: 'Noto Serif TC', serif;
+        font-weight: 700;
+        font-size: 1.25rem;
+        color: var(--accent);
+        letter-spacing: 0.04em;
+      }
+      .outline-title-box .otb-title::before { content: '《'; opacity: 0.6; }
+      .outline-title-box .otb-title::after { content: '》'; opacity: 0.6; }
+      .outline-title-box .otb-title:empty::before,
+      .outline-title-box .otb-title:empty::after { content: ''; }
+
       .outline-chapter {
         padding: 12px;
         margin-bottom: 8px;
@@ -4082,7 +4121,7 @@
 
       @media (max-width: 768px) {
         .settings-panel {
-          bottom: 80px;
+          bottom: calc(100px + env(safe-area-inset-bottom, 0px));
           right: 16px;
         }
 

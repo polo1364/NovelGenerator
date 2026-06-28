@@ -4085,9 +4085,11 @@ ${truncatedNotice}${storyContext}${settingsReminder}
         // 嘗試從故事內容中提取標題（通常在開頭有 ## 標題 格式）
         let storyTitle = '';
         if (latestStory) {
-          const titleMatch = latestStory.match(/##\s*([^\n#]+)/);
+          // 優先使用開頭的書名行「# 《書名》」，其次退回首個 ## 標題（通常為第一章標題）
+          const bookTitleMatch = latestStory.match(/^#\s+(.+)$/m);
+          const titleMatch = bookTitleMatch || latestStory.match(/##\s*([^\n#]+)/);
           if (titleMatch) {
-            storyTitle = titleMatch[1].trim();
+            storyTitle = titleMatch[1].replace(/[《》【】]/g, '').trim();
           }
         }
         
@@ -4120,11 +4122,12 @@ ${truncatedNotice}${storyContext}${settingsReminder}
 
       // 生成手機閱讀版 HTML（完全離線可用）
       function generateMobileHTML(text) {
-        // 提取標題
+        // 提取標題：優先開頭書名行「# 《書名》」，其次退回首個 ## 標題
         let title = '小說閱讀';
-        const titleMatch = text.match(/##\s*([^\n#]+)/);
+        const bookTitleMatch = text.match(/^#\s+(.+)$/m);
+        const titleMatch = bookTitleMatch || text.match(/##\s*([^\n#]+)/);
         if (titleMatch) {
-          title = titleMatch[1].trim();
+          title = titleMatch[1].replace(/[《》【】]/g, '').trim();
         }
         
         // 處理文字內容
@@ -5197,6 +5200,14 @@ ${truncatedNotice}${storyContext}${settingsReminder}
           .replace(/^[《【\[]\s*/, '')
           .replace(/\s*[》】\]]$/, '')
           .trim();
+
+        // 若書籤 title 已是乾淨的 AI 書名（非舊版「章節+正文截斷」），直接採用
+        const stored = strip(bm.title || '');
+        const looksLikeOldTruncated =
+          /第\s*[一二三四五六七八九十百千萬零\d]+\s*[章節回卷]/.test(stored) ||
+          stored.length > 24 ||
+          /^好的[，,]/.test(stored);
+        if (stored && !looksLikeOldTruncated) return stored.substring(0, 30);
 
         // 章節標題（含可選 # 標記），並擷取「：」之後的標題描述
         const chapRe = /^#{0,4}\s*(?:第\s*[一二三四五六七八九十百千萬零壹貳參肆伍陸柒捌玖拾佰仟\d]+\s*[章節回卷部集篇]|序章|楔子|引子|前言|尾聲|終章|番外|後記)\s*[：:、.\-－—\s]*(.*)$/;
@@ -8179,8 +8190,99 @@ ${truncatedNotice}${storyContext}${settingsReminder}
       const regenerateOutlineBtn = document.getElementById('regenerateOutlineBtn');
       const outlineLoading = document.getElementById('outlineLoading');
       const outlineContent = document.getElementById('outlineContent');
+      const outlineTitleBox = document.getElementById('outlineTitleBox');
+      const outlineTitleText = document.getElementById('outlineTitleText');
+      const retitleBtn = document.getElementById('retitleBtn');
       
       let currentOutline = null;
+      let currentBookTitle = '';
+
+      // 清理 AI 回傳的書名：去除引號、書名號、說明字樣、標點，限制長度
+      function cleanBookTitle(raw) {
+        let t = (raw || '').replace(/\uFFFD/g, '').trim();
+        // 只取第一行非空內容
+        t = (t.split('\n').map(s => s.trim()).find(Boolean)) || '';
+        t = t
+          .replace(/^(書名|片名|標題|title)\s*[:：]\s*/i, '')
+          .replace(/^[《【「『\[\("'`]+/, '')
+          .replace(/[》】」』\]\)"'`]+$/, '')
+          .replace(/[。！？!?．.]+$/, '')
+          .trim();
+        return t.slice(0, 20);
+      }
+
+      // 依大綱與設定，請 AI 取一個貼合內容的書名
+      async function generateBookTitle(signal) {
+        if (!currentOutline) return '';
+        const model = modelSelect.value;
+        const theme = (themeSelect.value || '').trim();
+        const setting = (settingSelect.value || '').trim();
+        const era = (eraSelect.value || '').trim();
+        const style = (styleSelect.value || '').trim();
+        const emotionalTone = (emotionalToneSelect.value || '').trim();
+        const settingLines = [
+          theme ? `主題：${theme}` : '',
+          setting ? `背景：${setting}` : '',
+          era ? `時代：${era}` : '',
+          style ? `風格：${style}` : '',
+          emotionalTone ? `基調：${emotionalTone}` : ''
+        ].filter(Boolean).join('\n');
+
+        const titlePrompt = `你是專業的小說命名編輯。請根據下方「故事設定與大綱」，為這部繁體中文小說取一個吸引人、貼合內容的書名。
+
+【嚴格要求】
+1. 只輸出書名本身，不要任何解釋、引號、書名號、標點符號或多餘文字
+2. 長度 4～12 個字，必須具體呼應故事內容與氛圍，避免空泛、避免英文與簡體字
+3. 不要出現「書名」「以下」「這是」等字樣
+
+${settingLines ? `【故事設定】\n${settingLines}\n\n` : ''}【故事大綱】
+${currentOutline.slice(0, 1600)}
+
+請直接輸出書名：`;
+
+        const raw = await callDeepSeek(titlePrompt, null, model, { signal, retries: 1 });
+        return cleanBookTitle(raw);
+      }
+
+      function showOutlineTitle(title) {
+        if (!outlineTitleBox) return;
+        if (title) {
+          outlineTitleText.textContent = title;
+          outlineTitleBox.style.display = 'flex';
+        } else {
+          outlineTitleText.textContent = '';
+          outlineTitleBox.style.display = 'none';
+        }
+      }
+
+      // 「換一個」：重新取名
+      if (retitleBtn) {
+        retitleBtn.addEventListener('click', async () => {
+          if (!currentOutline) { showStatus('error', '請先生成大綱'); return; }
+          retitleBtn.disabled = true;
+          const signal = beginGeneration();
+          try {
+            showStatus('loading', '正在重新命名...');
+            const title = await generateBookTitle(signal);
+            if (title) {
+              currentBookTitle = title;
+              showOutlineTitle(title);
+              showStatus('success', `已擬定新書名《${title}》`);
+            } else {
+              showStatus('warning', '未能取得書名，請再試一次');
+            }
+          } catch (err) {
+            if (err.name === 'AbortError' || userAborted) {
+              showStatus('info', '⏹ 已停止');
+            } else {
+              showStatus('error', '取書名失敗：' + err.message);
+            }
+          } finally {
+            endGeneration();
+            retitleBtn.disabled = false;
+          }
+        });
+      }
 
       // 打開大綱模態視窗
       outlineBtn.addEventListener('click', () => {
@@ -8353,6 +8455,9 @@ ${chapterListTemplate}
           
           if (outlineText) {
             currentOutline = outlineText;
+            // 大綱換新 → 舊書名失效，待使用者生成時再依新大綱命名
+            currentBookTitle = '';
+            showOutlineTitle('');
             if (typeof updateStepper === 'function') updateStepper();
             
             // 格式化顯示大綱
@@ -8434,22 +8539,52 @@ ${chapterListTemplate}
           showStatus('error', '請先生成大綱');
           return;
         }
-        
+
+        // 先依大綱請 AI 取書名（若尚未有書名）；命名失敗不阻擋後續生成
+        if (!currentBookTitle) {
+          generateFromOutlineBtn.disabled = true;
+          const signal = beginGeneration();
+          try {
+            showStatus('loading', '正在依大綱為作品命名...');
+            const title = await generateBookTitle(signal);
+            if (title) {
+              currentBookTitle = title;
+              showOutlineTitle(title);
+            }
+          } catch (err) {
+            if (err.name === 'AbortError' || userAborted) {
+              showStatus('info', '⏹ 已停止');
+              endGeneration();
+              generateFromOutlineBtn.disabled = false;
+              return; // 使用者主動中止 → 不接著生成
+            }
+            // 其他錯誤：略過命名，仍照常生成
+          } finally {
+            endGeneration();
+            generateFromOutlineBtn.disabled = false;
+          }
+        }
+
         // 關閉模態視窗
         outlineModal.classList.remove('open');
-        
-        // 將大綱添加到補充說明中
+
+        // 將書名指示與大綱添加到補充說明中
         const existingNotes = notesInput.value.trim();
-        const outlineNote = `【已生成的故事大綱，請嚴格按照此大綱展開故事】\n${currentOutline}`;
-        
+        const noteParts = [];
+        if (currentBookTitle) {
+          noteParts.push(`【本書書名】《${currentBookTitle}》\n請在全文最開頭，獨立一行輸出「# 《${currentBookTitle}》」作為書名，空一行後再開始第1章；後續章節沿用此書名，不要重複輸出書名行。`);
+        }
+        noteParts.push(`【已生成的故事大綱，請嚴格按照此大綱展開故事】\n${currentOutline}`);
+        const outlineNote = noteParts.join('\n\n');
+
         if (existingNotes) {
           notesInput.value = existingNotes + '\n\n' + outlineNote;
         } else {
           notesInput.value = outlineNote;
         }
-        
+
         // 觸發生成
-        showStatus('success', '大綱已加入補充說明，正在開始生成...');
+        showStatus('success', currentBookTitle ? `書名《${currentBookTitle}》已擬定，開始生成...` : '大綱已加入補充說明，正在開始生成...');
         setTimeout(() => {
           generateBtn.click();
         }, 500);

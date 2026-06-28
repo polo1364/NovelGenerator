@@ -884,13 +884,19 @@
           </div>
           
           <div id="outlineContent" class="outline-preview" style="display: none;"></div>
+
+          <div id="outlineTitleBox" class="outline-title-box" style="display: none;">
+            <span class="otb-label">📖 AI 擬定書名</span>
+            <span id="outlineTitleText" class="otb-title"></span>
+            <button id="retitleBtn" type="button" class="btn-outline btn-small" title="讓 AI 依大綱重新取一個書名">🔄 換一個</button>
+          </div>
           
           <div id="outlineActions" style="display: flex; gap: 12px; margin-top: 16px;">
             <button id="generateOutlineBtn" class="btn-primary" style="flex: 1;">
               ✨ 生成大綱
             </button>
             <button id="generateFromOutlineBtn" class="btn-gold" style="flex: 1; display: none;">
-              📖 基於此大綱生成小說
+              📖 取書名並生成小說
             </button>
             <button id="regenerateOutlineBtn" class="btn-outline" style="display: none;">
               🔄 重新生成
