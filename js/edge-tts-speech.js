@@ -4,6 +4,7 @@
 (function (global) {
   const TTS_ENDPOINT = '/api/tts';
   const VOICES_ENDPOINT = '/api/tts/voices';
+  const TTS_PROXY_URL = 'https://web-reader-tts-proxy.polo760504.workers.dev';
   const ANALYZE_ENDPOINT = '/api/analyze-roles';
   const ANALYZE_STREAM_ENDPOINT = '/api/analyze-roles/stream';
   const DEFAULT_VOICE = 'zh-CN-YunjianNeural';
@@ -58,6 +59,21 @@
   const NARRATOR_STYLE_PREF = ['narration-relaxed', 'narration-professional', 'documentary-narration', 'calm'];
 
   let cachedVoices = RECOMMENDED_VOICES;
+  let ttsModeCache = null;
+
+  async function detectTtsMode() {
+    if (typeof location !== 'undefined' && location.protocol === 'file:') return null;
+    if (ttsModeCache) return ttsModeCache;
+    try {
+      const res = await fetch('/api/health', { signal: AbortSignal.timeout(4000) });
+      if (res.ok) {
+        ttsModeCache = 'local';
+        return ttsModeCache;
+      }
+    } catch { /* GitHub Pages 等靜態站 */ }
+    ttsModeCache = 'proxy';
+    return ttsModeCache;
+  }
 
   function getVoices() {
     return cachedVoices;
@@ -398,7 +414,10 @@
   }
 
   async function synthesize({ text, voice, style, rate, pitch, signal }) {
-    const res = await fetch(TTS_ENDPOINT, {
+    const mode = await detectTtsMode();
+    const url = mode === 'local' ? TTS_ENDPOINT : mode === 'proxy' ? TTS_PROXY_URL : null;
+    if (!url) throw new Error('請用 npm start 或 HTTPS 網頁開啟');
+    const res = await fetch(url, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       signal,
@@ -426,13 +445,8 @@
   }
 
   async function checkAvailable() {
-    if (typeof location !== 'undefined' && location.protocol === 'file:') return false;
-    try {
-      const res = await fetch('/api/health', { signal: AbortSignal.timeout(5000) });
-      return res.ok;
-    } catch {
-      return false;
-    }
+    const mode = await detectTtsMode();
+    return mode === 'local' || mode === 'proxy';
   }
 
   global.EdgeTtsSpeech = {

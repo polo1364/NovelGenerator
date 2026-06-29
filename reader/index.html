@@ -522,7 +522,7 @@ html.no-gh-sync .gh-sync-panel{display:none!important}
         <label>Edge 語音</label>
         <select id="voiceSelect"></select>
       </div>
-      <p class="speech-hint">閱讀可雙擊本檔 · Edge 朗讀需 npm start 後用 localhost 開啟</p>
+      <p class="speech-hint">GitHub Pages 與 localhost 均可使用 Edge 神經語音；雙擊本機 html 檔則不支援</p>
       <div class="speech-row">
         <label>語速</label>
         <div class="speed-control">
@@ -597,6 +597,7 @@ html.no-gh-sync .gh-sync-panel{display:none!important}
 (function (global) {
   const TTS_ENDPOINT = '/api/tts';
   const VOICES_ENDPOINT = '/api/tts/voices';
+  const TTS_PROXY_URL = 'https://web-reader-tts-proxy.polo760504.workers.dev';
   const ANALYZE_ENDPOINT = '/api/analyze-roles';
   const ANALYZE_STREAM_ENDPOINT = '/api/analyze-roles/stream';
   const DEFAULT_VOICE = 'zh-CN-YunjianNeural';
@@ -651,6 +652,21 @@ html.no-gh-sync .gh-sync-panel{display:none!important}
   const NARRATOR_STYLE_PREF = ['narration-relaxed', 'narration-professional', 'documentary-narration', 'calm'];
 
   let cachedVoices = RECOMMENDED_VOICES;
+  let ttsModeCache = null;
+
+  async function detectTtsMode() {
+    if (typeof location !== 'undefined' && location.protocol === 'file:') return null;
+    if (ttsModeCache) return ttsModeCache;
+    try {
+      const res = await fetch('/api/health', { signal: AbortSignal.timeout(4000) });
+      if (res.ok) {
+        ttsModeCache = 'local';
+        return ttsModeCache;
+      }
+    } catch { /* GitHub Pages 等靜態站 */ }
+    ttsModeCache = 'proxy';
+    return ttsModeCache;
+  }
 
   function getVoices() {
     return cachedVoices;
@@ -991,7 +1007,10 @@ html.no-gh-sync .gh-sync-panel{display:none!important}
   }
 
   async function synthesize({ text, voice, style, rate, pitch, signal }) {
-    const res = await fetch(TTS_ENDPOINT, {
+    const mode = await detectTtsMode();
+    const url = mode === 'local' ? TTS_ENDPOINT : mode === 'proxy' ? TTS_PROXY_URL : null;
+    if (!url) throw new Error('請用 npm start 或 HTTPS 網頁開啟');
+    const res = await fetch(url, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       signal,
@@ -1019,13 +1038,8 @@ html.no-gh-sync .gh-sync-panel{display:none!important}
   }
 
   async function checkAvailable() {
-    if (typeof location !== "undefined" && location.protocol === "file:") return false;
-    try {
-      const res = await fetch('/api/health', { signal: AbortSignal.timeout(5000) });
-      return res.ok;
-    } catch {
-      return false;
-    }
+    const mode = await detectTtsMode();
+    return mode === 'local' || mode === 'proxy';
   }
 
   global.EdgeTtsSpeech = {
@@ -1343,8 +1357,8 @@ html.no-gh-sync .gh-sync-panel{display:none!important}
     if (!edgeReady) {
       edgeReady = await EdgeTtsSpeech.checkAvailable();
       if (!edgeReady) {
-        if (api.toast) api.toast(location.protocol==='file:'?'單檔模式無法 Edge 朗讀，請 npm start 後用 localhost 開啟':'Edge 朗讀需啟動本機伺服器（npm start）');
-        els.speechProgressText.textContent = '⚠️ 請先執行 npm start';
+        if (api.toast) api.toast(location.protocol==='file:'?'單檔模式無法 Edge 朗讀，請用 HTTPS 網頁或 npm start 開啟':'Edge 朗讀目前無法使用，請稍後再試');
+        els.speechProgressText.textContent = '⚠️ 朗讀服務不可用';
         return;
       }
     }
@@ -1475,7 +1489,7 @@ html.no-gh-sync .gh-sync-panel{display:none!important}
       if (!edgeReady) {
         edgeReady = await EdgeTtsSpeech.checkAvailable();
         if (!edgeReady) {
-          els.speechProgressText.textContent = '⚠️ 請先執行 npm start 以使用 Edge 朗讀';
+          els.speechProgressText.textContent = '⚠️ Edge 朗讀目前無法使用';
         }
       }
     });
@@ -1611,7 +1625,7 @@ html.no-gh-sync .gh-sync-panel{display:none!important}
     bindEvents();
     EdgeTtsSpeech.checkAvailable().then(function (ok) {
       edgeReady = ok;
-      if (!ok) els.speakBtn.title = '朗讀需啟動 npm start 伺服器';
+      if (!ok) els.speakBtn.title = '朗讀需 HTTPS 網頁或 npm start';
     });
   };
 
