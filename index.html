@@ -400,7 +400,24 @@
           <h2 class="section-title" data-icon="✏️">其他說明</h2>
           <div class="input-group" style="margin-bottom: 0;">
             <label for="notes">補充說明（選填）</label>
-            <textarea id="notes" placeholder="如有額外情節或風格要求，可在此補充。例如：希望主角有反轉的結局、加入時間旅行元素等。"></textarea>
+            <textarea id="notes" placeholder="可填任意自訂規則，AI 會逐條遵守。例如：全劇不能有男性、結局必須是悲劇、禁止穿越設定等。"></textarea>
+          </div>
+        </div>
+
+        <!-- 預覽大綱（與補充說明分開顯示） -->
+        <div class="section" id="outlineAttachSection">
+          <h2 class="section-title" data-icon="📋">預覽大綱</h2>
+          <div id="outlineAttachPanel" class="outline-attach-panel">
+            <div class="outline-attach-head">
+              <span id="outlineAttachTitle" class="outline-attach-title"></span>
+              <div class="outline-attach-actions">
+                <button type="button" id="outlineAttachOpenBtn" class="btn-outline btn-small" disabled>開啟大綱視窗</button>
+                <button type="button" id="outlineAttachClearBtn" class="btn-outline btn-small" disabled>清除大綱</button>
+              </div>
+            </div>
+            <div id="outlineAttachPreview" class="outline-attach-preview">
+              <p class="outline-attach-empty">尚未生成大綱。請點上方工具列「預覽大綱」生成，內容會顯示於此（不會寫入補充說明）。</p>
+            </div>
           </div>
         </div>
 

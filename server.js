@@ -27,11 +27,13 @@ const READER_DIR = path.join(ROOT, 'reader');
 const PUBLIC_DIR = path.join(__dirname, 'public');
 
 app.get('/', (req, res) => {
-  res.sendFile(path.join(ROOT, 'index.html'));
+  res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
+  res.sendFile(path.join(PUBLIC_DIR, 'index.html'));
 });
 
 app.get('/index.html', (req, res) => {
-  res.sendFile(path.join(ROOT, 'index.html'));
+  res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
+  res.sendFile(path.join(PUBLIC_DIR, 'index.html'));
 });
 
 app.get('/reader', (req, res) => {
@@ -88,7 +90,7 @@ app.get('/api/novels', (req, res) => {
   }
 });
 
-// AI 小說工坊靜態資源（css、js、icons 等，根目錄 index.html 引用）
+// 根目錄 index.html 為舊版備份；首頁統一由 public/index.html 提供
 app.use(express.static(PUBLIC_DIR, {
   setHeaders(res, filePath) {
     if (/\.(html|js|css|webmanifest)$/.test(filePath)) {
