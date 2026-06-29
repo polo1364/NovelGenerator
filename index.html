@@ -161,6 +161,13 @@ body::before{
 .import-panel .btn-primary{background:linear-gradient(135deg,#8b5a2b,#6e451a);border-color:transparent;color:#fff}
 .import-panel .import-field,.import-panel .paste-area{background:rgba(255,255,255,.07);border:1px solid rgba(255,255,255,.18);color:#f3e3c8;border-radius:10px}
 .import-panel .import-field::placeholder,.import-panel .paste-area::placeholder{color:rgba(243,227,200,.45)}
+.gh-sync-panel{margin-top:1rem;padding-top:1rem;border-top:1px dashed rgba(255,255,255,.15)}
+.gh-sync-panel h3{margin:0 0 .65rem;font-size:.88rem;color:#f3e3c8;font-weight:600}
+.gh-sync-hint{margin:.5rem 0 0;font-size:.72rem;color:rgba(243,227,200,.55);line-height:1.45}
+.gh-sync-status{margin:.45rem 0 0;font-size:.78rem;color:#d4a574;min-height:1.2em}
+.gh-sync-actions{display:flex;flex-wrap:wrap;gap:.5rem;margin-top:.65rem}
+.gh-sync-row{display:flex;flex-wrap:wrap;align-items:center;gap:.5rem;margin-bottom:.5rem}
+.gh-sync-row label{font-size:.82rem;color:rgba(243,227,200,.85);display:flex;align-items:center;gap:.35rem;cursor:pointer}
 .import-actions{display:flex;flex-wrap:wrap;gap:.5rem;justify-content:center;align-items:center}
 .import-actions input[type=file]{display:none}
 .import-field{width:100%;padding:.55rem .75rem;font:inherit;font-size:.86rem}
@@ -393,6 +400,20 @@ body::before{
               </select>
               <button type="button" class="btn btn-primary" id="pasteSaveBtn">加入書櫃</button>
             </div>
+          </div>
+          <div class="gh-sync-panel">
+            <h3>☁️ 同步到 GitHub Pages</h3>
+            <p class="gh-sync-hint">設定 Token 後，匯入的書可上傳至 <strong>polo1364.github.io/NovelGenerator</strong>，其他裝置開啟網站會自動拉取。</p>
+            <input type="password" id="ghToken" class="import-field" placeholder="GitHub Personal Access Token（repo 權限）" autocomplete="off">
+            <div class="gh-sync-row">
+              <label><input type="checkbox" id="ghAutoSync"> 匯入後自動上傳</label>
+            </div>
+            <div class="gh-sync-actions">
+              <button type="button" class="btn btn-primary" id="ghPushBtn">⬆️ 上傳書櫃</button>
+              <button type="button" class="btn" id="ghPullBtn">⬇️ 從 GitHub 拉取</button>
+            </div>
+            <p class="gh-sync-status" id="ghSyncStatus"></p>
+            <p class="gh-sync-hint">Token 只存在本機瀏覽器。建立方式：GitHub → Settings → Developer settings → Fine-grained token（此 repo 的 Contents 讀寫）。</p>
           </div>
         </div>
       </div>
@@ -1546,6 +1567,7 @@ body::before{
 })(window);
 
 </script>
+<script src="reader-gh-sync.js"></script>
 <script>
 (function(){
 'use strict';
@@ -2064,7 +2086,7 @@ function importOmnibus(content,opts){
       return setSeriesVolumes(series,parsed.volumes).then(function(s){
         renderShelf();
         toast('已匯入全系列：'+s.title+'（'+parsed.volumes.length+' 集）');
-        return s;
+        return afterImportDone(opts).then(function(){return s;});
       });
     }
     var p=Promise.resolve(series);
@@ -2074,7 +2096,7 @@ function importOmnibus(content,opts){
     return p.then(function(s){
       renderShelf();
       toast('已匯入全系列：'+s.title+'（'+parsed.volumes.length+' 集）');
-      return s;
+      return afterImportDone(opts).then(function(){return s;});
     });
   });
 }
@@ -2102,7 +2124,7 @@ function importVolume(content,opts){
     return addVolume(series,volTitle,content,order).then(function(s){
       renderShelf();
       toast('已加入：'+s.title+' · '+volTitle);
-      return s;
+      return afterImportDone(opts).then(function(){return s;});
     });
   });
 }
@@ -2149,7 +2171,7 @@ function finishGroupedImport(groups,cb){
       return chain;
     }).then(function(){
       left--;
-      if(!left){renderShelf();if(cb)cb();}
+      if(!left){renderShelf();if(cb)cb();ghMaybeSync();}
     });
   });
 }
@@ -2180,14 +2202,49 @@ function appendVolToCurrent(file){
   };
   reader.readAsText(file,'UTF-8');
 }
+function seriesToTxt(series){
+  var vols=sortVolumes(series.volumes);
+  if(!vols.length) return '';
+  if(vols.length===1) return vols[0].content||'';
+  return vols.map(function(v){
+    return '═══ 《'+series.title+'》'+v.title+' ═══\n\n'+(v.content||'');
+  }).join('\n\n');
+}
+function ghMaybeSync(){
+  if(typeof NovelGhSync==='undefined') return Promise.resolve();
+  return NovelGhSync.maybeAutoSync({
+    getSeriesList:function(){return state.seriesList;},
+    sortVolumes:sortVolumes,
+    seriesToTxt:seriesToTxt,
+    toast:toast
+  });
+}
+function afterImportDone(opts){
+  if(opts&&opts.skipSync) return Promise.resolve();
+  return ghMaybeSync();
+}
+function importRemote(text,opts){
+  opts=opts||{};
+  if(opts.remoteId){
+    var ex=state.seriesList.find(function(s){return s.id===opts.remoteId;});
+    if(ex) opts.targetSeriesId=ex.id;
+  }
+  var info=opts.filename?parseVolumeInfo(opts.filename):{};
+  if(info.isOmnibus||isOmnibusContent(text)){
+    return importOmnibus(text,{filename:opts.filename,seriesTitle:opts.seriesTitle,targetSeriesId:opts.targetSeriesId,skipSync:true});
+  }
+  return importVolume(text,{filename:opts.filename,seriesTitle:opts.seriesTitle,targetSeriesId:opts.targetSeriesId,skipSync:true});
+}
+var ghPulledOnce=false;
 function removeSeries(id){
   deleteSeries(id).then(function(){
     state.seriesList=state.seriesList.filter(function(s){return s.id!==id;});
     if(state.series&&state.series.id===id) showShelf();
     renderShelf();toast('已刪除');
+    ghMaybeSync();
   }).catch(function(){toast('刪除失敗');});
 }
-function loadLibrary(){
+function loadLibrary(skipRemotePull){
   getAllSeries().then(function(list){
     state.seriesList=(list||[]).map(normalizeSeries).sort(function(a,b){return(b.updatedAt||0)-(a.updatedAt||0);});
     list.forEach(function(s,i){
@@ -2196,6 +2253,16 @@ function loadLibrary(){
       state.seriesList[i]=n;
     });
     renderShelf();
+    if(skipRemotePull||ghPulledOnce||typeof NovelGhSync==='undefined') return;
+    ghPulledOnce=true;
+    return NovelGhSync.pullRemote(importRemote,sortVolumes).then(function(n){
+      if(n<=0) return;
+      return getAllSeries().then(function(list2){
+        state.seriesList=(list2||[]).map(normalizeSeries).sort(function(a,b){return(b.updatedAt||0)-(a.updatedAt||0);});
+        renderShelf();renderSeriesList();
+        toast('☁️ 從 GitHub 拉取 '+n+' 本');
+      });
+    }).catch(function(){/* 離線或未設定 token */});
   }).catch(function(){state.seriesList=[];renderShelf();});
 }
 function exportCurrent(){
@@ -2354,6 +2421,16 @@ if(window.initReaderSpeech){
       var p=els.chapterBody.children[pi];
       if(p&&els.main) p.scrollIntoView({behavior:'smooth',block:'center'});
     }
+  });
+}
+if(typeof NovelGhSync!=='undefined'){
+  NovelGhSync.bindUi({
+    toast:toast,
+    getSeriesList:function(){return state.seriesList;},
+    sortVolumes:sortVolumes,
+    seriesToTxt:seriesToTxt,
+    importRemote:importRemote,
+    onPullDone:function(){loadLibrary(true);}
   });
 }
 loadLibrary();

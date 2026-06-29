@@ -52,6 +52,11 @@ app.get('/reader-speech.js', (req, res) => {
   res.sendFile(path.join(ROOT, 'reader-speech.js'));
 });
 
+app.get('/reader-gh-sync.js', (req, res) => {
+  res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
+  res.sendFile(path.join(ROOT, 'reader-gh-sync.js'));
+});
+
 app.use('/novels', express.static(NOVELS_DIR));
 
 app.get('/api/novels', (req, res) => {
