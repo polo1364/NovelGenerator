@@ -88,15 +88,6 @@ app.get('/api/novels', (req, res) => {
   }
 });
 
-// LINE 記事本轉換工具（LineNote/）
-app.use('/LineNote', express.static(path.join(__dirname, 'LineNote'), {
-  setHeaders(res, filePath) {
-    if (/\.(html|js|css)$/.test(filePath)) {
-      res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
-    }
-  },
-}));
-
 // AI 小說工坊靜態資源（css、js、icons 等，根目錄 index.html 引用）
 app.use(express.static(PUBLIC_DIR, {
   setHeaders(res, filePath) {
@@ -267,7 +258,6 @@ app.post('/api/analyze-roles/stream', async (req, res) => {
 app.listen(PORT, () => {
   console.log(`🛠️  AI 小說工坊： http://localhost:${PORT}/`);
   console.log(`📖 小說閱讀站： http://localhost:${PORT}/reader/`);
-  console.log(`📒 LINE 記事本：  http://localhost:${PORT}/LineNote/`);
   if (!process.env.DEEPSEEK_API_KEY) {
     console.warn('⚠️  尚未設定 DEEPSEEK_API_KEY，/api/chat 將回傳 500。請在 .env 設定金鑰。');
   }
