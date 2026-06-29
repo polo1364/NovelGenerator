@@ -2096,6 +2096,85 @@ function parseCnNum(s){
 function isOmnibusFilename(name){
   return /(?:全系列|全集|合訂本?|完整版)/i.test(String(name||''));
 }
+function normalizeBookTitle(title){
+  return String(title||'')
+    .replace(/^[\s#]+/,'')
+    .replace(/^[《「]|[》」]$/g,'')
+    .replace(/\s*[（(][^）)]*[）)]\s*$/,'')
+    .trim();
+}
+function looksLikeBadImportTitle(title){
+  if(!title) return true;
+  if(title.length>36) return true;
+  if(/^#/.test(title)) return true;
+  if(/#{1,3}\s*第/.test(title)) return true;
+  if(/\.{2,}$/.test(title)) return true;
+  if(/^第[一二三四五六七八九十百千\d]+章/.test(title)) return true;
+  return false;
+}
+function extractBookTitleFromText(text){
+  text=String(text||'').replace(/^\uFEFF/,'');
+  var m=text.match(/^\s*#{1,4}\s*[《「]([^》」]+)[》」]/m);
+  if(m) return normalizeBookTitle(m[1]);
+  var lines=text.replace(/\r\n/g,'\n').split('\n');
+  var scanned=0;
+  for(var i=0;i<lines.length&&scanned<10;i++){
+    var line=lines[i].trim();
+    if(!line) continue;
+    scanned++;
+    m=line.match(/^[《「]([^》」]+)[》」]\s*$/);
+    if(m) return normalizeBookTitle(m[1]);
+    if(/^#{0,4}\s*(?:第\s*[一二三四五六七八九十百千\d]+章|序章|楔子|引子|前言)/.test(line)) break;
+  }
+  m=text.match(/^\s*#{1,4}\s*([^\n#]+)/m);
+  if(m){
+    var t=normalizeBookTitle(m[1]);
+    if(t&&!/^第[一二三四五六七八九十百千\d]+章/.test(t)) return t;
+  }
+  return null;
+}
+function cleanFilenameForTitle(name){
+  name=String(name||'').replace(/\.txt$/i,'').trim();
+  var m=name.match(/^[#\s]*[《「]([^》」]+)[》」]/);
+  if(m) return normalizeBookTitle(m[1]);
+  name=name.replace(/^[#\s]+/,'');
+  name=name.replace(/\s*#{1,3}\s*第[0-9一二三四五六七八九十百千]+章[：:].*$/i,'').trim();
+  m=name.match(/[《「]([^》」]+)[》」]/);
+  if(m) return normalizeBookTitle(m[1]);
+  name=name.replace(/\.{2,}$/,'').trim();
+  var volPatterns=[
+    /^(.+?)[\s_\-—·]+第([0-9一二三四五六七八九十百千]+)\s*(集|卷|部|篇|冊)\s*$/i,
+    /^(.+?)[\s_\-—·]+([上中下])卷?\s*$/i,
+    /^(.+?)[\s_\-—·]+(?:Vol\.?\s*|vol\s*)(\d+)\s*$/i,
+    /^(.+?)[\s_\-—·]+第(\d+)\s*(?:集|卷|部|篇|冊)?\s*$/i
+  ];
+  for(var i=0;i<volPatterns.length;i++){
+    var vm=name.match(volPatterns[i]);
+    if(vm) return normalizeBookTitle(vm[1])||vm[1].trim();
+  }
+  return normalizeBookTitle(name)||name;
+}
+function stripLeadingBookTitleLine(content,seriesTitle){
+  if(!content||!seriesTitle) return content;
+  var norm=normalizeBookTitle(seriesTitle);
+  var lines=String(content).replace(/\r\n/g,'\n').split('\n');
+  var i=0;
+  while(i<lines.length&&!lines[i].trim()) i++;
+  if(i>=lines.length) return content;
+  var line=lines[i].trim().replace(/^#{1,4}\s*/,'');
+  var m=line.match(/^[《「]([^》」]+)[》」]\s*$/);
+  if(m&&normalizeBookTitle(m[1])===norm){
+    lines.splice(i,1);
+    while(i<lines.length&&!lines[i].trim()) lines.splice(i,1);
+    return lines.join('\n');
+  }
+  return content;
+}
+function findSeriesByTitle(title){
+  var norm=normalizeBookTitle(title);
+  if(!norm) return null;
+  return state.seriesList.find(function(s){return normalizeBookTitle(s.title)===norm;})||null;
+}
 function isOmnibusContent(text){
   return /^[═━─=\-—\s]{3,}.+?(上集|中集|下集|上卷|中卷|下卷|第[0-9一二三四五六七八九十百千]+集)/m.test(String(text||''));
 }
@@ -2144,10 +2223,12 @@ function parseVolumeInfo(filename){
   var name=String(filename||'').replace(/\.txt$/i,'').trim();
   if(isOmnibusFilename(name)){
     return {
-      seriesTitle:name.replace(/[_\s\-—·]*(?:全系列|全集|合訂本?|完整版)\s*$/i,'').trim()||'未命名系列',
+      seriesTitle:cleanFilenameForTitle(name.replace(/[_\s\-—·]*(?:全系列|全集|合訂本?|完整版)\s*$/i,'').trim())||'未命名系列',
       isOmnibus:true
     };
   }
+  var chapterSuffixRe=/\s*#{0,3}\s*第([0-9一二三四五六七八九十百千]+)章(?:[：:].*)?$/i;
+  var baseName=name.replace(chapterSuffixRe,'').trim();
   var patterns=[
     {re:/^(.+?)[\s_\-—·]+第([0-9一二三四五六七八九十百千]+)\s*(集|卷|部|篇|冊)\s*$/i,g:1,v:2,u:3},
     {re:/^(.+?)[\s_\-—·]+([上中下])卷?\s*$/i,g:1,v:2,u:'卷',map:{上:1,中:2,下:3}},
@@ -2155,18 +2236,28 @@ function parseVolumeInfo(filename){
     {re:/^(.+?)[\s_\-—·]+第(\d+)\s*(?:集|卷|部|篇|冊)?\s*$/i,g:1,v:2,u:'集'}
   ];
   for(var i=0;i<patterns.length;i++){
-    var m=name.match(patterns[i].re);
+    var m=baseName.match(patterns[i].re);
     if(!m) continue;
     var order=patterns[i].map?patterns[i].map[m[patterns[i].v]]:parseCnNum(m[patterns[i].v]);
     var unit=patterns[i].u;
     var volTitle=typeof unit==='string'&&unit.length===1?m[patterns[i].v]+unit:'第'+m[patterns[i].v]+unit;
-    return {seriesTitle:m[patterns[i].g].trim(),volTitle:volTitle,order:order||1};
+    return {
+      seriesTitle:cleanFilenameForTitle(m[patterns[i].g].trim())||cleanFilenameForTitle(name),
+      volTitle:volTitle,
+      order:order||1
+    };
   }
-  return {seriesTitle:name||'未命名系列',volTitle:'第一集',order:1};
+  return {
+    seriesTitle:cleanFilenameForTitle(name)||'未命名系列',
+    volTitle:'第一集',
+    order:1
+  };
 }
 
 function normalizeSeries(item){
-  if(item&&item.volumes&&item.volumes.length) return item;
+  // If volumes is already a proper array (even empty), return as-is.
+  // Only trigger legacy conversion when volumes is missing and item.content exists (old single-volume format).
+  if(item&&Array.isArray(item.volumes)) return item;
   return {
     id:item.id||uid('s'),
     title:item.title||'未命名系列',
@@ -2333,8 +2424,24 @@ function parseChapters(text){
   });
 }
 function guessTitle(text,fallback){
-  var m=text.match(/^\s*#{1,4}\s*([^\n#]+)/m)||text.match(/^\s*(第[一二三四五六七八九十百千\d]+章[^\n]*)/m);
+  var fromContent=extractBookTitleFromText(text);
+  if(fromContent) return fromContent.slice(0,80);
+  var m=text.match(/^\s*#{1,4}\s*([^\n#]+)/m);
+  if(m){
+    var t=normalizeBookTitle(m[1]);
+    if(t&&!/^第[一二三四五六七八九十百千\d]+章/.test(t)) return t.slice(0,80);
+  }
+  m=text.match(/^\s*(第[一二三四五六七八九十百千\d]+章[^\n]*)/m);
   return (m&&m[1]?m[1]:fallback||'未命名').trim().slice(0,80);
+}
+function resolveImportSeriesTitle(content,info,opts){
+  var fromContent=extractBookTitleFromText(content);
+  var fromFile=info&&info.seriesTitle;
+  if(opts&&opts.seriesTitle) return normalizeBookTitle(opts.seriesTitle)||opts.seriesTitle;
+  if(fromContent&&(looksLikeBadImportTitle(fromFile)||!fromFile)) return fromContent;
+  if(fromFile&&!looksLikeBadImportTitle(fromFile)) return normalizeBookTitle(fromFile)||fromFile;
+  if(fromContent) return fromContent;
+  return guessTitle(content,opts&&opts.fallbackTitle);
 }
 
 function updateNavButtons(){
@@ -2573,7 +2680,8 @@ function openSeriesById(id){
 }
 
 function findOrCreateSeries(title){
-  var hit=state.seriesList.find(function(s){return s.title===title;});
+  title=normalizeBookTitle(title)||title||'未命名系列';
+  var hit=findSeriesByTitle(title);
   if(hit) return Promise.resolve(hit);
   var series={id:uid('s'),title:title,volumes:[],addedAt:Date.now(),updatedAt:Date.now()};
   return saveSeries(series).then(function(){
@@ -2655,8 +2763,9 @@ function importVolume(content,opts){
   if((info&&info.isOmnibus)||(!opts.volTitle&&isOmnibusContent(content))){
     return importOmnibus(content,opts);
   }
-  var seriesTitle=opts.seriesTitle||(info&&info.seriesTitle)||guessTitle(content,opts.fallbackTitle);
-  var volTitle=opts.volTitle||(info&&info.volTitle)||('第'+(sortVolumes((state.seriesList.find(function(s){return s.title===seriesTitle;})||{volumes:[]}).volumes).length+1)+'集');
+  var seriesTitle=resolveImportSeriesTitle(content,info,opts);
+  content=stripLeadingBookTitleLine(content,seriesTitle);
+  var volTitle=opts.volTitle||(info&&info.volTitle)||('第'+(sortVolumes((findSeriesByTitle(seriesTitle)||{volumes:[]}).volumes).length+1)+'集');
   var order=opts.order||(info&&info.order);
   var targetId=opts.targetSeriesId;
   var chain;
@@ -2664,11 +2773,15 @@ function importVolume(content,opts){
     var existing=state.seriesList.find(function(s){return s.id===targetId;});
     chain=existing?Promise.resolve(existing):findOrCreateSeries(seriesTitle);
   } else {
-    var same=state.seriesList.find(function(s){return s.title===seriesTitle;});
+    var same=findSeriesByTitle(seriesTitle);
     chain=same?Promise.resolve(same):findOrCreateSeries(seriesTitle);
   }
   return chain.then(function(series){
-    return addVolume(series,volTitle,content,order).then(function(s){
+    var vols=sortVolumes(series.volumes);
+    var chapterCount=parseChapters(content).length;
+    var replaceExisting=vols.length===1&&chapterCount>1&&(!order||order===1)&&
+      (!info||!info.volTitle||info.volTitle==='第一集'||info.volTitle===vols[0].title);
+    return addVolume(series,replaceExisting?vols[0].title:volTitle,content,replaceExisting?vols[0].order:order,replaceExisting).then(function(s){
       renderShelf();
       toast('已加入：'+s.title+' · '+volTitle);
       return afterImportDone(opts).then(function(){return s;});
@@ -2690,8 +2803,9 @@ function importFiles(files){
         if(item.info.isOmnibus||isOmnibusContent(item.content)){
           omnibusJobs.push(importOmnibus(item.content,{filename:item.file.name}));
         } else {
-          if(!groups[item.info.seriesTitle]) groups[item.info.seriesTitle]={title:item.info.seriesTitle,items:[]};
-          groups[item.info.seriesTitle].items.push({content:item.content,info:item.info,filename:item.file.name});
+          var title=resolveImportSeriesTitle(item.content,item.info,{});
+          if(!groups[title]) groups[title]={title:title,items:[]};
+          groups[title].items.push({content:item.content,info:item.info,filename:item.file.name});
         }
       });
       Promise.all(omnibusJobs).then(function(){
