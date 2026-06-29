@@ -1791,8 +1791,13 @@ body.speech-open .topbar{visibility:hidden;pointer-events:none}
     });
 
     els.readAllBtn.addEventListener('click', function () {
+      var built = buildScopeSegments('chapter');
+      var total = built.segments.length || 1;
       els.startSegment.value = 1;
-      updateSegmentInputs();
+      els.endSegment.value = total;
+      els.startSegment.max = total;
+      els.endSegment.max = total;
+      els.segmentInfo.textContent = '本章共 ' + total + ' 段';
     });
 
     if (els.speechScope) {
