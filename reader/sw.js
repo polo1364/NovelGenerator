@@ -1,5 +1,5 @@
 /* 小說閱讀站 — Service Worker（離線閱讀殼層） */
-const CACHE_VERSION = 'reader-v14';
+const CACHE_VERSION = 'reader-v15';
 const CACHE_NAME = 'novel-reader-' + CACHE_VERSION;
 
 const APP_SHELL = [

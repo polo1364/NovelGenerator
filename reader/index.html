@@ -99,13 +99,13 @@ body::before{
   margin:0 0 .65rem;padding-bottom:.4rem;font-size:.78rem;letter-spacing:.1em;
   color:var(--text-muted);text-transform:uppercase;border-bottom:1px solid var(--border);
 }
-.series-list,.volume-list,.chapter-list{list-style:none;margin:0 0 1.5rem;padding:0}
-.series-list button,.volume-list button,.chapter-list button{
+.volume-list,.chapter-list{list-style:none;margin:0 0 1.5rem;padding:0}
+.volume-list button,.chapter-list button{
   width:100%;text-align:left;border:none;background:transparent;color:var(--text);font:inherit;
   padding:.6rem .75rem;border-radius:10px;cursor:pointer;transition:background .15s var(--ease),color .15s var(--ease);
 }
-.series-list button:hover,.volume-list button:hover,.chapter-list button:hover{background:var(--accent-soft)}
-.series-list button.active,.volume-list button.active,.chapter-list button.active{
+.volume-list button:hover,.chapter-list button:hover{background:var(--accent-soft)}
+.volume-list button.active,.chapter-list button.active{
   background:var(--accent-soft);color:var(--accent);font-weight:600;box-shadow:inset 3px 0 0 var(--accent);
 }
 .item-title{display:block;font-size:.92rem;line-height:1.35}
@@ -438,7 +438,7 @@ body.speech-open .topbar{visibility:hidden;pointer-events:none}
         <output id="fontSizeLabel">18</output>
         <button type="button" class="btn btn-icon" id="fontLarger" aria-label="放大字級">A+</button>
       </div>
-      <button type="button" class="btn btn-icon sidebar-toggle" id="sidebarToggle" aria-label="目錄">☰</button>
+      <button type="button" class="btn btn-icon sidebar-toggle" id="sidebarToggle" aria-label="章節目錄">☰</button>
       <button type="button" class="btn btn-ghost" id="backShelfBtn" hidden>← 書架</button>
       <button type="button" class="btn btn-icon" id="speakBtn" hidden title="Edge 朗讀" aria-label="朗讀">🔊</button>
     </div>
@@ -455,10 +455,6 @@ body.speech-open .topbar{visibility:hidden;pointer-events:none}
 <input type="file" id="addVolInput" accept=".txt,text/plain" hidden>
 <div class="layout">
   <aside class="sidebar" id="sidebar">
-    <section id="seriesSection">
-      <h2>書庫</h2>
-      <ul class="series-list" id="seriesList"></ul>
-    </section>
     <section id="volumeSection" hidden>
       <h2>集數</h2>
       <ul class="volume-list" id="volumeList"></ul>
@@ -2035,7 +2031,7 @@ var SHELF_WIDTHS=['bk-w-thin','bk-w-std','bk-w-std','bk-w-std','bk-w-thick'];
 var els={
   main:document.querySelector('.main'),layout:document.querySelector('.layout'),
   pageTitle:document.getElementById('pageTitle'),pageSubtitle:document.getElementById('pageSubtitle'),
-  seriesList:document.getElementById('seriesList'),volumeList:document.getElementById('volumeList'),
+  volumeList:document.getElementById('volumeList'),
   volumeSection:document.getElementById('volumeSection'),chapterList:document.getElementById('chapterList'),
   chapterSection:document.getElementById('chapterSection'),shelfView:document.getElementById('shelfView'),
   shelfGrid:document.getElementById('shelfGrid'),shelfEmpty:document.getElementById('shelfEmpty'),
@@ -2510,12 +2506,9 @@ function renderChapterList(){
     return '<li><button type="button" data-idx="'+i+'" class="'+(i===state.chapterIdx?'active':'')+'"><span class="item-num">'+(i+1)+'</span>'+esc(ch.title)+'</button></li>';
   }).join('');
 }
-function renderSeriesList(){
-  els.seriesList.innerHTML=state.seriesList.map(function(s){
-    var n=sortVolumes(s.volumes).length;
-    return '<li><button type="button" data-id="'+esc(s.id)+'" class="'+(state.series&&state.series.id===s.id?'active':'')+'"><span class="item-title">'+esc(s.title)+'</span><span class="item-meta">共 '+n+' 集</span></button></li>';
-  }).join('');
+function renderPasteTargetSeries(){
   var sel=els.pasteTargetSeries;
+  if(!sel) return;
   sel.innerHTML='<option value="">— 新建系列 —</option>'+state.seriesList.map(function(s){
     return '<option value="'+esc(s.id)+'">'+esc(s.title)+'（追加集數）</option>';
   }).join('');
@@ -2629,7 +2622,7 @@ function renderShelf(){
       return '<div class="book-spine'+markClass+speechClass+' '+variant.style+' '+variant.width+'" data-id="'+esc(s.id)+'" style="--c1:'+colors[0]+';--c2:'+colors[1]+';animation-delay:'+(i*40)+'ms" title="'+esc(tip)+'"><span class="book-spine-title">'+esc(name)+'</span>'+(n>1?'<span class="book-spine-series">全'+n+'集</span>':'')+'</div>';
     }).join('');
   }
-  renderSeriesList();
+  renderPasteTargetSeries();
 }
 function showReader(){
   els.shelfView.classList.add('hidden');els.readerView.classList.add('show');
@@ -2656,7 +2649,7 @@ function showShelf(){
   if(els.readProgressWrap) els.readProgressWrap.classList.remove('show');
   els.pageTitle.textContent='小說閱讀';els.pageSubtitle.textContent='本機書庫 · 雙擊即可使用';
   els.volumeSection.hidden=true;els.chapterSection.hidden=true;
-  state.series=null;state.chapters=[];renderSeriesList();renderShelf();
+  state.series=null;state.chapters=[];renderPasteTargetSeries();renderShelf();
 }
 
 function openSeries(series,startProgress){
@@ -2673,11 +2666,7 @@ function openSeries(series,startProgress){
   if(p.chapterIdx>=state.chapters.length) p.chapterIdx=0;
   state.chapterIdx=p.chapterIdx;
   els.pageTitle.textContent=series.title;
-  renderSeriesList();renderVolumeList();renderChapterList();showReader();renderChapter(state.chapterIdx,true);
-}
-function openSeriesById(id){
-  var s=state.seriesList.find(function(x){return x.id===id;});
-  if(s) openSeries(s);
+  renderPasteTargetSeries();renderVolumeList();renderChapterList();showReader();renderChapter(state.chapterIdx,true);
 }
 
 function findOrCreateSeries(title){
@@ -2922,7 +2911,7 @@ function loadLibrary(skipRemotePull){
       if(n<=0) return;
       return getAllSeries().then(function(list2){
         state.seriesList=(list2||[]).map(normalizeSeries).sort(function(a,b){return(b.updatedAt||0)-(a.updatedAt||0);});
-        renderShelf();renderSeriesList();
+        renderShelf();renderPasteTargetSeries();
         toast('☁️ 從 GitHub 拉取 '+n+' 本');
       });
     }).catch(function(){/* 離線或未設定 token */});
@@ -3029,10 +3018,6 @@ document.addEventListener('click',function(e){
   }
 });
 els.sidebarBackdrop.onclick=closeSidebar;
-els.seriesList.onclick=function(e){
-  var btn=e.target.closest('button[data-id]');
-  if(btn) openSeriesById(btn.dataset.id);
-};
 els.volumeList.onclick=function(e){
   var btn=e.target.closest('button[data-vidx]');
   if(btn) switchVolume(Number(btn.dataset.vidx),0);
