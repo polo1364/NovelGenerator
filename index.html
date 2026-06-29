@@ -340,6 +340,7 @@ html.no-gh-sync .gh-sync-panel{display:none!important}
     <button type="button" class="btn btn-icon sidebar-toggle" id="sidebarToggle" aria-label="目錄">☰</button>
     <button type="button" class="btn" id="addVolBtn" hidden>追加集數</button>
     <button type="button" class="btn" id="themeToggle" aria-label="切換深色模式">🌙</button>
+    <button type="button" class="btn btn-ghost" id="workshopLinkBtn" title="AI 小說工坊">🛠️ 工坊</button>
     <button type="button" class="btn" id="speakBtn" hidden title="Edge 朗讀">🔊</button>
     <button type="button" class="btn" id="exportBtn" hidden>匯出</button>
     <button type="button" class="btn btn-ghost" id="backShelfBtn" hidden>← 書架</button>
@@ -2442,6 +2443,17 @@ if(typeof NovelGhSync!=='undefined'){
   });
 }
 loadLibrary();
+var workshopLinkBtn=document.getElementById('workshopLinkBtn');
+if(workshopLinkBtn){
+  workshopLinkBtn.onclick=function(){
+    var path=location.pathname.replace(/\\/g,'/');
+    var low=path.toLowerCase();
+    var idx=low.indexOf('/novelgenerator');
+    var base=idx>=0?path.substring(0,idx+'/NovelGenerator'.length)+'/':'/';
+    if(location.protocol==='file:'){location.href='http://localhost:3000/workshop/';return;}
+    location.href=base+'workshop/';
+  };
+}
 if('serviceWorker' in navigator&&location.protocol!=='file:'){
   window.addEventListener('load',function(){
     navigator.serviceWorker.register('./reader-sw.js',{scope:'./'}).catch(function(){/* 非 HTTPS 或路徑不支援 */});
