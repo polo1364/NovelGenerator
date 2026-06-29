@@ -47,15 +47,6 @@
 
       <div class="toolbar-divider"></div>
 
-      <!-- 隨機填充 -->
-      <button id="randomBtn" class="toolbar-btn btn-random" title="隨機填充">
-        <span class="text-char">隨</span>
-        <span class="text-char">機</span>
-        <span class="text-char">填</span>
-        <span class="text-char">充</span>
-        <span class="toolbar-tooltip">隨機填充</span>
-      </button>
-
       <!-- 開始生成 -->
       <button id="generateBtn" class="toolbar-btn btn-generate" title="開始生成">
         <span class="text-char">開</span>
@@ -245,8 +236,11 @@
 
         <!-- 故事元素 -->
         <div class="section">
-          <h2 class="section-title" data-icon="📖">故事元素</h2>
-          <div class="input-group">
+          <div class="advanced-head-row story-elements-head">
+            <h2 class="section-title" data-icon="📖">故事元素</h2>
+            <button id="randomStoryElementsBtn" type="button" class="btn-outline btn-small advanced-random-btn" title="隨機填充主題、背景設定、故事風格">🎲 隨機填充</button>
+          </div>
+          <div class="input-group" style="margin-top: 16px;">
             <label for="theme">主題</label>
             <select id="theme">
               <option value="">請選擇主題</option>
@@ -258,30 +252,25 @@
               <option value="">請選擇背景</option>
             </select>
           </div>
-          <div class="input-group" id="stepCast">
-            <div class="label-row">
-              <label>主要人物設定</label>
-              <div style="display: flex; gap: 8px; flex-wrap: wrap;">
-                <button id="aiGenerateCharactersBtn" type="button" class="btn-outline btn-small" title="依你目前的人物列數量，呼叫 AI 完整設計一組彼此關聯、貼合劇情的角色，所有欄位一次生成好供你微調（會覆蓋現有內容，覆蓋前會先詢問；想要幾位就先用「+ 新增人物」調整列數）">✨ AI 設計角色群</button>
-                <button id="randomAllCharactersBtn" type="button" class="btn-outline btn-small" title="不參考故事設定，純從內建詞庫隨機抽選，把目前每一列重新填滿（免費、瞬間完成）">🎲 隨機湊組</button>
-                <button id="addCharacterBtn" type="button" class="btn-outline btn-small" title="新增一位空白人物">+ 新增人物</button>
-              </div>
-            </div>
-            <p class="char-hint">✨ <strong>AI 設計</strong>：依「目前人物列數量」完整生成貼合劇情、彼此連貫的角色群，所有欄位一次設計好供你微調（覆蓋現有內容，覆蓋前會詢問；想要幾位先用「+ 新增人物」加列；建議先選好主題／背景，需 API）。🎲 <strong>隨機湊組</strong>：純詞庫亂數，快但不看劇情。</p>
-            <div class="character-template-bar">
-              <select id="characterTemplateSelect" class="template-select">
-                <option value="">選擇角色原型模板…</option>
-              </select>
-              <button id="applyCharacterTemplateBtn" type="button" class="btn-outline btn-small">套用人物模板</button>
-            </div>
-            <div id="characterTabs" class="char-tabs"></div>
-            <div id="charactersContainer"></div>
-          </div>
           <div class="input-group">
             <label for="style">故事風格</label>
             <select id="style">
               <option value="">請選擇風格</option>
             </select>
+          </div>
+          <div class="input-group" id="stepCast">
+            <div class="label-row">
+              <label>主要人物設定</label>
+              <div style="display: flex; gap: 8px; flex-wrap: wrap;">
+                <button id="aiGenerateCharactersBtn" type="button" class="btn-outline btn-small" title="依你目前的人物列數量，呼叫 AI 完整設計一組彼此關聯、貼合劇情的角色，所有欄位一次生成好供你微調（會覆蓋現有內容，覆蓋前會先詢問；想要幾位就先用「+ 新增人物」調整列數）">✨ AI 設計角色群</button>
+                <button id="namePoolBtn" type="button" class="btn-outline btn-small" title="管理自訂人名清單；勾選的名字供 AI 設計角色群時挑選">📋 人名清單</button>
+                <button id="randomAllCharactersBtn" type="button" class="btn-outline btn-small" title="不參考故事設定，純從內建詞庫隨機抽選，把目前每一列重新填滿（免費、瞬間完成）">🎲 隨機湊組</button>
+                <button id="addCharacterBtn" type="button" class="btn-outline btn-small" title="新增一位空白人物">+ 新增人物</button>
+              </div>
+            </div>
+            <p class="char-hint">✨ <strong>AI 設計</strong>：依「目前人物列數量」完整生成貼合劇情、彼此連貫的角色群，所有欄位一次設計好供你微調（覆蓋現有內容，覆蓋前會詢問；想要幾位先用「+ 新增人物」加列；建議先選好主題／背景，需 API）。🎲 <strong>隨機湊組</strong>：純詞庫亂數，快但不看劇情。</p>
+            <div id="characterTabs" class="char-tabs"></div>
+            <div id="charactersContainer"></div>
           </div>
           <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px;">
             <div class="input-group" style="margin-bottom: 0;">
@@ -291,18 +280,27 @@
             <div class="input-group" style="margin-bottom: 0;">
               <label for="length">預計總字數</label>
               <input type="number" id="length" placeholder="如：50000" min="1000" max="200000" step="1000" />
+              <small class="char-hint" style="margin-top: 4px;">與章節數搭配；AI 依「總字數 ÷ 章節數」要求每章篇幅</small>
             </div>
           </div>
           <small id="perChapterHint" class="per-chapter-hint" style="display:none;"></small>
+          <div class="input-group" style="margin-top: 12px; margin-bottom: 0;">
+            <label for="volumes">預計集數</label>
+            <input type="number" id="volumes" value="1" min="1" max="5" step="1" />
+            <small class="char-hint" style="margin-top: 4px;">設為 2 以上＝系列分集（上下集／第X集），每集照章節數與總字數獨立成書；選「續集鋪墊／伏筆結局」會自動帶到 2 集</small>
+          </div>
           <label class="auto-continue-row">
             <input type="checkbox" id="autoContinueToggle" />
-            <span>自動生成全部章節（逐章模式時，自動接續產生至設定章節數）</span>
+            <span>自動生成全部章節（逐章模式自動接續至章節數；系列分集時自動一集接一集寫完全系列）</span>
           </label>
         </div>
 
         <!-- 進階設定 -->
         <div class="section collapsible-section" id="advancedSection">
-          <h2 class="section-title collapsible-title" data-icon="🎛️" id="advancedToggle" role="button" tabindex="0" aria-expanded="true" aria-controls="advancedBody">進階設定<span class="section-chevron" aria-hidden="true">▾</span></h2>
+          <div class="advanced-head-row">
+            <h2 class="section-title collapsible-title" data-icon="🎛️" id="advancedToggle" role="button" tabindex="0" aria-expanded="true" aria-controls="advancedBody">進階設定<span class="section-chevron" aria-hidden="true">▾</span></h2>
+            <button id="randomAdvancedBtn" type="button" class="btn-outline btn-small advanced-random-btn" title="隨機設定敘事視角、時代、節奏、分級、世界觀、基調、結局傾向">🎲 隨機進階</button>
+          </div>
           <div class="section-body" id="advancedBody">
           <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px;">
             <div class="input-group" style="margin-bottom: 0;">
@@ -351,6 +349,7 @@
             <select id="ending">
               <option value="">請選擇結局</option>
             </select>
+            <small class="char-hint" style="margin-top: 4px;">「番外預告」主線完結後會再寫一篇完整番外篇；「開放留白」等會補一段後日談；「續集鋪墊／伏筆結局」會建議分集（見下方預計集數）</small>
           </div>
           
           <!-- 特殊元素多選 -->
@@ -479,6 +478,7 @@
             </div>
           </div>
         </div>
+        <div id="seriesBar" class="series-bar" style="display:none;"></div>
         <div class="output-wrap" id="outputWrap">
           <div class="vertical-viewport" id="verticalViewport">
             <div id="result" class="output"></div>
@@ -905,6 +905,36 @@
         </div>
       </div>
 
+    </div>
+
+    <!-- 大綱預覽模態視窗 -->
+    <div id="namePoolModal" class="modal-overlay">
+      <div class="modal-content name-pool-modal">
+        <div class="modal-header" style="background: linear-gradient(135deg, #2d6a4f 0%, #52b788 100%);">
+          <span class="modal-title">📋 人名清單</span>
+          <button id="closeNamePoolModal" type="button" class="modal-close">✕</button>
+        </div>
+        <div class="modal-body">
+          <p class="name-pool-hint">自行新增人名與性別；<strong>勾選</strong>代表 AI 設計角色群／補完人物時，姓名必須從勾選清單中挑選。</p>
+          <div class="name-pool-add">
+            <input type="text" id="namePoolInput" placeholder="姓名" maxlength="24" autocomplete="off" />
+            <select id="namePoolGender">
+              <option value="男">男</option>
+              <option value="女">女</option>
+              <option value="不明">不明</option>
+            </select>
+            <button id="namePoolAddBtn" type="button" class="btn-outline btn-small">+ 新增</button>
+          </div>
+          <div id="namePoolList" class="name-pool-list"></div>
+          <div class="name-pool-footer">
+            <span id="namePoolSelectedCount" class="name-pool-count">已勾選 0 個</span>
+            <div class="name-pool-footer-actions">
+              <button id="namePoolClearSelectedBtn" type="button" class="btn-outline btn-small">清除全部勾選</button>
+              <button id="namePoolDeleteAllBtn" type="button" class="btn-outline btn-small">刪除全部</button>
+            </div>
+          </div>
+        </div>
+      </div>
     </div>
 
     <!-- 大綱預覽模態視窗 -->
