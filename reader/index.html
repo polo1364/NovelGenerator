@@ -1146,6 +1146,7 @@ body.speech-open .topbar{visibility:hidden;pointer-events:none}
   var edgeSession = 0;
   var audioCtx = null;
   var edgeSource = null;
+  var segCache = {};
   var speechStartOffset = 0;
   var speechLogicalTotal = 0;
   var lastShownLogicalNum = -1;
@@ -1415,6 +1416,43 @@ body.speech-open .topbar{visibility:hidden;pointer-events:none}
     });
   }
 
+  // 取得（並快取）某段已合成、已解碼的音訊；用於邊播邊預取下一段，消除段間停頓
+  function getSegmentAudio(index) {
+    if (segCache[index]) return segCache[index];
+    var item = speechQueue[index];
+    if (!item) return Promise.reject(new Error('no segment'));
+    var text = EdgeTtsSpeech.sanitizeTtsText(item.text || '');
+    if (!text || !text.trim()) return Promise.reject(new Error('empty segment'));
+    var voice = item.voice || els.voiceSelect.value || EdgeTtsSpeech.DEFAULT_VOICE;
+    var style = item.style || 'general';
+    var rate = item.rate != null ? item.rate : parseFloat(els.speechRate.value) || 1;
+    var pitch = item.pitch != null ? item.pitch : parseFloat(els.speechPitch.value) || 1;
+    var p = EdgeTtsSpeech.synthesize({ text: text, voice: voice, style: style, rate: rate, pitch: pitch })
+      .then(function (buf) {
+        var result = { buf: buf, decoded: null };
+        var ctx = ensureAudioCtx();
+        if (ctx) {
+          return decodeAudio(ctx, buf.slice(0))
+            .then(function (d) { result.decoded = d; return result; }, function () { return result; });
+        }
+        return result;
+      });
+    segCache[index] = p;
+    return p;
+  }
+
+  function prefetchNext(index) {
+    var n = findNextQueueIdx(index);
+    Object.keys(segCache).forEach(function (k) { if (+k !== n) delete segCache[k]; });
+    if (n < speechQueue.length && !segCache[n]) {
+      getSegmentAudio(n).catch(function () { /* 預取失敗忽略，播放時再重試 */ });
+    }
+  }
+
+  function clearSegmentCache() {
+    segCache = {};
+  }
+
   function stopEdgeAudio() {
     if (edgeSource) {
       try { edgeSource.onended = null; } catch (e) { /* ignore */ }
@@ -1616,63 +1654,49 @@ body.speech-open .topbar{visibility:hidden;pointer-events:none}
   async function speakWithEdge(processedText, queueItem, index) {
     var session = ++edgeSession;
     stopEdgeAudio();
-    edgeAbort = new AbortController();
 
-    var voice = queueItem.voice || els.voiceSelect.value || EdgeTtsSpeech.DEFAULT_VOICE;
-    var style = queueItem.style || 'general';
-    var rate = queueItem.rate != null ? queueItem.rate : parseFloat(els.speechRate.value) || 1;
-    var pitch = queueItem.pitch != null ? queueItem.pitch : parseFloat(els.speechPitch.value) || 1;
     var pause = queueItem.pause || 300;
 
     try {
       els.speechProgressText.textContent = formatSegmentProgressText(index, '正在合成');
-      var buf = await EdgeTtsSpeech.synthesize({
-        text: processedText,
-        voice: voice,
-        style: style,
-        rate: rate,
-        pitch: pitch,
-        signal: edgeAbort.signal
-      });
+      var audio = await getSegmentAudio(index);
       if (!isSpeaking || session !== edgeSession) return;
+      delete segCache[index];
+      var buf = audio.buf;
+
+      // 立即在背景預取下一段，消除段與段之間的合成等待
+      prefetchNext(index);
 
       // 優先使用 Web Audio（行動裝置上 HTMLAudio 連續播放常被自動播放政策阻擋）
       var ctx = ensureAudioCtx();
-      if (ctx) {
-        var decoded = null;
-        try {
-          decoded = await decodeAudio(ctx, buf.slice(0));
-        } catch (decErr) { decoded = null; }
+      if (ctx && audio.decoded) {
+        if (ctx.state === 'suspended') { try { await ctx.resume(); } catch (e) { /* ignore */ } }
         if (!isSpeaking || session !== edgeSession) return;
-        if (decoded) {
-          if (ctx.state === 'suspended') { try { await ctx.resume(); } catch (e) { /* ignore */ } }
-          if (!isSpeaking || session !== edgeSession) return;
-          if (ctx.state === 'suspended') {
-            isPaused = true;
-            els.playPauseBtn.textContent = '▶️ 繼續朗讀';
-            els.speechProgressText.textContent = '⚠️ 請點「繼續朗讀」以開始播放';
-            return;
-          }
-          var src = ctx.createBufferSource();
-          src.buffer = decoded;
-          src.connect(ctx.destination);
-          edgeSource = src;
-          src.onended = function () {
-            if (edgeSource !== src) return;
-            edgeSource = null;
-            if (isSpeaking && !isPaused) {
-              setTimeout(function () { speakSegment(findNextQueueIdx(index)); }, pause);
-            }
-          };
-          els.speechProgressText.textContent = formatSegmentProgressText(index, '正在朗讀');
-          try {
-            src.start(0);
-          } catch (startErr) {
-            edgeSource = null;
-            throw startErr;
-          }
+        if (ctx.state === 'suspended') {
+          isPaused = true;
+          els.playPauseBtn.textContent = '▶️ 繼續朗讀';
+          els.speechProgressText.textContent = '⚠️ 請點「繼續朗讀」以開始播放';
           return;
         }
+        var src = ctx.createBufferSource();
+        src.buffer = audio.decoded;
+        src.connect(ctx.destination);
+        edgeSource = src;
+        src.onended = function () {
+          if (edgeSource !== src) return;
+          edgeSource = null;
+          if (isSpeaking && !isPaused) {
+            setTimeout(function () { speakSegment(findNextQueueIdx(index)); }, pause);
+          }
+        };
+        els.speechProgressText.textContent = formatSegmentProgressText(index, '正在朗讀');
+        try {
+          src.start(0);
+        } catch (startErr) {
+          edgeSource = null;
+          throw startErr;
+        }
+        return;
       }
 
       // 後備：HTMLAudioElement（重用同一個已解鎖的元素）
@@ -1718,6 +1742,7 @@ body.speech-open .topbar{visibility:hidden;pointer-events:none}
     isSpeaking = false;
     isPaused = false;
     lastShownLogicalNum = -1;
+    clearSegmentCache();
     stopEdgePlaybackOnly();
     els.playPauseBtn.textContent = '▶️ 開始朗讀';
     els.playPauseBtn.disabled = false;
@@ -1741,6 +1766,7 @@ body.speech-open .topbar{visibility:hidden;pointer-events:none}
   }
 
   function buildSpeechQueueFromScope(startIdx, endIdx) {
+    clearSegmentCache();
     var scope = getSpeechScope();
     var built = buildScopeSegments(scope);
     var allSegments = built.segments;
