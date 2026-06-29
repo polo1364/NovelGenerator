@@ -1689,6 +1689,7 @@ body.speech-open .topbar{visibility:hidden;pointer-events:none}
   }
 
   async function toggleSpeech(forcedStartIdx) {
+    if (typeof forcedStartIdx !== 'number') forcedStartIdx = null;
     if (!edgeReady) {
       edgeReady = await EdgeTtsSpeech.checkAvailable();
       if (!edgeReady) {
@@ -1831,7 +1832,7 @@ body.speech-open .topbar{visibility:hidden;pointer-events:none}
       if (e.target === els.speechModal) closeSpeechPanel();
     });
 
-    els.playPauseBtn.addEventListener('click', toggleSpeech);
+    els.playPauseBtn.addEventListener('click', function () { toggleSpeech(); });
     els.stopSpeechBtn.addEventListener('click', function () { stopSpeech(); });
     els.resetSpeechBtn.addEventListener('click', resetSpeech);
     els.prevSegmentBtn.addEventListener('click', prevSegment);
