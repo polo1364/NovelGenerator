@@ -11,6 +11,7 @@
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="apple-mobile-web-app-title" content="小說閱讀">
 <link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" type="image/png" sizes="32x32" href="icons/favicon-32.png">
 <link rel="icon" type="image/png" sizes="192x192" href="icons/icon-192.png">
 <link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -51,9 +52,8 @@ body::before{
 }
 .brand{display:flex;align-items:center;gap:.7rem;min-width:0}
 .brand-icon{
-  width:2.2rem;height:2.2rem;display:flex;align-items:center;justify-content:center;
-  border-radius:10px;background:linear-gradient(135deg,var(--accent),var(--gold));font-size:1.1rem;
-  box-shadow:0 4px 12px rgba(156,58,68,.25);
+  width:2.2rem;height:2.2rem;display:block;object-fit:cover;
+  border-radius:10px;box-shadow:0 4px 12px rgba(156,58,68,.25);
 }
 .brand-text h1{margin:0;font-size:1.02rem;font-weight:700;letter-spacing:.02em;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .brand-text p{margin:0;font-size:.75rem;color:var(--text-muted)}
@@ -325,7 +325,7 @@ html.no-gh-sync .gh-sync-panel{display:none!important}
 <div class="read-progress-wrap" id="readProgressWrap"><div class="read-progress-bar" id="readProgressBar"></div></div>
 <header class="topbar">
   <div class="brand">
-    <span class="brand-icon" aria-hidden="true">📖</span>
+    <img class="brand-icon" src="icons/icon-192.png" alt="" width="35" height="35" decoding="async">
     <div class="brand-text">
       <h1 id="pageTitle">小說閱讀</h1>
       <p id="pageSubtitle">本機書庫 · 雙擊 index.html 即可閱讀</p>
