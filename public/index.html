@@ -1008,6 +1008,7 @@
       <div class="book-reader-bar">
         <span id="bookReaderTitle" class="book-reader-title">📖 翻書閱讀</span>
         <div class="book-reader-tools">
+          <button id="bookResetProgress" class="book-tool-btn book-tool-btn-text" type="button" title="清除書籤，從頭閱讀">↺ 重頭</button>
           <button id="bookFontDec" class="book-tool-btn" title="縮小字級">A−</button>
           <button id="bookFontInc" class="book-tool-btn" title="放大字級">A+</button>
           <button id="bookReaderClose" class="book-tool-btn" title="關閉（Esc）">✕</button>
@@ -1026,6 +1027,7 @@
         <button id="bookNext" class="book-nav-btn" title="下一頁（→）">›</button>
       </div>
       <div id="bookIndicator" class="book-indicator"></div>
+      <div id="bookBookmarkStatus" class="book-bookmark-status" aria-live="polite"></div>
       <div class="book-progress"><div id="bookProgressFill" class="book-progress-fill"></div></div>
       <div id="bookMeasure" class="book-measure"></div>
     </div>

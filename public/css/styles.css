@@ -4465,6 +4465,23 @@
         background: rgba(255, 255, 255, 0.2);
       }
 
+      .book-tool-btn-text {
+        width: auto;
+        min-width: 38px;
+        padding: 0 12px;
+        font-size: 0.82rem;
+        white-space: nowrap;
+      }
+
+      .book-bookmark-status {
+        flex-shrink: 0;
+        text-align: center;
+        font-size: 0.82rem;
+        color: rgba(243, 233, 216, 0.78);
+        padding: 0 16px 4px;
+        min-height: 1.25em;
+      }
+
       .book-stage {
         flex: 1;
         display: flex;
@@ -5549,7 +5566,12 @@
         .reading-scene { padding: 54px 14px 56px; }
         .reading-scene .output { padding: 28px 22px; }
         .output-wrap.vertical-scroll .vertical-viewport {
-          height: min(65vh, 560px);
+          height: auto;
+          min-height: 220px;
+          max-height: none;
+        }
+        .output-wrap.vertical-scroll .vertical-viewport > .output {
+          padding: 18px 14px;
         }
         .output-wrap.horizontal-scroll .vertical-viewport {
           max-height: min(65vh, 560px);

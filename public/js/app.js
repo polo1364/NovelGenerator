@@ -124,27 +124,38 @@
       const outputWrap = document.getElementById('outputWrap');
       const verticalViewport = document.getElementById('verticalViewport');
 
-      const VERTICAL_BLOCK_HEIGHT = () => Math.min(window.innerHeight * 0.72, 680);
-
-      function getContentScroller() {
-        return verticalViewport || outputWrap;
+      function getMobileToolbarTop() {
+        const toolbar = document.querySelector('.floating-toolbar');
+        if (!toolbar || !window.matchMedia('(max-width: 768px)').matches) return null;
+        const rect = toolbar.getBoundingClientRect();
+        return rect.height > 0 ? rect.top : null;
       }
 
-      // 生成時自動跟隨最新段落：橫排往下捲、直排往左捲（右→左書寫）
-      function isVerticalWriting() {
-        return Boolean(outputWrap && outputWrap.classList.contains('vertical-scroll'));
+      function syncVerticalViewportHeight() {
+        if (!verticalViewport) return;
+        if (!isVerticalWriting()) {
+          verticalViewport.style.height = '';
+          return;
+        }
+        if (!window.matchMedia('(max-width: 768px)').matches) {
+          verticalViewport.style.height = '';
+          return;
+        }
+
+        const rect = verticalViewport.getBoundingClientRect();
+        const vv = window.visualViewport;
+        const visualBottom = vv ? vv.offsetTop + vv.height : window.innerHeight;
+        const toolbarTop = getMobileToolbarTop();
+        const bottomLimit = toolbarTop != null ? Math.min(visualBottom, toolbarTop) : visualBottom;
+        const available = Math.floor(bottomLimit - rect.top - 6);
+        verticalViewport.style.height = Math.max(220, available) + 'px';
       }
-      function getVerticalScroller() {
-        return verticalViewport || outputWrap;
-      }
-      function getVerticalScrollMax() {
-        const scroller = getVerticalScroller();
-        if (!scroller) return 0;
-        return Math.max(0, scroller.scrollWidth - scroller.clientWidth);
-      }
+
       function syncVerticalLayout() {
         if (!isVerticalWriting() || !resultDiv || !verticalViewport) return;
-        const blockHeight = VERTICAL_BLOCK_HEIGHT();
+        syncVerticalViewportHeight();
+        const blockHeight = verticalViewport.clientHeight;
+        if (blockHeight <= 0) return;
         resultDiv.style.height = blockHeight + 'px';
         resultDiv.style.width = 'max-content';
         resultDiv.style.display = 'inline-block';
@@ -153,6 +164,25 @@
         const minWidth = Math.max(contentWidth, verticalViewport.clientWidth);
         resultDiv.style.minWidth = minWidth + 'px';
       }
+
+      function getContentScroller() {
+        return verticalViewport || outputWrap;
+      }
+
+      function isVerticalWriting() {
+        return Boolean(outputWrap && outputWrap.classList.contains('vertical-scroll'));
+      }
+
+      function getVerticalScroller() {
+        return verticalViewport || outputWrap;
+      }
+
+      function getVerticalScrollMax() {
+        const scroller = getVerticalScroller();
+        if (!scroller) return 0;
+        return Math.max(0, scroller.scrollWidth - scroller.clientWidth);
+      }
+
       function isNearPageBottom(threshold = 140) {
         const scrollPos = window.innerHeight + window.scrollY;
         const docHeight = document.documentElement.scrollHeight;
@@ -291,6 +321,14 @@
       window.addEventListener('resize', () => {
         if (isVerticalWriting()) syncVerticalLayout();
       });
+      if (window.visualViewport) {
+        window.visualViewport.addEventListener('resize', () => {
+          if (isVerticalWriting()) syncVerticalLayout();
+        });
+        window.visualViewport.addEventListener('scroll', () => {
+          if (isVerticalWriting()) syncVerticalViewportHeight();
+        });
+      }
       if (resultDiv) {
         new MutationObserver(() => {
           if (!isVerticalWriting()) return;
@@ -6859,10 +6897,12 @@ ${truncatedNotice}${storyContext}${settingsReminder}
         if (verticalWritingBtn) verticalWritingBtn.classList.toggle('active', vertical);
         try { localStorage.setItem('writingMode', mode); } catch (e) {}
         if (vertical) {
+          syncVerticalLayout();
           scrollVerticalToStart(true);
         } else if (resultDiv) {
           verticalScrollToStartPending = false;
           unbindVerticalStartScrollObserver();
+          if (verticalViewport) verticalViewport.style.height = '';
           resultDiv.style.height = '';
           resultDiv.style.width = '';
           resultDiv.style.minWidth = '';
@@ -8806,7 +8846,12 @@ ${chapterListTemplate}
         const titleEl = document.getElementById('bookReaderTitle');
         const fontDec = document.getElementById('bookFontDec');
         const fontInc = document.getElementById('bookFontInc');
+        const resetProgressBtn = document.getElementById('bookResetProgress');
+        const bookmarkStatusEl = document.getElementById('bookBookmarkStatus');
         const measure = document.getElementById('bookMeasure');
+
+        const BOOK_PROGRESS_KEY = 'bookReaderProgress';
+        let saveProgressTimer = null;
 
         let pages = [];      // 每頁的 HTML 字串
         let pos = 0;         // 桌面：左頁索引；手機：當前頁索引
@@ -8820,6 +8865,78 @@ ${chapterListTemplate}
         function getStoryTitle() {
           const m = (latestStory || '').match(/^\s*#{1,4}\s*([^\n#]+)/m);
           return m ? m[1].trim() : '翻書閱讀';
+        }
+
+        function getBookReaderStoryKey() {
+          const story = latestStory || '';
+          const title = getStoryTitle();
+          const prefix = story.slice(0, 800);
+          let hash = 0;
+          for (let i = 0; i < prefix.length; i++) {
+            hash = ((hash << 5) - hash + prefix.charCodeAt(i)) | 0;
+          }
+          return `${title}|${(hash >>> 0).toString(36)}`;
+        }
+
+        function loadBookProgress() {
+          try {
+            const raw = localStorage.getItem(BOOK_PROGRESS_KEY);
+            if (!raw) return null;
+            const data = JSON.parse(raw);
+            if (!data || data.storyKey !== getBookReaderStoryKey()) return null;
+            return data;
+          } catch {
+            return null;
+          }
+        }
+
+        function saveBookProgress() {
+          if (!pages.length || !overlay.classList.contains('open')) return;
+          try {
+            localStorage.setItem(BOOK_PROGRESS_KEY, JSON.stringify({
+              storyKey: getBookReaderStoryKey(),
+              title: getStoryTitle(),
+              pos,
+              totalPages: pages.length,
+              fontSize,
+              updatedAt: Date.now()
+            }));
+          } catch { /* ignore */ }
+          updateBookmarkStatus();
+        }
+
+        function scheduleSaveBookProgress() {
+          clearTimeout(saveProgressTimer);
+          saveProgressTimer = setTimeout(saveBookProgress, 280);
+        }
+
+        function clearBookProgress() {
+          try { localStorage.removeItem(BOOK_PROGRESS_KEY); } catch { /* ignore */ }
+          if (bookmarkStatusEl) bookmarkStatusEl.textContent = '';
+        }
+
+        function restorePosFromProgress(saved) {
+          if (!saved || !pages.length) return 0;
+          if (saved.totalPages && saved.totalPages > 0) {
+            const ratio = (saved.pos || 0) / saved.totalPages;
+            return Math.round(ratio * pages.length);
+          }
+          return Math.min(saved.pos || 0, pages.length - 1);
+        }
+
+        function updateBookmarkStatus(resumed = false) {
+          if (!bookmarkStatusEl) return;
+          const pageNum = pos + 1;
+          const total = pages.length;
+          if (resumed && pos > 0) {
+            bookmarkStatusEl.textContent = `🔖 已從第 ${pageNum} 頁繼續（共 ${total} 頁）`;
+            return;
+          }
+          if (total > 0 && loadBookProgress()) {
+            bookmarkStatusEl.textContent = `🔖 閱讀位置已記錄 · 第 ${pageNum} / ${total} 頁`;
+          } else if (pos === 0) {
+            bookmarkStatusEl.textContent = total > 1 ? '🔖 翻頁時會自動記錄閱讀位置' : '';
+          }
         }
 
         // 將故事解析為區塊（標題 / 段落）
@@ -8935,6 +9052,7 @@ ${chapterListTemplate}
           progressFill.style.width = (total <= 1 ? 100 : (shownEnd / total) * 100) + '%';
           prevBtn.disabled = pos <= 0;
           nextBtn.disabled = pos + step() >= total;
+          scheduleSaveBookProgress();
         }
 
         function go(dir) {
@@ -8997,18 +9115,43 @@ ${chapterListTemplate}
           }
           titleEl.textContent = '📖 ' + getStoryTitle();
           overlay.classList.add('open');
+          const saved = loadBookProgress();
           // 等版面就緒再分頁
           requestAnimationFrame(() => {
             requestAnimationFrame(() => {
               pos = 0;
+              if (saved?.fontSize) {
+                fontSize = Math.max(14, Math.min(28, saved.fontSize));
+                localStorage.setItem('bookFontSize', fontSize);
+              }
               paginate();
+              let resumed = false;
+              if (saved) {
+                const restored = restorePosFromProgress(saved);
+                if (restored > 0) {
+                  pos = restored;
+                  clampPos();
+                  resumed = true;
+                }
+              }
               render();
+              updateBookmarkStatus(resumed);
+              if (resumed) saveBookProgress();
             });
           });
         }
 
         function close() {
+          saveBookProgress();
           overlay.classList.remove('open');
+        }
+
+        function resetToStart() {
+          pos = 0;
+          clearBookProgress();
+          clampPos();
+          render();
+          updateBookmarkStatus();
         }
 
         let resizeTimer = null;
@@ -9020,6 +9163,7 @@ ${chapterListTemplate}
 
         openBtn.addEventListener('click', () => { if (!openBtn.disabled) open(); });
         closeBtn.addEventListener('click', close);
+        if (resetProgressBtn) resetProgressBtn.addEventListener('click', resetToStart);
         prevBtn.addEventListener('click', () => go(-1));
         nextBtn.addEventListener('click', () => go(1));
 
