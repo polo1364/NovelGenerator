@@ -57,6 +57,22 @@ app.get('/reader-gh-sync.js', (req, res) => {
   res.sendFile(path.join(ROOT, 'reader-gh-sync.js'));
 });
 
+app.get('/reader-manifest.webmanifest', (req, res) => {
+  res.setHeader('Content-Type', 'application/manifest+json');
+  res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
+  res.sendFile(path.join(ROOT, 'reader-manifest.webmanifest'));
+});
+
+app.get('/reader-sw.js', (req, res) => {
+  res.setHeader('Content-Type', 'application/javascript');
+  res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
+  res.sendFile(path.join(ROOT, 'reader-sw.js'));
+});
+
+app.use('/reader-icons', express.static(path.join(ROOT, 'reader-icons'), {
+  maxAge: '7d'
+}));
+
 app.use('/novels', express.static(NOVELS_DIR));
 
 app.get('/api/novels', (req, res) => {

@@ -4,8 +4,15 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>小說閱讀 · 本機書庫</title>
-<meta name="description" content="單檔小說閱讀器 — 支援多集、章節導航、本機書庫">
+<meta name="description" content="單檔小說閱讀器 — 支援多集、章節導航、本機書庫、離線 PWA">
 <meta name="theme-color" content="#3a2a1a">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="小說閱讀">
+<link rel="manifest" href="reader-manifest.webmanifest">
+<link rel="icon" type="image/png" sizes="192x192" href="reader-icons/icon-192.png">
+<link rel="apple-touch-icon" href="reader-icons/apple-touch-icon.png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Noto+Serif+TC:wght@400;600;700&display=swap" rel="stylesheet">
@@ -2435,6 +2442,11 @@ if(typeof NovelGhSync!=='undefined'){
   });
 }
 loadLibrary();
+if('serviceWorker' in navigator&&location.protocol!=='file:'){
+  window.addEventListener('load',function(){
+    navigator.serviceWorker.register('./reader-sw.js',{scope:'./'}).catch(function(){/* 非 HTTPS 或路徑不支援 */});
+  });
+}
 })();
 </script>
 </body>
