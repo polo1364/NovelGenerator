@@ -1,0 +1,2363 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>小說閱讀 · 本機書庫</title>
+<meta name="description" content="單檔小說閱讀器 — 支援多集、章節導航、本機書庫">
+<meta name="theme-color" content="#3a2a1a">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Serif+TC:wght@400;600;700&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#efe7d8;--bg-panel:#fffdf8;--text:#2a2620;--text-muted:#6b6154;
+  --accent:#9c3a44;--accent-hover:#b84651;--accent-soft:rgba(156,58,68,.1);
+  --gold:#b7892f;--gold-soft:rgba(183,137,47,.15);
+  --border:#e2d6c0;--shadow:0 16px 48px rgba(74,58,36,.12);
+  --reader-width:44rem;--font-serif:"Noto Serif TC","PingFang TC","Microsoft JhengHei","微軟正黑體",serif;
+  --font-size:18px;--line-height:2;--radius:14px;--topbar-h:58px;
+  --ease:cubic-bezier(.4,0,.2,1);
+}
+[data-theme=dark]{
+  --bg:#0f0e0c;--bg-panel:#1a1814;--text:#ece6da;--text-muted:#a89f90;
+  --accent:#d4a574;--accent-hover:#e0b888;--accent-soft:rgba(212,165,116,.12);
+  --gold:#d4a574;--gold-soft:rgba(212,165,116,.12);
+  --border:#3a342c;--shadow:0 16px 48px rgba(0,0,0,.45);
+}
+*,*::before,*::after{box-sizing:border-box}
+html{scroll-behavior:smooth;height:100%}
+body{
+  margin:0;min-height:100vh;height:100%;overflow:hidden;font-family:var(--font-serif);background:var(--bg);color:var(--text);
+  line-height:var(--line-height);
+  background-image:radial-gradient(circle at 20% 10%,var(--gold-soft),transparent 40%),radial-gradient(circle at 80% 90%,var(--accent-soft),transparent 35%);
+}
+body::before{
+  content:"";position:fixed;inset:0 auto auto 0;width:100%;height:3px;z-index:30;
+  background:linear-gradient(90deg,var(--accent),var(--gold),var(--accent));
+}
+.topbar{
+  position:sticky;top:0;z-index:25;display:flex;align-items:center;justify-content:space-between;
+  gap:1rem;padding:.8rem 1.25rem;height:var(--topbar-h);
+  background:color-mix(in srgb,var(--bg-panel) 88%,transparent);
+  backdrop-filter:blur(14px);border-bottom:1px solid var(--border);
+}
+.brand{display:flex;align-items:center;gap:.7rem;min-width:0}
+.brand-icon{
+  width:2.2rem;height:2.2rem;display:flex;align-items:center;justify-content:center;
+  border-radius:10px;background:linear-gradient(135deg,var(--accent),var(--gold));font-size:1.1rem;
+  box-shadow:0 4px 12px rgba(156,58,68,.25);
+}
+.brand-text h1{margin:0;font-size:1.02rem;font-weight:700;letter-spacing:.02em;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.brand-text p{margin:0;font-size:.75rem;color:var(--text-muted)}
+.topbar-actions{display:flex;align-items:center;gap:.45rem;flex-shrink:0;flex-wrap:wrap;justify-content:flex-end}
+.read-progress-wrap{
+  position:fixed;top:3px;left:0;right:0;height:3px;z-index:31;background:transparent;pointer-events:none;
+  opacity:0;transition:opacity .3s var(--ease);
+}
+.read-progress-wrap.show{opacity:1}
+.read-progress-bar{height:100%;width:0;background:linear-gradient(90deg,var(--gold),var(--accent));transition:width .35s var(--ease)}
+.btn{
+  border:1px solid var(--border);background:var(--bg-panel);color:var(--text);
+  border-radius:999px;padding:.45rem .95rem;font:inherit;font-size:.84rem;cursor:pointer;
+  transition:border-color .2s var(--ease),background .2s var(--ease),transform .15s var(--ease),box-shadow .2s var(--ease);
+}
+.btn:hover{border-color:var(--accent);background:var(--accent-soft);transform:translateY(-1px)}
+.btn:active{transform:translateY(0)}
+.btn:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.btn:disabled{opacity:.4;cursor:not-allowed;transform:none}
+.btn-primary{background:linear-gradient(135deg,var(--accent),#7a2e36);border-color:transparent;color:#fff;box-shadow:0 4px 14px rgba(156,58,68,.25)}
+.btn-primary:hover{filter:brightness(1.06);background:linear-gradient(135deg,var(--accent-hover),#8a3540)}
+.btn-ghost{background:transparent}
+.btn-icon{width:2.3rem;height:2.3rem;padding:0;display:inline-flex;align-items:center;justify-content:center;border-radius:50%}
+.layout{display:grid;grid-template-columns:300px 1fr;height:calc(100vh - var(--topbar-h));min-height:0;overflow:hidden}
+.layout.shelf-layout{grid-template-columns:1fr}
+.layout.shelf-layout .sidebar{display:none}
+.sidebar{
+  border-right:1px solid var(--border);background:color-mix(in srgb,var(--bg-panel) 96%,transparent);
+  overflow-x:hidden;overflow-y:auto;padding:1rem 1rem 2rem;scrollbar-width:thin;
+  height:100%;min-height:0;align-self:stretch;
+}
+.sidebar h2{
+  margin:0 0 .65rem;padding-bottom:.4rem;font-size:.78rem;letter-spacing:.1em;
+  color:var(--text-muted);text-transform:uppercase;border-bottom:1px solid var(--border);
+}
+.series-list,.volume-list,.chapter-list{list-style:none;margin:0 0 1.5rem;padding:0}
+.series-list button,.volume-list button,.chapter-list button{
+  width:100%;text-align:left;border:none;background:transparent;color:var(--text);font:inherit;
+  padding:.6rem .75rem;border-radius:10px;cursor:pointer;transition:background .15s var(--ease),color .15s var(--ease);
+}
+.series-list button:hover,.volume-list button:hover,.chapter-list button:hover{background:var(--accent-soft)}
+.series-list button.active,.volume-list button.active,.chapter-list button.active{
+  background:var(--accent-soft);color:var(--accent);font-weight:600;box-shadow:inset 3px 0 0 var(--accent);
+}
+.item-title{display:block;font-size:.92rem;line-height:1.35}
+.item-meta{display:block;margin-top:.12rem;font-size:.72rem;color:var(--text-muted)}
+.chapter-list button,.volume-list button{font-size:.86rem;padding:.48rem .65rem}
+.item-num{display:inline-block;min-width:1.4rem;color:var(--text-muted);font-size:.78rem;font-variant-numeric:tabular-nums}
+.main{overflow-x:hidden;overflow-y:auto;padding:1.5rem 1.25rem 3rem;transition:background .3s var(--ease);height:100%;min-height:0}
+.main.shelf-mode{padding:0;display:flex;flex-direction:column;background:radial-gradient(circle at 50% -10%,rgba(120,85,45,.35),transparent 55%),linear-gradient(165deg,#3a2a1a 0%,#241810 100%)}
+.view-shelf{max-width:none;margin:0;flex:1;min-height:0;display:flex;flex-direction:column}
+.bookshelf-header{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:16px 24px;background:linear-gradient(180deg,rgba(0,0,0,.28),transparent);color:#f3e3c8;flex-shrink:0;flex-wrap:wrap}
+.bookshelf-title{font-size:1.3rem;font-weight:700;letter-spacing:.05em;text-shadow:0 1px 2px rgba(0,0,0,.3)}
+.bookshelf-tools{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.bookshelf-search,.bookshelf-sort{
+  background:rgba(255,255,255,.1);border:1px solid rgba(255,255,255,.18);color:#f3e3c8;
+  border-radius:10px;padding:8px 12px;font-size:.84rem;outline:none;font-family:inherit;
+  transition:border-color .2s,background .2s;
+}
+.bookshelf-search{width:190px}.bookshelf-search:focus,.bookshelf-sort:focus{border-color:rgba(212,175,55,.6);background:rgba(255,255,255,.16)}
+.bookshelf-search::placeholder{color:rgba(243,227,200,.5)}
+.bookshelf-sort{cursor:pointer}.bookshelf-sort option{color:#2c2418}
+.bookshelf-scroll{flex:1;overflow-y:auto;padding:12px 28px 28px;min-height:300px;scrollbar-width:thin}
+.bookshelf-body{
+  display:flex;flex-wrap:wrap;align-items:flex-end;align-content:flex-start;gap:44px 26px;padding:0 0 30px;
+  background-image:repeating-linear-gradient(to bottom,transparent 0,transparent 170px,rgba(0,0,0,.28) 170px,rgba(0,0,0,.28) 172px,#7a5230 172px,#5e3e22 188px,rgba(0,0,0,.38) 188px,rgba(0,0,0,.38) 191px,transparent 191px,transparent 214px);
+}
+.book-spine{
+  position:relative;width:52px;height:170px;border-radius:3px 5px 5px 3px;cursor:pointer;
+  display:flex;align-items:center;justify-content:center;
+  background:linear-gradient(90deg,var(--c1,#555) 0%,var(--c2,#333) 100%);
+  box-shadow:inset -3px 0 6px rgba(0,0,0,.35),inset 3px 0 4px rgba(255,255,255,.18),2px 6px 12px rgba(0,0,0,.45);
+  transition:transform .2s var(--ease),box-shadow .2s var(--ease);overflow:hidden;
+  animation:spineIn .4s var(--ease) both;
+}
+@keyframes spineIn{from{opacity:0;transform:translateY(12px)}to{opacity:1;transform:translateY(0)}}
+.book-spine.bk-w-thin{width:42px}.book-spine.bk-w-std{width:52px}.book-spine.bk-w-thick{width:64px}
+.book-spine.bk-leather{background:linear-gradient(90deg,rgba(0,0,0,.22),transparent 16%,transparent 84%,rgba(0,0,0,.3)),linear-gradient(90deg,var(--c1),var(--c2))}
+.book-spine.bk-leather::after{content:'';position:absolute;inset:0;pointer-events:none;background:linear-gradient(to bottom,transparent 24px,rgba(0,0,0,.4) 24px 28px,rgba(212,175,55,.55) 28px 29px,transparent 29px,transparent 130px,rgba(0,0,0,.4) 130px 134px,rgba(212,175,55,.55) 134px 135px,transparent 135px)}
+.book-spine.bk-leather .book-spine-title{color:#f3e3c8}
+.book-spine.bk-cloth{background:linear-gradient(90deg,rgba(255,255,255,.06),rgba(0,0,0,.1)),linear-gradient(90deg,var(--c1),var(--c2))}
+.book-spine.bk-cloth .book-spine-title{background:rgba(245,238,222,.94);color:#3a2c1a;padding:12px 5px;border-radius:3px;box-shadow:inset 0 0 0 1px rgba(0,0,0,.18);text-shadow:none;max-height:116px}
+.book-spine.bk-stripe::after{content:'';position:absolute;inset:0;pointer-events:none;background:linear-gradient(to bottom,rgba(0,0,0,.32) 0 20px,rgba(212,175,55,.5) 20px 21px,transparent 21px,transparent calc(100% - 21px),rgba(212,175,55,.5) calc(100% - 21px) calc(100% - 20px),rgba(0,0,0,.32) calc(100% - 20px))}
+.book-spine.bk-modern{background:var(--c1);box-shadow:inset -2px 0 5px rgba(0,0,0,.3),2px 6px 12px rgba(0,0,0,.4)}
+.book-spine.bk-modern::before{content:'';position:absolute;left:8px;right:8px;top:16px;height:2px;background:rgba(255,255,255,.65)}
+.book-spine.bk-modern::after{display:none}
+.book-spine.bk-vintage::after{content:'';position:absolute;inset:7px 6px;pointer-events:none;border:1px solid rgba(212,175,55,.7);border-radius:2px;box-shadow:inset 0 0 0 3px rgba(0,0,0,.12),inset 0 0 0 4px rgba(212,175,55,.35)}
+.book-spine.bk-vintage .book-spine-title{color:#f4e4c1}
+.book-spine::before{content:'';position:absolute;left:5px;top:0;bottom:0;width:2px;background:rgba(255,255,255,.25)}
+.book-spine:not(.bk-modern):not(.bk-leather):not(.bk-cloth):not(.bk-stripe):not(.bk-vintage)::after{content:'';position:absolute;left:0;right:0;top:10px;height:3px;background:rgba(255,255,255,.35);box-shadow:0 150px 0 rgba(255,255,255,.25)}
+.book-spine:hover{transform:translateY(-12px) rotate(-2deg);box-shadow:inset -3px 0 6px rgba(0,0,0,.35),4px 16px 24px rgba(0,0,0,.55)}
+.book-spine-title{writing-mode:vertical-rl;text-orientation:upright;font-size:.88rem;font-weight:600;line-height:1.15;letter-spacing:.05em;color:#fff;max-height:150px;overflow:hidden;text-shadow:0 1px 2px rgba(0,0,0,.45);padding:6px 0}
+.book-spine-series{position:absolute;bottom:6px;left:50%;transform:translateX(-50%);font-size:.58rem;font-weight:700;padding:2px 5px;border-radius:3px;background:rgba(0,0,0,.5);color:#ffe9b8;white-space:nowrap}
+.bookshelf-empty{text-align:center;color:#d8c4a2;padding:70px 20px;display:none}
+.bookshelf-empty span{font-size:3.2rem;display:block;margin-bottom:14px;opacity:.85}
+.bookshelf-empty p{margin:6px 0}.bookshelf-empty .hint{font-size:.85rem;opacity:.65}
+.import-panel{margin:0;padding:0;border-top:1px solid rgba(255,255,255,.08);background:rgba(0,0,0,.22);flex-shrink:0}
+.import-toggle{
+  width:100%;padding:.85rem 1.5rem;border:none;background:transparent;color:#d8c4a2;
+  font:inherit;font-size:.88rem;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:.5rem;
+}
+.import-toggle:hover{color:#f3e3c8;background:rgba(255,255,255,.04)}
+.import-body{padding:0 1.5rem 1.25rem;display:none}
+.import-body.open{display:block}
+.import-dropzone{
+  border:2px dashed rgba(255,255,255,.2);border-radius:var(--radius);padding:1.5rem 1rem;text-align:center;
+  color:rgba(243,227,200,.75);margin-bottom:1rem;transition:border-color .2s,background .2s;
+}
+.import-dropzone.dragover{border-color:rgba(212,175,55,.7);background:rgba(212,175,55,.08)}
+.import-dropzone p{margin:0 0 .65rem;font-size:.88rem}
+.import-panel .btn{border-color:rgba(255,255,255,.22);background:rgba(255,255,255,.08);color:#f3e3c8}
+.import-panel .btn-primary{background:linear-gradient(135deg,#8b5a2b,#6e451a);border-color:transparent;color:#fff}
+.import-panel .import-field,.import-panel .paste-area{background:rgba(255,255,255,.07);border:1px solid rgba(255,255,255,.18);color:#f3e3c8;border-radius:10px}
+.import-panel .import-field::placeholder,.import-panel .paste-area::placeholder{color:rgba(243,227,200,.45)}
+.import-actions{display:flex;flex-wrap:wrap;gap:.5rem;justify-content:center;align-items:center}
+.import-actions input[type=file]{display:none}
+.import-field{width:100%;padding:.55rem .75rem;font:inherit;font-size:.86rem}
+.paste-area{width:100%;min-height:96px;margin-top:.75rem;padding:.75rem;font:inherit;font-size:.88rem;resize:vertical;line-height:1.6}
+.field-row{display:grid;grid-template-columns:1fr 1fr;gap:.5rem;margin-top:.65rem}
+.view-reader{display:none;max-width:calc(var(--reader-width) + 4rem);margin:0 auto;animation:fadeUp .35s var(--ease)}
+.view-reader.show{display:block}
+@keyframes fadeUp{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:translateY(0)}}
+.view-shelf.hidden{display:none}
+.reader-paper{
+  background:var(--bg-panel);border:1px solid var(--border);border-radius:var(--radius);
+  box-shadow:var(--shadow);padding:2.5rem clamp(1.25rem,4vw,2.5rem) 2rem;
+  position:relative;
+}
+.reader-paper::before{
+  content:"";position:absolute;inset:0;border-radius:inherit;pointer-events:none;
+  background:repeating-linear-gradient(transparent,transparent 31px,rgba(120,95,55,.04) 31px,rgba(120,95,55,.04) 32px);
+}
+.volume-label{
+  text-align:center;color:var(--text-muted);font-size:.82rem;margin:0 auto 1.25rem;
+  padding:.35rem .85rem;border-radius:999px;background:var(--gold-soft);display:block;max-width:100%;
+  letter-spacing:.02em;
+}
+.chapter-title{
+  margin:0 0 1.75rem;font-size:clamp(1.3rem,3vw,1.7rem);text-align:center;line-height:1.45;
+  font-weight:700;position:relative;padding-bottom:.75rem;
+}
+.chapter-title::after{
+  content:"";position:absolute;bottom:0;left:50%;transform:translateX(-50%);
+  width:3rem;height:2px;background:linear-gradient(90deg,transparent,var(--gold),transparent);
+}
+.chapter-body{position:relative;z-index:1}
+.chapter-body p{margin:0 0 1.15em;text-indent:2em;font-size:var(--font-size);color:var(--text)}
+.chapter-body p.speaking-segment{
+  background:var(--accent-soft);border-radius:8px;
+  box-shadow:inset 3px 0 0 var(--accent);
+  margin-left:-.35rem;margin-right:-.35rem;padding:.15rem .35rem;
+}
+.btn.active-task{box-shadow:0 0 0 2px var(--gold);animation:speakPulse 1.5s ease infinite}
+@keyframes speakPulse{0%,100%{opacity:1}50%{opacity:.75}}
+.speech-modal{
+  position:fixed;inset:0;z-index:210;display:flex;align-items:center;justify-content:center;
+  padding:20px;background:rgba(0,0,0,.55);backdrop-filter:blur(6px);
+  opacity:0;visibility:hidden;transition:opacity .25s var(--ease),visibility .25s;
+}
+.speech-modal.open{opacity:1;visibility:visible}
+.speech-modal-card{
+  background:var(--bg-panel);color:var(--text);border:1px solid var(--border);
+  border-radius:18px;width:100%;max-width:560px;max-height:90vh;overflow:hidden;
+  box-shadow:0 28px 80px rgba(0,0,0,.4);display:flex;flex-direction:column;
+  transform:scale(.96) translateY(8px);transition:transform .3s var(--ease);
+}
+.speech-modal.open .speech-modal-card{transform:scale(1) translateY(0)}
+.speech-modal-head{
+  display:flex;align-items:center;justify-content:space-between;padding:16px 20px;
+  background:linear-gradient(135deg,var(--accent),#7a3540);color:#fff;
+}
+.speech-modal-head h2{margin:0;font-size:1.05rem;font-weight:700}
+.speech-modal-close{
+  width:34px;height:34px;border:none;border-radius:50%;background:rgba(255,255,255,.2);
+  color:#fff;font-size:1rem;cursor:pointer;
+}
+.speech-modal-body{padding:18px 20px 22px;overflow-y:auto}
+.speech-row{display:flex;align-items:center;gap:10px;margin-bottom:12px;flex-wrap:wrap}
+.speech-row>label{min-width:4.5rem;font-size:.84rem;color:var(--text-muted);flex-shrink:0}
+.speech-row select,.speech-row input[type=number]{flex:1;min-width:120px;padding:.45rem .65rem;border:1px solid var(--border);border-radius:10px;font:inherit;font-size:.84rem;background:var(--bg-panel);color:var(--text)}
+.speech-hint{font-size:.78rem;color:var(--text-muted);margin:-6px 0 10px}
+.speed-control{display:flex;align-items:center;gap:8px;flex:1;min-width:180px}
+.speed-control input[type=range]{flex:1;accent-color:var(--accent)}
+.speed-btn{width:30px;height:30px;border:1px solid var(--border);border-radius:8px;background:var(--bg-panel);cursor:pointer;font-weight:700}
+.speed-value{min-width:2.5rem;font-size:.82rem;color:var(--text-muted);font-variant-numeric:tabular-nums}
+.range-selector{display:flex;align-items:center;gap:6px;flex-wrap:wrap;font-size:.84rem}
+.segment-input{width:58px!important;min-width:58px!important;text-align:center;padding:.4rem!important}
+.segment-info{font-size:.82rem;color:var(--text-muted);margin:4px 0 12px}
+.speech-btns{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:12px}
+.speech-nav{display:flex;align-items:center;justify-content:center;gap:10px;margin-bottom:14px}
+.speech-nav button{flex:1;max-width:140px}
+.segment-display{font-size:.84rem;color:var(--text-muted);min-width:4rem;text-align:center}
+.speech-progress{margin-bottom:12px}
+.speech-progress-bar{height:8px;background:var(--border);border-radius:999px;cursor:pointer;overflow:hidden;margin-bottom:6px}
+.speech-progress-fill{height:100%;width:0;background:linear-gradient(90deg,var(--gold),var(--accent));transition:width .3s var(--ease)}
+.speech-progress-text{font-size:.8rem;color:var(--text-muted)}
+.speech-options{display:flex;flex-wrap:wrap;gap:14px;margin-bottom:14px;font-size:.84rem}
+.speech-options label{display:flex;align-items:center;gap:6px;cursor:pointer}
+.speech-extra{border-top:1px dashed var(--border);padding-top:12px}
+.speech-extra .btn{width:100%;justify-content:center}
+.chapter-nav-bar{
+  display:flex;justify-content:space-between;gap:1rem;margin-top:2rem;padding-top:1.25rem;
+  border-top:1px solid var(--border);flex-wrap:wrap;position:relative;z-index:1;
+}
+.book-detail{
+  position:fixed;inset:0;z-index:200;display:none;align-items:center;justify-content:center;
+  background:rgba(0,0,0,.6);backdrop-filter:blur(6px);padding:20px;
+  animation:fadeIn .25s var(--ease);
+}
+.book-detail.open{display:flex}
+@keyframes fadeIn{from{opacity:0}to{opacity:1}}
+.book-detail-card{
+  position:relative;display:flex;gap:22px;background:var(--bg-panel);color:var(--text);
+  border-radius:18px;padding:26px;max-width:520px;width:100%;
+  box-shadow:0 28px 80px rgba(0,0,0,.45);border:1px solid var(--border);
+  animation:scaleIn .3s var(--ease);
+}
+@keyframes scaleIn{from{opacity:0;transform:scale(.96) translateY(8px)}to{opacity:1;transform:scale(1) translateY(0)}}
+.book-detail-cover{width:96px;height:140px;flex-shrink:0;border-radius:4px 8px 8px 4px;box-shadow:3px 6px 16px rgba(0,0,0,.35);display:flex;align-items:center;justify-content:center;color:#fff;font-weight:700;font-size:1.5rem;text-shadow:0 1px 3px rgba(0,0,0,.4)}
+.book-detail-info{flex:1;min-width:0}
+.book-detail-title{margin:0 36px 8px 0;font-size:1.12rem;font-weight:700;word-break:break-word}
+.book-detail-meta{font-size:.8rem;color:var(--text-muted);margin-bottom:10px;display:flex;gap:12px;flex-wrap:wrap}
+.book-detail-preview{font-size:.84rem;color:var(--text-muted);line-height:1.65;max-height:5em;overflow:hidden;margin-bottom:16px}
+.book-detail-actions{display:flex;flex-wrap:wrap;gap:8px}
+.bd-btn{border:1px solid var(--border);background:var(--bg-panel);color:var(--text);border-radius:10px;padding:8px 16px;font:inherit;font-size:.84rem;cursor:pointer;transition:all .15s var(--ease)}
+.bd-btn:hover{border-color:var(--accent);background:var(--accent-soft)}
+.bd-btn-primary{background:var(--accent);border-color:var(--accent);color:#fff}
+.bd-btn-danger{color:#b44;border-color:rgba(180,68,68,.4)}
+.bd-btn-danger:hover{background:rgba(180,68,68,.08)}
+.book-detail-close{position:absolute;top:12px;right:12px;width:34px;height:34px;border:none;border-radius:50%;background:var(--accent-soft);cursor:pointer;font-size:1rem;line-height:1;transition:background .15s}
+.book-detail-close:hover{background:var(--accent-soft);filter:brightness(.95)}
+.sidebar-toggle{display:none}
+.sidebar-backdrop{display:none;position:fixed;inset:var(--topbar-h) 0 0 0;background:rgba(0,0,0,.4);z-index:14;backdrop-filter:blur(2px)}
+.sidebar-backdrop.show{display:block}
+.font-size-control{display:flex;align-items:center;gap:.2rem;padding:0 .2rem;border:1px solid var(--border);border-radius:999px;background:var(--bg-panel)}
+.font-size-control output{min-width:1.8rem;text-align:center;font-size:.78rem;color:var(--text-muted);font-variant-numeric:tabular-nums}
+.font-size-control .btn-icon{border:none;background:transparent}
+.toast{
+  position:fixed;bottom:1.75rem;left:50%;transform:translateX(-50%) translateY(80px);
+  background:rgba(42,38,32,.92);color:#fff;padding:.7rem 1.35rem;border-radius:999px;
+  font-size:.88rem;opacity:0;transition:transform .3s var(--ease),opacity .3s var(--ease);
+  pointer-events:none;z-index:300;box-shadow:0 8px 24px rgba(0,0,0,.25);backdrop-filter:blur(8px);
+}
+.toast.show{transform:translateX(-50%) translateY(0);opacity:1}
+@media(max-width:860px){
+  .layout{grid-template-columns:1fr;height:calc(100vh - var(--topbar-h))}
+  .sidebar{position:fixed;inset:var(--topbar-h) auto 0 0;width:min(88vw,320px);height:auto;max-height:none;transform:translateX(-100%);transition:transform .28s var(--ease);z-index:15;box-shadow:var(--shadow)}
+  .sidebar.open{transform:translateX(0)}
+  .sidebar-toggle{display:inline-flex}
+  .field-row{grid-template-columns:1fr}
+  .bookshelf-search{width:130px}
+  .bookshelf-scroll{padding:10px 16px 20px}
+  .bookshelf-body{gap:36px 18px}
+  .reader-paper{padding:1.75rem 1.15rem 1.5rem}
+  .topbar-actions .btn:not(.btn-icon):not(.sidebar-toggle){padding:.4rem .7rem;font-size:.8rem}
+}
+@media(prefers-reduced-motion:reduce){*,*::before,*::after{animation:none!important;transition:none!important}}
+</style>
+</head>
+<body>
+<div class="read-progress-wrap" id="readProgressWrap"><div class="read-progress-bar" id="readProgressBar"></div></div>
+<header class="topbar">
+  <div class="brand">
+    <span class="brand-icon" aria-hidden="true">📖</span>
+    <div class="brand-text">
+      <h1 id="pageTitle">小說閱讀</h1>
+      <p id="pageSubtitle">本機書庫 · 雙擊 index.html 即可閱讀</p>
+    </div>
+  </div>
+  <div class="topbar-actions">
+    <div class="font-size-control" title="字級">
+      <button type="button" class="btn btn-icon" id="fontSmaller" aria-label="縮小字級">A−</button>
+      <output id="fontSizeLabel">18</output>
+      <button type="button" class="btn btn-icon" id="fontLarger" aria-label="放大字級">A+</button>
+    </div>
+    <button type="button" class="btn btn-icon sidebar-toggle" id="sidebarToggle" aria-label="目錄">☰</button>
+    <button type="button" class="btn" id="addVolBtn" hidden>追加集數</button>
+    <button type="button" class="btn" id="themeToggle" aria-label="切換深色模式">🌙</button>
+    <button type="button" class="btn" id="speakBtn" hidden title="Edge 朗讀">🔊</button>
+    <button type="button" class="btn" id="exportBtn" hidden>匯出</button>
+    <button type="button" class="btn btn-ghost" id="backShelfBtn" hidden>← 書架</button>
+  </div>
+</header>
+<div class="sidebar-backdrop" id="sidebarBackdrop"></div>
+<input type="file" id="addVolInput" accept=".txt,text/plain" hidden>
+<div class="layout">
+  <aside class="sidebar" id="sidebar">
+    <section id="seriesSection">
+      <h2>書庫</h2>
+      <ul class="series-list" id="seriesList"></ul>
+    </section>
+    <section id="volumeSection" hidden>
+      <h2>集數</h2>
+      <ul class="volume-list" id="volumeList"></ul>
+    </section>
+    <section id="chapterSection" hidden>
+      <h2>章節</h2>
+      <ul class="chapter-list" id="chapterList"></ul>
+    </section>
+  </aside>
+  <main class="main">
+    <section class="view-shelf" id="shelfView">
+      <div class="bookshelf-header">
+        <span class="bookshelf-title">📚 我的書櫃</span>
+        <div class="bookshelf-tools">
+          <input type="text" id="shelfSearch" class="bookshelf-search" placeholder="🔍 搜尋書名…">
+          <select id="shelfSort" class="bookshelf-sort">
+            <option value="newest">最新</option>
+            <option value="name">書名</option>
+            <option value="color">配色</option>
+            <option value="style">裝幀</option>
+          </select>
+        </div>
+      </div>
+      <div class="bookshelf-scroll">
+        <div id="shelfGrid" class="bookshelf-body"></div>
+        <div id="shelfEmpty" class="bookshelf-empty">
+          <span>📚</span>
+          <p>書櫃是空的</p>
+          <p class="hint">匯入 .txt 開始收藏</p>
+        </div>
+      </div>
+      <div class="import-panel">
+        <button type="button" class="import-toggle" id="importToggle">📥 匯入小說 ▾</button>
+        <div class="import-body" id="importBody">
+          <div class="import-dropzone" id="dropZone">
+            <p>拖放 <strong>.txt</strong> 到這裡，或點下方按鈕</p>
+            <p style="font-size:.78rem;opacity:.75">支援 <strong>書名_全系列.txt</strong>、分集多選</p>
+          </div>
+          <div class="import-actions">
+            <input type="file" id="fileInput" accept=".txt,text/plain" multiple hidden>
+            <button type="button" class="btn btn-primary" id="pickFileBtn">選擇 .txt</button>
+            <button type="button" class="btn" id="pasteToggleBtn">貼上文字</button>
+          </div>
+          <div id="pasteBox" hidden>
+            <textarea class="paste-area" id="pasteText" placeholder="在此貼上小說全文…"></textarea>
+            <div class="field-row">
+              <input type="text" id="pasteSeriesTitle" class="import-field" placeholder="系列書名">
+              <input type="text" id="pasteVolTitle" class="import-field" placeholder="集數名（如：第一集）">
+            </div>
+            <div class="import-actions" style="margin-top:.75rem">
+              <select id="pasteTargetSeries" class="import-field">
+                <option value="">— 新建系列 —</option>
+              </select>
+              <button type="button" class="btn btn-primary" id="pasteSaveBtn">加入書櫃</button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+    <article class="view-reader" id="readerView">
+      <div class="reader-paper">
+        <p class="volume-label" id="volumeLabel"></p>
+        <h2 class="chapter-title" id="chapterTitle"></h2>
+        <div class="chapter-body" id="chapterBody"></div>
+        <nav class="chapter-nav-bar">
+          <button type="button" class="btn" id="prevChapterBtn">← 上一章</button>
+          <button type="button" class="btn btn-primary" id="nextChapterBtn">下一章 →</button>
+        </nav>
+      </div>
+    </article>
+  </main>
+</div>
+<div id="bookDetail" class="book-detail">
+  <div class="book-detail-card">
+    <button type="button" class="book-detail-close" id="bookDetailClose" aria-label="關閉">✕</button>
+    <div class="book-detail-cover" id="bookDetailCover">書</div>
+    <div class="book-detail-info">
+      <h3 class="book-detail-title" id="bookDetailTitle"></h3>
+      <div class="book-detail-meta" id="bookDetailMeta"></div>
+      <div class="book-detail-preview" id="bookDetailPreview"></div>
+      <div class="book-detail-actions">
+        <button type="button" class="bd-btn bd-btn-primary" id="bookDetailRead">📖 閱讀</button>
+        <button type="button" class="bd-btn bd-btn-danger" id="bookDetailDelete">🗑 刪除</button>
+      </div>
+    </div>
+  </div>
+</div>
+<div id="speechModal" class="speech-modal">
+  <div class="speech-modal-card">
+    <div class="speech-modal-head">
+      <h2>🎙️ 朗讀控制</h2>
+      <button type="button" class="speech-modal-close" id="closeSpeechModal" aria-label="關閉">✕</button>
+    </div>
+    <div class="speech-modal-body">
+      <div class="speech-row">
+        <label>Edge 語音</label>
+        <select id="voiceSelect"></select>
+      </div>
+      <p class="speech-hint">閱讀可雙擊本檔 · Edge 朗讀需 npm start 後用 localhost 開啟</p>
+      <div class="speech-row">
+        <label>語速</label>
+        <div class="speed-control">
+          <button type="button" class="speed-btn" data-speed="-0.25">−</button>
+          <input type="range" id="speechRate" min="0.25" max="3" step="0.05" value="1">
+          <button type="button" class="speed-btn" data-speed="+0.25">+</button>
+          <span id="rateValue" class="speed-value">1.0x</span>
+        </div>
+      </div>
+      <div class="speech-row">
+        <label>音調</label>
+        <div class="speed-control">
+          <button type="button" class="speed-btn" data-pitch="-0.1">−</button>
+          <input type="range" id="speechPitch" min="0.5" max="2" step="0.05" value="1">
+          <button type="button" class="speed-btn" data-pitch="+0.1">+</button>
+          <span id="pitchValue" class="speed-value">1.0</span>
+        </div>
+      </div>
+      <div class="speech-row">
+        <label>情緒模式</label>
+        <select id="emotionMode">
+          <option value="auto">🎭 自動偵測</option>
+          <option value="narration">📖 平穩敘述</option>
+          <option value="dramatic">🎬 戲劇張力</option>
+          <option value="gentle">🌸 溫柔細膩</option>
+          <option value="excited">⚡ 激昂熱血</option>
+          <option value="sad">💧 悲傷低沉</option>
+          <option value="mysterious">🌙 神秘懸疑</option>
+        </select>
+      </div>
+      <div class="speech-row">
+        <label>朗讀範圍</label>
+        <div class="range-selector">
+          <span>第</span>
+          <input type="number" id="startSegment" min="1" value="1" class="segment-input">
+          <span>–</span>
+          <input type="number" id="endSegment" min="1" value="1" class="segment-input">
+          <span>段</span>
+          <button type="button" class="btn" id="readAllBtn" style="font-size:.78rem;padding:.35rem .7rem">全部</button>
+        </div>
+      </div>
+      <div id="segmentInfo" class="segment-info">本章共 0 段</div>
+      <div class="speech-btns">
+        <button type="button" class="btn btn-primary" id="playPauseBtn">▶️ 開始朗讀</button>
+        <button type="button" class="btn" id="stopSpeechBtn">⏹️ 停止</button>
+        <button type="button" class="btn" id="resetSpeechBtn">🔄 重置</button>
+      </div>
+      <div class="speech-nav">
+        <button type="button" class="btn" id="prevSegmentBtn" disabled>⏮ 上一段</button>
+        <span id="currentSegmentDisplay" class="segment-display">- / -</span>
+        <button type="button" class="btn" id="nextSegmentBtn" disabled>下一段 ⏭</button>
+      </div>
+      <div class="speech-progress">
+        <div class="speech-progress-bar" id="speechProgressBar"><div id="speechProgressFill" class="speech-progress-fill"></div></div>
+        <span id="speechProgressText" class="speech-progress-text">準備就緒</span>
+      </div>
+      <div class="speech-options">
+        <label><input type="checkbox" id="autoScrollCheck" checked> 自動捲動到目前段落</label>
+        <label><input type="checkbox" id="highlightCheck" checked> 高亮目前段落</label>
+      </div>
+      <div class="speech-extra">
+        <button type="button" class="btn" id="copyChapterBtn">📋 複製本章全文</button>
+      </div>
+    </div>
+  </div>
+</div>
+<div class="toast" id="toast"></div>
+<script>
+/**
+ * 小說工坊 — Edge 神經語音＋情緒朗讀（對齊 extx 擴充元件邏輯）
+ */
+(function (global) {
+  const TTS_ENDPOINT = '/api/tts';
+  const VOICES_ENDPOINT = '/api/tts/voices';
+  const ANALYZE_ENDPOINT = '/api/analyze-roles';
+  const ANALYZE_STREAM_ENDPOINT = '/api/analyze-roles/stream';
+  const DEFAULT_VOICE = 'zh-CN-YunjianNeural';
+  const VOICE_STORAGE_KEY = 'edgeSpeechVoice';
+  const CHUNK_LEN = 200;
+
+  const RECOMMENDED_VOICES = [
+    { id: 'zh-TW-HsiaoChenNeural', name: '曉臻（女聲・繁中）', lang: 'zh-TW', styles: ['general', 'calm', 'cheerful', 'sad', 'angry', 'fearful', 'gentle', 'serious', 'affectionate'] },
+    { id: 'zh-TW-HsiaoYuNeural', name: '曉雨（女聲・繁中）', lang: 'zh-TW', styles: ['general', 'calm', 'cheerful', 'sad', 'gentle'] },
+    { id: 'zh-CN-XiaoxiaoNeural', name: '曉曉（女聲・普通話）', lang: 'zh-CN', styles: ['general', 'cheerful', 'sad', 'gentle', 'serious', 'affectionate', 'fearful', 'angry'] },
+    { id: 'zh-CN-YunxiNeural', name: '雲希（男聲・普通話）', lang: 'zh-CN', styles: ['general', 'narration-relaxed', 'cheerful', 'sad', 'serious', 'fearful', 'angry'] },
+    { id: 'zh-CN-YunjianNeural', name: '雲健（男聲・渾厚旁白）', lang: 'zh-CN', styles: ['general', 'narration-relaxed', 'documentary-narration', 'sad', 'serious', 'cheerful', 'angry'] },
+    { id: 'zh-CN-YunxiaNeural', name: '雲夏（少年男聲）', lang: 'zh-CN', styles: ['general', 'calm', 'cheerful', 'sad', 'angry', 'fearful'] },
+    { id: 'zh-CN-XiaoyiNeural', name: '曉伊（女聲・甜美）', lang: 'zh-CN', styles: ['general', 'cheerful', 'gentle', 'sad', 'affectionate', 'serious'] },
+    { id: 'zh-HK-HiuMaanNeural', name: '曉曼（女聲・粵語）', lang: 'zh-HK', styles: ['general'] },
+    { id: 'zh-HK-WanLungNeural', name: '雲龍（男聲・粵語）', lang: 'zh-HK', styles: ['general'] }
+  ];
+
+  // extx content.js EMOTION_STYLE_MAP
+  const EMOTION_STYLE_MAP = {
+    neutral: ['general'],
+    happy: ['cheerful', 'friendly', 'affectionate', 'general'],
+    excited: ['cheerful', 'friendly', 'lyrical', 'general'],
+    sad: ['sad', 'depressed', 'gentle', 'calm', 'general'],
+    angry: ['angry', 'disgruntled', 'serious', 'general'],
+    fear: ['fearful', 'embarrassed', 'sad', 'general'],
+    gentle: ['gentle', 'affectionate', 'calm', 'general'],
+    whisper: ['gentle', 'affectionate', 'calm', 'general'],
+    cold: ['serious', 'disgruntled', 'calm', 'general'],
+    serious: ['serious', 'calm', 'narration-professional', 'general'],
+    narration: ['narration-relaxed', 'documentary-narration', 'calm', 'general'],
+    mysterious: ['fearful', 'serious', 'calm', 'general'],
+    dramatic: ['serious', 'angry', 'general']
+  };
+
+  const EMOTION_PROSODY = {
+    neutral: { rateMul: 1.0, pitchAdd: 0, pause: 300 },
+    happy: { rateMul: 1.06, pitchAdd: 0.08, pause: 280 },
+    excited: { rateMul: 1.14, pitchAdd: 0.14, pause: 200 },
+    sad: { rateMul: 0.9, pitchAdd: -0.08, pause: 500 },
+    angry: { rateMul: 1.1, pitchAdd: 0.06, pause: 320 },
+    fear: { rateMul: 1.12, pitchAdd: 0.1, pause: 350 },
+    gentle: { rateMul: 0.94, pitchAdd: -0.02, pause: 350 },
+    whisper: { rateMul: 0.88, pitchAdd: -0.1, pause: 400 },
+    cold: { rateMul: 0.96, pitchAdd: -0.06, pause: 380 },
+    serious: { rateMul: 0.96, pitchAdd: -0.04, pause: 350 },
+    narration: { rateMul: 1.0, pitchAdd: 0, pause: 300 },
+    mysterious: { rateMul: 0.9, pitchAdd: -0.04, pause: 450 },
+    dramatic: { rateMul: 1.02, pitchAdd: 0.04, pause: 400 }
+  };
+
+  const NARRATOR_STYLE_PREF = ['narration-relaxed', 'narration-professional', 'documentary-narration', 'calm'];
+
+  let cachedVoices = RECOMMENDED_VOICES;
+
+  function getVoices() {
+    return cachedVoices;
+  }
+
+  function getVoiceById(voiceId) {
+    return cachedVoices.find((v) => v.id === voiceId) || cachedVoices.find((v) => v.id === DEFAULT_VOICE) || cachedVoices[0];
+  }
+
+  function getVoiceStyles(voiceId) {
+    const v = getVoiceById(voiceId);
+    return v?.styles?.length ? v.styles : ['general'];
+  }
+
+  function pickStyleForEmotion(voiceId, emotion) {
+    const avail = getVoiceStyles(voiceId);
+    const cands = EMOTION_STYLE_MAP[emotion] || EMOTION_STYLE_MAP.neutral;
+    for (const c of cands) {
+      if (avail.includes(c)) return c;
+    }
+    return 'general';
+  }
+
+  function pickNarratorStyle(voiceId) {
+    const avail = getVoiceStyles(voiceId);
+    for (const c of NARRATOR_STYLE_PREF) {
+      if (avail.includes(c)) return c;
+    }
+    return 'general';
+  }
+
+  function prosodyForEmotion(emotion, baseRate, basePitch) {
+    const p = EMOTION_PROSODY[emotion] || EMOTION_PROSODY.neutral;
+    return {
+      rate: Math.min(2, Math.max(0.5, baseRate * p.rateMul)),
+      pitch: Math.min(2, Math.max(0.5, basePitch + p.pitchAdd)),
+      pause: p.pause
+    };
+  }
+
+  function buildEmotionParams(emotion, baseRate, basePitch, voiceId) {
+    const prosody = prosodyForEmotion(emotion, baseRate, basePitch);
+    return {
+      rate: prosody.rate,
+      pitch: prosody.pitch,
+      volume: 1,
+      pause: prosody.pause,
+      style: pickStyleForEmotion(voiceId, emotion),
+      emotion
+    };
+  }
+
+  function detectEmotionFromText(text) {
+    const sadKeywords = ['悲傷', '哭泣', '淚水', '死亡', '離別', '痛苦', '絕望', '心碎', '哀傷', '悼念', '嘆息', '憂愁', '哽咽'];
+    const excitedKeywords = ['激動', '興奮', '勝利', '衝刺', '爆發', '熱血', '燃燒', '戰鬥', '吶喊', '奮起', '怒吼', '突破'];
+    const mysteriousKeywords = ['神秘', '陰森', '詭異', '黑暗', '未知', '秘密', '隱藏', '恐怖', '懸疑', '謎團', '幽暗', '詛咒'];
+    const gentleKeywords = ['溫柔', '輕聲', '微笑', '愛情', '甜蜜', '擁抱', '親吻', '溫暖', '呢喃', '柔情', '浪漫', '心動', '低聲'];
+    const dramaticKeywords = ['震驚', '揭露', '轉折', '意外', '真相', '背叛', '復仇', '命運', '對決', '高潮', '決戰', '冷笑'];
+
+    let sadScore = sadKeywords.filter((k) => text.includes(k)).length;
+    let excitedScore = excitedKeywords.filter((k) => text.includes(k)).length;
+    let mysteriousScore = mysteriousKeywords.filter((k) => text.includes(k)).length;
+    let gentleScore = gentleKeywords.filter((k) => text.includes(k)).length;
+    let dramaticScore = dramaticKeywords.filter((k) => text.includes(k)).length;
+
+    if ((text.match(/！/g) || []).length > 2) excitedScore += 2;
+    if ((text.match(/？/g) || []).length > 2) mysteriousScore += 1;
+    if ((text.match(/⋯|…/g) || []).length > 1) sadScore += 1;
+
+    const maxScore = Math.max(sadScore, excitedScore, mysteriousScore, gentleScore, dramaticScore);
+    if (maxScore === 0) return 'narration';
+    if (sadScore === maxScore) return 'sad';
+    if (excitedScore === maxScore) return 'excited';
+    if (mysteriousScore === maxScore) return 'mysterious';
+    if (gentleScore === maxScore) return 'gentle';
+    if (dramaticScore === maxScore) return 'dramatic';
+    return 'narration';
+  }
+
+  function sanitizeTtsText(text) {
+    if (!text) return '';
+    let s = String(text);
+    s = s.replace(/[#＃*＊_＿`´^＾~～｜|\\<>＜＞{}\[\]【】〖〗〔〕［］]/g, '');
+    s = s.replace(/[\u{1F000}-\u{1FAFF}\u{2600}-\u{27BF}\u{FE0F}\u{200D}]/gu, '');
+    s = s.replace(/[—–\-=＝]{3,}/g, '');
+    s = s.replace(/[ \t\u00A0]{2,}/g, ' ');
+    return s.trim();
+  }
+
+  function hasSpeakableText(s) {
+    return /[\p{L}\p{N}]/u.test(s || '');
+  }
+
+  function splitTextIntoChunks(text, maxLen = CHUNK_LEN) {
+    if (text.length <= maxLen) return [text.trim()].filter(Boolean);
+    const chunks = [];
+    const sentences = text.match(/[^。！？.!?\n]+[。！？.!?\n]?/g) || [text];
+    let current = '';
+    for (const sentence of sentences) {
+      if (current.length + sentence.length > maxLen) {
+        if (current) chunks.push(current.trim());
+        if (sentence.length > maxLen) {
+          for (let i = 0; i < sentence.length; i += maxLen) {
+            chunks.push(sentence.slice(i, i + maxLen).trim());
+          }
+          current = '';
+        } else {
+          current = sentence;
+        }
+      } else {
+        current += sentence;
+      }
+    }
+    if (current.trim()) chunks.push(current.trim());
+    return chunks.filter(Boolean);
+  }
+
+  async function fetchVoices() {
+    try {
+      const res = await fetch(VOICES_ENDPOINT);
+      if (!res.ok) return cachedVoices;
+      const data = await res.json();
+      if (Array.isArray(data.voices) && data.voices.length) {
+        cachedVoices = data.voices;
+      }
+    } catch { /* ignore */ }
+    return cachedVoices;
+  }
+
+  function populateVoiceSelect(selectEl, selectedId) {
+    if (!selectEl) return;
+    const saved = selectedId || localStorage.getItem(VOICE_STORAGE_KEY) || DEFAULT_VOICE;
+    selectEl.innerHTML = '';
+    const tw = cachedVoices.filter((v) => v.lang === 'zh-TW');
+    const cn = cachedVoices.filter((v) => v.lang === 'zh-CN');
+    const hk = cachedVoices.filter((v) => v.lang === 'zh-HK');
+
+    function addGroup(label, list) {
+      if (!list.length) return;
+      const group = document.createElement('optgroup');
+      group.label = label;
+      list.forEach((v) => {
+        const opt = document.createElement('option');
+        opt.value = v.id;
+        opt.textContent = v.name;
+        group.appendChild(opt);
+      });
+      selectEl.appendChild(group);
+    }
+
+    addGroup('🇹🇼 繁體中文', tw);
+    addGroup('🇨🇳 普通話', cn);
+    addGroup('🇭🇰 粵語', hk);
+
+    if ([...selectEl.options].some((o) => o.value === saved)) {
+      selectEl.value = saved;
+    } else if (selectEl.options.length) {
+      selectEl.value = selectEl.options[0].value;
+    }
+  }
+
+  function populateRoleSelects(narratorEl, maleEl, femaleEl, prefs = {}) {
+    for (const sel of [narratorEl, maleEl, femaleEl]) {
+      if (!sel) continue;
+      sel.innerHTML = '';
+      cachedVoices.forEach((v) => {
+        const opt = document.createElement('option');
+        opt.value = v.id;
+        opt.textContent = v.name;
+        sel.appendChild(opt);
+      });
+    }
+    const set = (sel, val, fallback) => {
+      if (sel && val && [...sel.options].some((o) => o.value === val)) sel.value = val;
+      else if (sel && fallback && [...sel.options].some((o) => o.value === fallback)) sel.value = fallback;
+    };
+    set(narratorEl, prefs.narratorVoice, DEFAULT_VOICE);
+    set(maleEl, prefs.maleVoice, 'zh-CN-YunxiNeural');
+    set(femaleEl, prefs.femaleVoice, 'zh-CN-XiaoxiaoNeural');
+  }
+
+  async function analyzeRoles(text, onProgress, signal) {
+    const res = await fetch(ANALYZE_STREAM_ENDPOINT, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Accept: 'text/event-stream'
+      },
+      body: JSON.stringify({ text }),
+      signal
+    });
+
+    if (!res.ok) {
+      const data = await res.json().catch(() => ({}));
+      throw new Error(data.error || `角色分析失敗 (${res.status})`);
+    }
+
+    const reader = res.body?.getReader();
+    if (!reader) {
+      throw new Error('無法讀取分析進度串流');
+    }
+
+    const decoder = new TextDecoder();
+    let buffer = '';
+    let segments = [];
+
+    const handleEvent = (payload) => {
+      if (!payload || typeof payload !== 'object') return;
+      if (payload.type === 'start' && typeof onProgress === 'function') {
+        onProgress(0, payload.total || 1);
+      } else if (payload.type === 'progress' && typeof onProgress === 'function') {
+        onProgress(payload.done || 0, payload.total || 1);
+      } else if (payload.type === 'complete') {
+        segments = payload.segments || [];
+      } else if (payload.type === 'error') {
+        throw new Error(payload.error || '角色分析失敗');
+      }
+    };
+
+    while (true) {
+      const { done, value } = await reader.read();
+      if (done) break;
+      buffer += decoder.decode(value, { stream: true });
+      const parts = buffer.split('\n\n');
+      buffer = parts.pop() || '';
+      for (const part of parts) {
+        const line = part.split('\n').find((l) => l.startsWith('data: '));
+        if (!line) continue;
+        handleEvent(JSON.parse(line.slice(6)));
+      }
+    }
+
+    if (buffer.trim()) {
+      const line = buffer.split('\n').find((l) => l.startsWith('data: '));
+      if (line) handleEvent(JSON.parse(line.slice(6)));
+    }
+
+    return segments;
+  }
+
+  /**
+   * 依 extx 角色模式建立播放佇列：每段含 text / voice / style / rate / pitch
+   */
+  async function buildRolePlayQueue(text, options = {}) {
+    const {
+      narratorVoice = DEFAULT_VOICE,
+      maleVoice = 'zh-CN-YunxiNeural',
+      femaleVoice = 'zh-CN-XiaoxiaoNeural',
+      baseRate = 1,
+      basePitch = 1,
+      dramaMode = true,
+      onProgress
+    } = options;
+
+    const clean = sanitizeTtsText(text);
+    if (!clean) return [];
+
+    let segments;
+    try {
+      if (typeof onProgress === 'function') onProgress('start');
+      segments = await analyzeRoles(clean, (done, total) => {
+        if (typeof onProgress === 'function') onProgress('progress', done, total);
+      });
+      if (typeof onProgress === 'function') onProgress('done');
+    } catch (err) {
+      console.warn('角色分析失敗，改用單一語音:', err.message);
+      segments = [{ g: 'n', e: 'neutral', t: clean }];
+    }
+
+    const voiceFor = (g) =>
+      g === 'm' ? maleVoice : g === 'f' ? femaleVoice : narratorVoice;
+
+    const merged = [];
+    for (const seg of segments) {
+      const g = seg.g === 'm' || seg.g === 'f' ? seg.g : 'n';
+      const e = seg.e || 'neutral';
+      const t = seg.t || '';
+      if (!t) continue;
+      const last = merged[merged.length - 1];
+      if (last && last.g === g && last.e === e) last.t += t;
+      else merged.push({ g, e, t });
+    }
+
+    const queue = [];
+    for (const seg of merged) {
+      const voice = voiceFor(seg.g);
+      const style = seg.g === 'n'
+        ? pickNarratorStyle(voice)
+        : pickStyleForEmotion(voice, seg.e);
+      const prosody = (seg.g !== 'n' && dramaMode)
+        ? prosodyForEmotion(seg.e, baseRate, basePitch)
+        : { rate: baseRate, pitch: basePitch, pause: 300 };
+
+      for (const piece of splitTextIntoChunks(seg.t)) {
+        if (!hasSpeakableText(piece)) continue;
+        queue.push({
+          text: piece,
+          voice,
+          style,
+          rate: prosody.rate,
+          pitch: prosody.pitch,
+          pause: prosody.pause,
+          g: seg.g,
+          e: seg.e,
+          sourceText: seg.t
+        });
+      }
+    }
+    return queue;
+  }
+
+  function buildSimplePlayQueue(segments, voiceId, emotionMode, baseRate, basePitch) {
+    const queue = [];
+    for (let si = 0; si < segments.length; si++) {
+      const raw = segments[si];
+      const emotion = emotionMode === 'auto'
+        ? detectEmotionFromText(raw)
+        : emotionMode;
+      const params = buildEmotionParams(emotion, baseRate, basePitch, voiceId);
+      const text = sanitizeTtsText(raw);
+      if (!hasSpeakableText(text)) continue;
+      for (const piece of splitTextIntoChunks(text)) {
+        if (!hasSpeakableText(piece)) continue;
+        queue.push({
+          text: piece,
+          voice: voiceId,
+          style: params.style,
+          rate: params.rate,
+          pitch: params.pitch,
+          pause: params.pause,
+          emotion,
+          sourceSegmentIndex: si,
+          sourceText: raw
+        });
+      }
+    }
+    return queue;
+  }
+
+  async function synthesize({ text, voice, style, rate, pitch, signal }) {
+    const res = await fetch(TTS_ENDPOINT, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      signal,
+      body: JSON.stringify({
+        text,
+        voice: voice || DEFAULT_VOICE,
+        style: style || 'general',
+        rate: rate ?? 1,
+        pitch: pitch ?? 1
+      })
+    });
+
+    if (!res.ok) {
+      let msg = `語音合成失敗 (${res.status})`;
+      try {
+        const err = await res.json();
+        if (err?.error) msg = err.error;
+      } catch {
+        const t = await res.text().catch(() => '');
+        if (t) msg = t.slice(0, 120);
+      }
+      throw new Error(msg);
+    }
+    return res.arrayBuffer();
+  }
+
+  async function checkAvailable() {
+    if (typeof location !== "undefined" && location.protocol === "file:") return false;
+    try {
+      const res = await fetch('/api/health', { signal: AbortSignal.timeout(5000) });
+      return res.ok;
+    } catch {
+      return false;
+    }
+  }
+
+  global.EdgeTtsSpeech = {
+    DEFAULT_VOICE,
+    RECOMMENDED_VOICES,
+    getVoices,
+    fetchVoices,
+    populateVoiceSelect,
+    populateRoleSelects,
+    pickStyleForEmotion,
+    buildEmotionParams,
+    detectEmotionFromText,
+    sanitizeTtsText,
+    analyzeRoles,
+    buildRolePlayQueue,
+    buildSimplePlayQueue,
+    synthesize,
+    checkAvailable
+  };
+})(window);
+
+</script>
+<script>
+/**
+ * 小說閱讀站 — Edge 神經語音朗讀（不含 DeepSeek 角色分析）
+ */
+(function (global) {
+  'use strict';
+
+  var api = null;
+  var edgeReady = false;
+  var speechInit = false;
+  var isSpeaking = false;
+  var isPaused = false;
+  var speechQueue = [];
+  var segmentParaMap = [];
+  var currentIdx = 0;
+  var edgeAudio = null;
+  var edgeAudioUrl = null;
+  var edgeAbort = null;
+  var edgeSession = 0;
+  var speechStartOffset = 0;
+
+  var els = {};
+
+  function $(id) { return document.getElementById(id); }
+
+  function preprocessTextForSpeech(text) {
+    if (!text || !text.trim()) return '';
+    var s = text.trim();
+    s = s.replace(/^#+\s*/gm, '').replace(/\*+/g, '');
+    s = s.replace(/[「」『』【】〈〉《》（）()\[\]{}""'']/g, '');
+    s = s.replace(/[：:；;]/g, '，');
+    s = s.replace(/[⋯…]+/g, '，');
+    s = s.replace(/[——–—−]+/g, '，');
+    s = s.replace(/[～~★☆●○◆◇■□▲△▼▽※＊*#＃@＠&＆─━┃│]+/g, '');
+    s = s.replace(/，+/g, '，').replace(/。+/g, '。').replace(/\s+/g, ' ').trim();
+    return s;
+  }
+
+  function splitLongText(text) {
+    if (text.length <= 200) return [text];
+    var out = [];
+    var sentences = text.match(/[^。！？.!?\n]+[。！？.!?\n]?/g) || [text];
+    var chunk = '';
+    for (var i = 0; i < sentences.length; i++) {
+      if ((chunk + sentences[i]).length > 150 && chunk.trim()) {
+        out.push(chunk.trim());
+        chunk = sentences[i];
+      } else {
+        chunk += sentences[i];
+      }
+    }
+    if (chunk.trim()) out.push(chunk.trim());
+    return out;
+  }
+
+  function splitTextToSegments(text) {
+    var segments = [];
+    if (!text) return segments;
+    var paragraphs = text.split(/\n\n+/);
+    paragraphs.forEach(function (para) {
+      var trimmed = para.trim();
+      if (!trimmed) return;
+      if (trimmed.length > 200) {
+        var sentences = trimmed.split(/(?<=[。！？!?])/);
+        var chunk = '';
+        for (var i = 0; i < sentences.length; i++) {
+          if ((chunk + sentences[i]).length > 150 && chunk.trim()) {
+            segments.push(chunk.trim());
+            chunk = sentences[i];
+          } else {
+            chunk += sentences[i];
+          }
+        }
+        if (chunk.trim()) segments.push(chunk.trim());
+      } else {
+        segments.push(trimmed);
+      }
+    });
+    return segments.filter(function (s) { return s.length > 0; });
+  }
+
+  function buildChapterSegments() {
+    var ch = api.getChapterContent && api.getChapterContent();
+    if (!ch || !ch.length) return { segments: [], paraMap: [] };
+    var segments = [];
+    var paraMap = [];
+    ch.forEach(function (para, pi) {
+      var processed = preprocessTextForSpeech(para);
+      if (!processed) return;
+      var pieces = processed.length > 200 ? splitLongText(processed) : [processed];
+      pieces.forEach(function (p) {
+        segments.push(p);
+        paraMap.push(pi);
+      });
+    });
+    return { segments: segments, paraMap: paraMap };
+  }
+
+  function progressKey() {
+    return api.getProgressKey ? api.getProgressKey() : 'default';
+  }
+
+  function saveSpeechProgress() {
+    try {
+      localStorage.setItem('novelReader.speech.' + progressKey(), JSON.stringify({
+        segmentIndex: currentIdx,
+        rate: els.speechRate.value,
+        pitch: els.speechPitch.value,
+        voice: els.voiceSelect.value,
+        emotion: els.emotionMode.value
+      }));
+    } catch (e) { /* ignore */ }
+  }
+
+  function loadSpeechProgress() {
+    try {
+      var raw = localStorage.getItem('novelReader.speech.' + progressKey());
+      return raw ? JSON.parse(raw) : null;
+    } catch (e) { return null; }
+  }
+
+  function clearSpeechProgress() {
+    try { localStorage.removeItem('novelReader.speech.' + progressKey()); } catch (e) { /* ignore */ }
+  }
+
+  function stopEdgeAudio() {
+    if (edgeAudio) {
+      edgeAudio.onended = null;
+      edgeAudio.onerror = null;
+      edgeAudio.pause();
+      edgeAudio.src = '';
+      edgeAudio = null;
+    }
+    if (edgeAudioUrl) {
+      URL.revokeObjectURL(edgeAudioUrl);
+      edgeAudioUrl = null;
+    }
+    if (edgeAbort) {
+      edgeAbort.abort();
+      edgeAbort = null;
+    }
+  }
+
+  function stopEdgePlaybackOnly() {
+    edgeSession++;
+    stopEdgeAudio();
+  }
+
+  function clearHighlight() {
+    if (api.clearHighlight) api.clearHighlight();
+  }
+
+  function highlightForQueueIndex(queueIdx) {
+    if (!els.highlightCheck || !els.highlightCheck.checked) return;
+    var item = speechQueue[queueIdx];
+    if (!item || item.sourceSegmentIndex == null) return;
+    var segIdx = item.sourceSegmentIndex + speechStartOffset;
+    var pi = segmentParaMap[segIdx];
+    if (pi == null) return;
+    if (api.highlightParagraph) api.highlightParagraph(pi);
+    if (els.autoScrollCheck && els.autoScrollCheck.checked && api.scrollToParagraph) {
+      setTimeout(function () { api.scrollToParagraph(pi); }, 50);
+    }
+  }
+
+  function updateSpeechNav() {
+    els.prevSegmentBtn.disabled = !isSpeaking || currentIdx <= 0;
+    els.nextSegmentBtn.disabled = !isSpeaking || currentIdx >= speechQueue.length - 1;
+    if (isSpeaking && speechQueue.length) {
+      els.currentSegmentDisplay.textContent = (currentIdx + 1) + ' / ' + speechQueue.length;
+    } else {
+      els.currentSegmentDisplay.textContent = '- / -';
+    }
+  }
+
+  function updateSegmentInputs() {
+    var built = buildChapterSegments();
+    var total = built.segments.length;
+    els.startSegment.max = total || 1;
+    els.endSegment.max = total || 1;
+    if (parseInt(els.endSegment.value, 10) > total || !els.endSegment.value) {
+      els.endSegment.value = total || 1;
+    }
+    els.segmentInfo.textContent = '本章共 ' + total + ' 段';
+    return built.segments;
+  }
+
+  function updateProgressUI(idx) {
+    if (!speechQueue.length) return;
+    var pct = ((idx + 1) / speechQueue.length) * 100;
+    els.speechProgressFill.style.width = pct + '%';
+    els.speechProgressText.textContent = isPaused
+      ? '⏸️ 已暫停'
+      : '正在朗讀 ' + (idx + 1) + '/' + speechQueue.length + ' 段…';
+  }
+
+  function speakSegment(index) {
+    if (!isSpeaking) return;
+
+    if (index >= speechQueue.length) {
+      stopSpeech(true);
+      els.speechProgressText.textContent = '✅ 朗讀完成';
+      return;
+    }
+
+    currentIdx = index;
+    saveSpeechProgress();
+    updateSpeechNav();
+    highlightForQueueIndex(index);
+
+    var item = speechQueue[index] || {};
+    var processed = EdgeTtsSpeech.sanitizeTtsText(
+      item.text || preprocessTextForSpeech(item.text || '')
+    );
+    if (!processed || !processed.trim()) {
+      if (isSpeaking && !isPaused) setTimeout(function () { speakSegment(index + 1); }, 100);
+      return;
+    }
+
+    updateProgressUI(index);
+    speakWithEdge(processed, item, index);
+  }
+
+  async function speakWithEdge(processedText, queueItem, index) {
+    var session = ++edgeSession;
+    stopEdgeAudio();
+    edgeAbort = new AbortController();
+
+    var voice = queueItem.voice || els.voiceSelect.value || EdgeTtsSpeech.DEFAULT_VOICE;
+    var style = queueItem.style || 'general';
+    var rate = queueItem.rate != null ? queueItem.rate : parseFloat(els.speechRate.value) || 1;
+    var pitch = queueItem.pitch != null ? queueItem.pitch : parseFloat(els.speechPitch.value) || 1;
+    var pause = queueItem.pause || 300;
+
+    try {
+      els.speechProgressText.textContent = '正在合成 ' + (index + 1) + '/' + speechQueue.length + ' 段…';
+      var buf = await EdgeTtsSpeech.synthesize({
+        text: processedText,
+        voice: voice,
+        style: style,
+        rate: rate,
+        pitch: pitch,
+        signal: edgeAbort.signal
+      });
+      if (!isSpeaking || session !== edgeSession) return;
+
+      edgeAudioUrl = URL.createObjectURL(new Blob([buf], { type: 'audio/mpeg' }));
+      edgeAudio = new Audio(edgeAudioUrl);
+      edgeAudio.onended = function () {
+        stopEdgeAudio();
+        if (isSpeaking && !isPaused) setTimeout(function () { speakSegment(index + 1); }, pause);
+      };
+      edgeAudio.onerror = function () {
+        stopEdgeAudio();
+        if (isSpeaking && !isPaused) setTimeout(function () { speakSegment(index + 1); }, 100);
+      };
+      els.speechProgressText.textContent = '正在朗讀 ' + (index + 1) + '/' + speechQueue.length + ' 段…';
+      await edgeAudio.play();
+    } catch (err) {
+      if (err && err.name === 'AbortError') return;
+      console.warn('Edge 朗讀失敗:', err);
+      els.speechProgressText.textContent = '第 ' + (index + 1) + ' 段合成失敗，跳過…';
+      if (isSpeaking && !isPaused) setTimeout(function () { speakSegment(index + 1); }, 200);
+    }
+  }
+
+  function stopSpeech(silent) {
+    isSpeaking = false;
+    isPaused = false;
+    stopEdgePlaybackOnly();
+    els.playPauseBtn.textContent = '▶️ 開始朗讀';
+    els.playPauseBtn.disabled = false;
+    els.speakBtn.classList.remove('active-task');
+    if (!silent) {
+      els.speechProgressFill.style.width = '0%';
+      els.speechProgressText.textContent = '準備就緒';
+      els.currentSegmentDisplay.textContent = '- / -';
+    }
+    clearHighlight();
+    updateSpeechNav();
+  }
+
+  function resetSpeech() {
+    stopSpeech();
+    clearSpeechProgress();
+    currentIdx = 0;
+    els.startSegment.value = 1;
+    updateSegmentInputs();
+    els.speechProgressText.textContent = '已重置，準備從頭開始';
+  }
+
+  async function toggleSpeech() {
+    if (!edgeReady) {
+      edgeReady = await EdgeTtsSpeech.checkAvailable();
+      if (!edgeReady) {
+        if (api.toast) api.toast(location.protocol==='file:'?'單檔模式無法 Edge 朗讀，請 npm start 後用 localhost 開啟':'Edge 朗讀需啟動本機伺服器（npm start）');
+        els.speechProgressText.textContent = '⚠️ 請先執行 npm start';
+        return;
+      }
+    }
+
+    var chapterText = api.getChapterPlainText ? api.getChapterPlainText() : '';
+    if (!chapterText.trim()) {
+      if (api.toast) api.toast('本章沒有可朗讀的內容');
+      return;
+    }
+
+    if (isSpeaking) {
+      if (!isPaused) {
+        edgeAudio && edgeAudio.pause();
+        isPaused = true;
+        saveSpeechProgress();
+        els.playPauseBtn.textContent = '▶️ 繼續朗讀';
+        els.speechProgressText.textContent = '⏸️ 已暫停';
+      } else {
+        isPaused = false;
+        els.playPauseBtn.textContent = '⏸️ 暫停';
+        els.speechProgressText.textContent = '正在朗讀 ' + (currentIdx + 1) + '/' + speechQueue.length + ' 段…';
+        if (edgeAudio) {
+          edgeAudio.play().catch(function () { speakSegment(currentIdx); });
+        } else {
+          speakSegment(currentIdx);
+        }
+      }
+      return;
+    }
+
+    var built = buildChapterSegments();
+    var allSegments = built.segments;
+    segmentParaMap = built.paraMap;
+    if (!allSegments.length) {
+      if (api.toast) api.toast('沒有可朗讀的內容');
+      return;
+    }
+
+    var startIdx = parseInt(els.startSegment.value, 10) - 1 || 0;
+    var endIdx = parseInt(els.endSegment.value, 10) || allSegments.length;
+    startIdx = Math.max(0, Math.min(startIdx, allSegments.length - 1));
+    endIdx = Math.max(startIdx + 1, Math.min(endIdx, allSegments.length));
+    speechStartOffset = startIdx;
+
+    var voiceId = els.voiceSelect.value || EdgeTtsSpeech.DEFAULT_VOICE;
+    var baseRate = parseFloat(els.speechRate.value) || 1;
+    var basePitch = parseFloat(els.speechPitch.value) || 1;
+    var emotionMode = els.emotionMode.value;
+
+    speechQueue = EdgeTtsSpeech.buildSimplePlayQueue(
+      allSegments.slice(startIdx, endIdx),
+      voiceId,
+      emotionMode,
+      baseRate,
+      basePitch
+    );
+
+    if (!speechQueue.length) {
+      if (api.toast) api.toast('沒有可朗讀的內容');
+      return;
+    }
+
+    var saved = loadSpeechProgress();
+    if (saved && saved.segmentIndex > 0 && saved.segmentIndex < speechQueue.length) {
+      var resume = confirm(
+        '發現上次朗讀進度（第 ' + (saved.segmentIndex + 1) + '/' + speechQueue.length + ' 段）\n\n要從上次位置繼續嗎？'
+      );
+      if (resume) {
+        currentIdx = saved.segmentIndex;
+        if (saved.rate) els.speechRate.value = saved.rate;
+        if (saved.pitch) els.speechPitch.value = saved.pitch;
+        if (saved.voice && els.voiceSelect.querySelector('option[value="' + saved.voice + '"]')) {
+          els.voiceSelect.value = saved.voice;
+        }
+        if (saved.emotion) els.emotionMode.value = saved.emotion;
+        els.rateValue.textContent = parseFloat(els.speechRate.value).toFixed(1) + 'x';
+        els.pitchValue.textContent = parseFloat(els.speechPitch.value).toFixed(1);
+      } else {
+        currentIdx = 0;
+        clearSpeechProgress();
+      }
+    } else {
+      currentIdx = 0;
+    }
+
+    isSpeaking = true;
+    isPaused = false;
+    els.playPauseBtn.textContent = '⏸️ 暫停';
+    els.speakBtn.classList.add('active-task');
+    els.speechProgressText.textContent = '朗讀範圍：第 ' + (startIdx + 1) + ' - ' + endIdx + ' 段';
+    updateSpeechNav();
+    speakSegment(currentIdx);
+  }
+
+  function prevSegment() {
+    if (!isSpeaking || currentIdx <= 0) return;
+    stopEdgePlaybackOnly();
+    isPaused = false;
+    speakSegment(currentIdx - 1);
+  }
+
+  function nextSegment() {
+    if (!isSpeaking || currentIdx >= speechQueue.length - 1) return;
+    stopEdgePlaybackOnly();
+    isPaused = false;
+    speakSegment(currentIdx + 1);
+  }
+
+  function jumpToSegment(idx) {
+    if (!isSpeaking || idx < 0 || idx >= speechQueue.length) return;
+    stopEdgePlaybackOnly();
+    isPaused = false;
+    speakSegment(idx);
+  }
+
+  async function loadVoices() {
+    await EdgeTtsSpeech.fetchVoices();
+    EdgeTtsSpeech.populateVoiceSelect(els.voiceSelect);
+    speechInit = true;
+  }
+
+  function bindEvents() {
+    els.speakBtn.addEventListener('click', async function () {
+      els.speechModal.classList.add('open');
+      if (!speechInit) await loadVoices();
+      updateSegmentInputs();
+      updateSpeechNav();
+      if (!edgeReady) {
+        edgeReady = await EdgeTtsSpeech.checkAvailable();
+        if (!edgeReady) {
+          els.speechProgressText.textContent = '⚠️ 請先執行 npm start 以使用 Edge 朗讀';
+        }
+      }
+    });
+
+    els.closeSpeechModal.addEventListener('click', function () {
+      els.speechModal.classList.remove('open');
+      if (isSpeaking && api.toast) api.toast('🔊 朗讀繼續中…');
+    });
+
+    els.speechModal.addEventListener('click', function (e) {
+      if (e.target === els.speechModal) {
+        els.speechModal.classList.remove('open');
+        if (isSpeaking && api.toast) api.toast('🔊 朗讀繼續中…');
+      }
+    });
+
+    els.playPauseBtn.addEventListener('click', toggleSpeech);
+    els.stopSpeechBtn.addEventListener('click', function () { stopSpeech(); });
+    els.resetSpeechBtn.addEventListener('click', resetSpeech);
+    els.prevSegmentBtn.addEventListener('click', prevSegment);
+    els.nextSegmentBtn.addEventListener('click', nextSegment);
+
+    els.speechProgressBar.addEventListener('click', function (e) {
+      if (!isSpeaking || !speechQueue.length) return;
+      var rect = els.speechProgressBar.getBoundingClientRect();
+      var pct = (e.clientX - rect.left) / rect.width;
+      jumpToSegment(Math.max(0, Math.min(Math.floor(pct * speechQueue.length), speechQueue.length - 1)));
+    });
+
+    els.readAllBtn.addEventListener('click', function () {
+      els.startSegment.value = 1;
+      updateSegmentInputs();
+    });
+
+    els.startSegment.addEventListener('change', function () {
+      if (parseInt(this.value, 10) > parseInt(els.endSegment.value, 10)) {
+        els.endSegment.value = this.value;
+      }
+      if (parseInt(this.value, 10) < 1) this.value = 1;
+    });
+
+    els.endSegment.addEventListener('change', function () {
+      if (parseInt(this.value, 10) < parseInt(els.startSegment.value, 10)) {
+        this.value = els.startSegment.value;
+      }
+    });
+
+    els.speechRate.addEventListener('input', function () {
+      els.rateValue.textContent = parseFloat(els.speechRate.value).toFixed(1) + 'x';
+    });
+
+    els.speechPitch.addEventListener('input', function () {
+      els.pitchValue.textContent = parseFloat(els.speechPitch.value).toFixed(1);
+    });
+
+    document.querySelectorAll('.speed-btn[data-speed]').forEach(function (btn) {
+      btn.addEventListener('click', function () {
+        var v = parseFloat(els.speechRate.value) + parseFloat(btn.dataset.speed);
+        v = Math.max(0.25, Math.min(3, v));
+        els.speechRate.value = v.toFixed(2);
+        els.rateValue.textContent = v.toFixed(1) + 'x';
+      });
+    });
+
+    document.querySelectorAll('.speed-btn[data-pitch]').forEach(function (btn) {
+      btn.addEventListener('click', function () {
+        var v = parseFloat(els.speechPitch.value) + parseFloat(btn.dataset.pitch);
+        v = Math.max(0.5, Math.min(2, v));
+        els.speechPitch.value = v.toFixed(2);
+        els.pitchValue.textContent = v.toFixed(1);
+      });
+    });
+
+    els.voiceSelect.addEventListener('change', function () {
+      try { localStorage.setItem('edgeSpeechVoice', els.voiceSelect.value); } catch (e) { /* ignore */ }
+    });
+
+    els.copyChapterBtn.addEventListener('click', function () {
+      var text = api.getChapterPlainText ? api.getChapterPlainText() : '';
+      if (!text) return;
+      navigator.clipboard.writeText(text).then(function () {
+        if (api.toast) api.toast('📋 已複製本章全文');
+      }).catch(function () {
+        if (api.toast) api.toast('複製失敗');
+      });
+    });
+
+    window.addEventListener('beforeunload', function () {
+      if (isSpeaking || currentIdx > 0) saveSpeechProgress();
+      stopEdgeAudio();
+    });
+
+    document.addEventListener('keydown', function (e) {
+      if (e.key === 'Escape' && els.speechModal.classList.contains('open')) {
+        els.speechModal.classList.remove('open');
+      }
+    });
+  }
+
+  function cacheElements() {
+    els.speakBtn = $('speakBtn');
+    els.speechModal = $('speechModal');
+    els.closeSpeechModal = $('closeSpeechModal');
+    els.voiceSelect = $('voiceSelect');
+    els.speechRate = $('speechRate');
+    els.speechPitch = $('speechPitch');
+    els.rateValue = $('rateValue');
+    els.pitchValue = $('pitchValue');
+    els.emotionMode = $('emotionMode');
+    els.startSegment = $('startSegment');
+    els.endSegment = $('endSegment');
+    els.segmentInfo = $('segmentInfo');
+    els.playPauseBtn = $('playPauseBtn');
+    els.stopSpeechBtn = $('stopSpeechBtn');
+    els.resetSpeechBtn = $('resetSpeechBtn');
+    els.prevSegmentBtn = $('prevSegmentBtn');
+    els.nextSegmentBtn = $('nextSegmentBtn');
+    els.currentSegmentDisplay = $('currentSegmentDisplay');
+    els.speechProgressBar = $('speechProgressBar');
+    els.speechProgressFill = $('speechProgressFill');
+    els.speechProgressText = $('speechProgressText');
+    els.autoScrollCheck = $('autoScrollCheck');
+    els.highlightCheck = $('highlightCheck');
+    els.readAllBtn = $('readAllBtn');
+    els.copyChapterBtn = $('copyChapterBtn');
+  }
+
+  global.initReaderSpeech = function (readerApi) {
+    api = readerApi;
+    cacheElements();
+    if (!els.speakBtn) return;
+
+    bindEvents();
+    EdgeTtsSpeech.checkAvailable().then(function (ok) {
+      edgeReady = ok;
+      if (!ok) els.speakBtn.title = '朗讀需啟動 npm start 伺服器';
+    });
+  };
+
+  global.readerSpeechOnChapterChange = function () {
+    if (isSpeaking) stopSpeech(true);
+    clearHighlight();
+  };
+
+  global.readerSpeechOnLeaveReader = function () {
+    if (isSpeaking) stopSpeech(true);
+    els.speechModal && els.speechModal.classList.remove('open');
+  };
+
+  global.readerSpeechSetVisible = function (visible) {
+    if (els.speakBtn) els.speakBtn.hidden = !visible;
+  };
+
+})(window);
+
+</script>
+<script>
+(function(){
+'use strict';
+var DB_NAME='NovelReaderDB',DB_VER=1,STORE='novels';
+var CHAPTER_NUM='[一二三四五六七八九十百零壹貳參肆伍陸柒捌玖拾佰\\d]+';
+var CHAPTER_TOKEN='(?:第'+CHAPTER_NUM+'章|序章|楔子|引子|前言|尾聲|終章|番外|後記)(?:[：:\\s].*)?';
+var HEADING_RE=new RegExp('^(#{0,4})\\s*('+CHAPTER_TOKEN+')$','i');
+var CHAPTER_ID_RE=new RegExp('第'+CHAPTER_NUM+'章|序章|楔子|引子|前言|尾聲|終章|番外|後記','i');
+var CN_NUM={零:0,一:1,二:2,三:3,四:4,五:5,六:6,七:7,八:8,九:9,十:10,百:100};
+var state={seriesList:[],series:null,volumeIdx:0,chapters:[],chapterIdx:0,detailSeries:null};
+var SHELF_COLORS=[['#8b4513','#6b3410'],['#2d5a4a','#1a3d32'],['#5c4033','#3d2a22'],['#4a5568','#2d3748'],['#744c9e','#553a7a'],['#9c4221','#7a3318'],['#1e5631','#0f3520'],['#8b2252','#6b1a3f'],['#2c5282','#1a365d'],['#975a16','#744210'],['#285e61','#234e52'],['#702459','#521b41'],['#6d214f','#4f1638'],['#3d5a4c','#2a4035'],['#925e26','#6e451a']];
+var SHELF_STYLES=['bk-leather','bk-cloth','bk-stripe','bk-modern','bk-vintage'];
+var SHELF_WIDTHS=['bk-w-thin','bk-w-std','bk-w-std','bk-w-std','bk-w-thick'];
+var els={
+  main:document.querySelector('.main'),layout:document.querySelector('.layout'),
+  pageTitle:document.getElementById('pageTitle'),pageSubtitle:document.getElementById('pageSubtitle'),
+  seriesList:document.getElementById('seriesList'),volumeList:document.getElementById('volumeList'),
+  volumeSection:document.getElementById('volumeSection'),chapterList:document.getElementById('chapterList'),
+  chapterSection:document.getElementById('chapterSection'),shelfView:document.getElementById('shelfView'),
+  shelfGrid:document.getElementById('shelfGrid'),shelfEmpty:document.getElementById('shelfEmpty'),
+  shelfSearch:document.getElementById('shelfSearch'),shelfSort:document.getElementById('shelfSort'),
+  bookDetail:document.getElementById('bookDetail'),bookDetailCover:document.getElementById('bookDetailCover'),
+  bookDetailTitle:document.getElementById('bookDetailTitle'),bookDetailMeta:document.getElementById('bookDetailMeta'),
+  bookDetailPreview:document.getElementById('bookDetailPreview'),bookDetailRead:document.getElementById('bookDetailRead'),
+  bookDetailDelete:document.getElementById('bookDetailDelete'),bookDetailClose:document.getElementById('bookDetailClose'),
+  readerView:document.getElementById('readerView'),volumeLabel:document.getElementById('volumeLabel'),
+  chapterTitle:document.getElementById('chapterTitle'),chapterBody:document.getElementById('chapterBody'),
+  prevChapterBtn:document.getElementById('prevChapterBtn'),nextChapterBtn:document.getElementById('nextChapterBtn'),
+  backShelfBtn:document.getElementById('backShelfBtn'),exportBtn:document.getElementById('exportBtn'),
+  addVolBtn:document.getElementById('addVolBtn'),addVolInput:document.getElementById('addVolInput'),
+  fileInput:document.getElementById('fileInput'),pickFileBtn:document.getElementById('pickFileBtn'),
+  pasteToggleBtn:document.getElementById('pasteToggleBtn'),pasteBox:document.getElementById('pasteBox'),
+  pasteText:document.getElementById('pasteText'),pasteSeriesTitle:document.getElementById('pasteSeriesTitle'),
+  pasteVolTitle:document.getElementById('pasteVolTitle'),pasteTargetSeries:document.getElementById('pasteTargetSeries'),
+  pasteSaveBtn:document.getElementById('pasteSaveBtn'),themeToggle:document.getElementById('themeToggle'),
+  sidebarToggle:document.getElementById('sidebarToggle'),sidebar:document.getElementById('sidebar'),
+  sidebarBackdrop:document.getElementById('sidebarBackdrop'),fontSmaller:document.getElementById('fontSmaller'),
+  fontLarger:document.getElementById('fontLarger'),fontSizeLabel:document.getElementById('fontSizeLabel'),
+  toast:document.getElementById('toast'),readProgressWrap:document.getElementById('readProgressWrap'),
+  readProgressBar:document.getElementById('readProgressBar'),dropZone:document.getElementById('dropZone'),
+  importToggle:document.getElementById('importToggle'),importBody:document.getElementById('importBody')
+};
+
+function debounce(fn,ms){
+  var t;return function(){var a=arguments,c=this;clearTimeout(t);t=setTimeout(function(){fn.apply(c,a);},ms);};
+}
+
+function updateReadProgress(){
+  if(!state.series||!state.chapters.length||!els.readProgressBar){
+    if(els.readProgressWrap) els.readProgressWrap.classList.remove('show');
+    return;
+  }
+  var vols=sortVolumes(state.series.volumes);
+  var volWeight=100/vols.length;
+  var pct=state.volumeIdx*volWeight+((state.chapterIdx+1)/state.chapters.length)*volWeight;
+  els.readProgressBar.style.width=Math.min(100,pct)+'%';
+  els.readProgressWrap.classList.add('show');
+}
+
+function toast(msg){els.toast.textContent=msg;els.toast.classList.add('show');clearTimeout(toast._t);toast._t=setTimeout(function(){els.toast.classList.remove('show');},2200);}
+function esc(s){return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');}
+function uid(p){return (p||'id')+'_'+Date.now()+'_'+Math.random().toString(36).slice(2,8);}
+
+function parseCnNum(s){
+  if(/^\d+$/.test(s)) return parseInt(s,10);
+  if(s.length===1&&CN_NUM[s]!=null) return CN_NUM[s];
+  if(/^十[一二三四五六七八九]?$/.test(s)) return 10+(CN_NUM[s[1]]||0);
+  if(/^[一二三四五六七八九]十[一二三四五六七八九]?$/.test(s)){
+    return (CN_NUM[s[0]]||0)*10+(CN_NUM[s[2]]||0);
+  }
+  return 1;
+}
+
+function isOmnibusFilename(name){
+  return /(?:全系列|全集|合訂本?|完整版)/i.test(String(name||''));
+}
+function isOmnibusContent(text){
+  return /^[═━─=\-—\s]{3,}.+?(上集|中集|下集|上卷|中卷|下卷|第[0-9一二三四五六七八九十百千]+集)/m.test(String(text||''));
+}
+function isVolumeHeaderLine(line){
+  return /^#{1,4}\s*[《「][^》」]+[》」]\s*[（(].*(?:上集|中集|下集|上卷|中卷|下卷|第.+集).*[）)]\s*$/.test(line);
+}
+function finishOmnibusVolume(v){
+  var content=v.lines.join('\n').trim();
+  content=content.replace(/\n*#{1,4}\s*[《「][^》」]+[》」]\s*[（(][^）)]+[）)]\s*(?=\n|$)/gm,'');
+  content=content.replace(/\n*[（(](?:上|中|下)集完|全文完[）)]\s*/g,'\n').trim();
+  if(!content) return null;
+  return {title:v.title,content:content,order:v.order};
+}
+function parseOmnibusVolumes(content,fallbackTitle){
+  var lines=String(content||'').replace(/^\uFEFF/,'').replace(/\r\n/g,'\n').split('\n');
+  var dividerRe=/^[═━─=\-—\s]{3,}.+?(上集|中集|下集|上卷|中卷|下卷|第[0-9一二三四五六七八九十百千]+集|第一部|第二部|第三部).+?[═━─=\-—\s]{3,}\s*$/;
+  var titleRe=/[《「]([^》」]+)[》」]/;
+  var volumes=[],current=null,detectedTitle=fallbackTitle||'';
+  for(var i=0;i<lines.length;i++){
+    var trimmed=lines[i].trim();
+    var dm=trimmed.match(dividerRe);
+    if(dm){
+      if(current){
+        var finished=finishOmnibusVolume(current);
+        if(finished) volumes.push(finished);
+      }
+      var tmatch=trimmed.match(titleRe);
+      if(tmatch) detectedTitle=tmatch[1].trim();
+      var label=dm[1];
+      current={title:label,order:volumes.length+1,lines:[]};
+      continue;
+    }
+    if(!current) continue;
+    if(isVolumeHeaderLine(trimmed)) continue;
+    if(/^[（(](?:上|中|下)集完|全文完[）)]\s*$/.test(trimmed)) continue;
+    current.lines.push(lines[i]);
+  }
+  if(current){
+    var last=finishOmnibusVolume(current);
+    if(last) volumes.push(last);
+  }
+  return {seriesTitle:detectedTitle||fallbackTitle||'未命名系列',volumes:volumes};
+}
+
+function parseVolumeInfo(filename){
+  var name=String(filename||'').replace(/\.txt$/i,'').trim();
+  if(isOmnibusFilename(name)){
+    return {
+      seriesTitle:name.replace(/[_\s\-—·]*(?:全系列|全集|合訂本?|完整版)\s*$/i,'').trim()||'未命名系列',
+      isOmnibus:true
+    };
+  }
+  var patterns=[
+    {re:/^(.+?)[\s_\-—·]+第([0-9一二三四五六七八九十百千]+)\s*(集|卷|部|篇|冊)\s*$/i,g:1,v:2,u:3},
+    {re:/^(.+?)[\s_\-—·]+([上中下])卷?\s*$/i,g:1,v:2,u:'卷',map:{上:1,中:2,下:3}},
+    {re:/^(.+?)[\s_\-—·]+(?:Vol\.?\s*|vol\s*)(\d+)\s*$/i,g:1,v:2,u:'集'},
+    {re:/^(.+?)[\s_\-—·]+第(\d+)\s*(?:集|卷|部|篇|冊)?\s*$/i,g:1,v:2,u:'集'}
+  ];
+  for(var i=0;i<patterns.length;i++){
+    var m=name.match(patterns[i].re);
+    if(!m) continue;
+    var order=patterns[i].map?patterns[i].map[m[patterns[i].v]]:parseCnNum(m[patterns[i].v]);
+    var unit=patterns[i].u;
+    var volTitle=typeof unit==='string'&&unit.length===1?m[patterns[i].v]+unit:'第'+m[patterns[i].v]+unit;
+    return {seriesTitle:m[patterns[i].g].trim(),volTitle:volTitle,order:order||1};
+  }
+  return {seriesTitle:name||'未命名系列',volTitle:'第一集',order:1};
+}
+
+function normalizeSeries(item){
+  if(item&&item.volumes&&item.volumes.length) return item;
+  return {
+    id:item.id||uid('s'),
+    title:item.title||'未命名系列',
+    volumes:[{id:uid('v'),title:'第一集',content:item.content||'',order:1}],
+    addedAt:item.addedAt||Date.now(),
+    updatedAt:item.updatedAt||Date.now()
+  };
+}
+function sortVolumes(volumes){
+  return (volumes||[]).slice().sort(function(a,b){return(a.order||0)-(b.order||0);});
+}
+function currentVolume(){
+  if(!state.series) return null;
+  var vols=sortVolumes(state.series.volumes);
+  return vols[state.volumeIdx]||null;
+}
+
+function openDB(){
+  return new Promise(function(resolve,reject){
+    var req=indexedDB.open(DB_NAME,DB_VER);
+    req.onerror=function(){reject(req.error);};
+    req.onupgradeneeded=function(e){
+      var db=e.target.result;
+      if(!db.objectStoreNames.contains(STORE)) db.createObjectStore(STORE,{keyPath:'id'});
+    };
+    req.onsuccess=function(){resolve(req.result);};
+  });
+}
+function getAllSeries(){
+  return openDB().then(function(db){
+    return new Promise(function(resolve,reject){
+      var tx=db.transaction(STORE,'readonly'),req=tx.objectStore(STORE).getAll();
+      req.onsuccess=function(){resolve((req.result||[]).map(normalizeSeries));};
+      req.onerror=function(){reject(req.error);};
+    });
+  });
+}
+function saveSeries(series){
+  series.updatedAt=Date.now();
+  return openDB().then(function(db){
+    return new Promise(function(resolve,reject){
+      var tx=db.transaction(STORE,'readwrite'),req=tx.objectStore(STORE).put(series);
+      req.onsuccess=function(){resolve();};
+      req.onerror=function(){reject(req.error);};
+    });
+  });
+}
+function deleteSeries(id){
+  return openDB().then(function(db){
+    return new Promise(function(resolve,reject){
+      var tx=db.transaction(STORE,'readwrite'),req=tx.objectStore(STORE).delete(id);
+      req.onsuccess=function(){resolve();};
+      req.onerror=function(){reject(req.error);};
+    });
+  });
+}
+
+function loadSettings(){
+  if(localStorage.getItem('novelReader.theme')==='dark') document.documentElement.setAttribute('data-theme','dark');
+  setFontSize(Number(localStorage.getItem('novelReader.fontSize'))||18);
+}
+function setFontSize(size){
+  size=Math.min(26,Math.max(14,size));
+  document.documentElement.style.setProperty('--font-size',size+'px');
+  els.fontSizeLabel.textContent=String(size);
+  localStorage.setItem('novelReader.fontSize',String(size));
+}
+function saveProgress(){
+  if(!state.series) return;
+  localStorage.setItem('novelReader.progress.'+state.series.id,JSON.stringify({volumeIdx:state.volumeIdx,chapterIdx:state.chapterIdx}));
+}
+function loadProgress(id){
+  try{
+    var r=localStorage.getItem('novelReader.progress.'+id);
+    if(!r) return {volumeIdx:0,chapterIdx:0};
+    var p=JSON.parse(r);
+    return {volumeIdx:p.volumeIdx||0,chapterIdx:p.chapterIdx||0};
+  }catch(e){return {volumeIdx:0,chapterIdx:0};}
+}
+
+function collapseSymbols(t){
+  return t.replace(/[-—=─━═]{3,}/g,'——').replace(/[…．.]{4,}/g,'……').replace(/[*]{4,}/g,'***');
+}
+function isDecorative(line){
+  var s=line.replace(/\s/g,'');
+  return s.length>=3&&/^[-—=─━═_*~·•◆◇■□.…～#]+$/u.test(s);
+}
+function formatChapterText(text){
+  text=collapseSymbols(text.replace(/\uFFFD/g,'').trim());
+  var blocks=text.split(/\n{2,}/),paras=[];
+  blocks.forEach(function(block){
+    block.split('\n').map(function(l){return l.trim().replace(/^#{1,4}\s*/,'').replace(/\*\*(.+?)\*\*/g,'$1');}).filter(Boolean).forEach(function(line){
+      if(isDecorative(line)||isVolumeHeaderLine(line)) return;
+      paras.push(line);
+    });
+  });
+  if(!paras.length&&text) paras.push(text.replace(/^#{1,4}\s*/gm,'').replace(/\n+/g,''));
+  return paras;
+}
+function parseChapters(text){
+  var lines=text.replace(/\r\n/g,'\n').split('\n'),matches=[];
+  for(var i=0;i<lines.length;i++){
+    var m=lines[i].match(HEADING_RE);
+    if(m){
+      var prev=i>0?lines[i-1]:'';
+      if(m[1].length>0||(!/^\s*\d+\.\s/.test(lines[i])&&!/\*\*/.test(lines[i])&&(i===0||prev.trim()===''||prev.trim()==='---')))
+        matches.push({title:m[2].trim(),lineIndex:i});
+    }
+  }
+  var seen=new Set(),filtered=matches.filter(function(m){
+    var idm=m.title.match(CHAPTER_ID_RE);
+    if(!idm) return true;
+    if(seen.has(idm[0])) return false;
+    seen.add(idm[0]);return true;
+  });
+  if(!filtered.length) return [{title:'全文',content:formatChapterText(text)}];
+  return filtered.map(function(m,idx){
+    var start=m.lineIndex+1,end=idx+1<filtered.length?filtered[idx+1].lineIndex:lines.length;
+    return {title:m.title.replace(/^#{1,4}\s*/,''),content:formatChapterText(lines.slice(start,end).join('\n'))};
+  });
+}
+function guessTitle(text,fallback){
+  var m=text.match(/^\s*#{1,4}\s*([^\n#]+)/m)||text.match(/^\s*(第[一二三四五六七八九十百千\d]+章[^\n]*)/m);
+  return (m&&m[1]?m[1]:fallback||'未命名').trim().slice(0,80);
+}
+
+function updateNavButtons(){
+  var vols=sortVolumes(state.series.volumes);
+  var hasPrevVol=state.volumeIdx>0;
+  var hasNextVol=state.volumeIdx<vols.length-1;
+  var atFirst=state.chapterIdx<=0;
+  var atLast=state.chapterIdx>=state.chapters.length-1;
+  els.prevChapterBtn.textContent=atFirst&&hasPrevVol?'← 上一集':'← 上一章';
+  els.nextChapterBtn.textContent=atLast&&hasNextVol?'下一集 →':'下一章 →';
+  els.prevChapterBtn.disabled=atFirst&&!hasPrevVol;
+  els.nextChapterBtn.disabled=atLast&&!hasNextVol;
+}
+
+function renderChapter(idx,keepVol){
+  if(!state.chapters.length) return;
+  var prevKey=state.series?state.series.id+'.'+state.volumeIdx+'.'+state.chapterIdx:null;
+  state.chapterIdx=Math.max(0,Math.min(idx,state.chapters.length-1));
+  var newKey=state.series?state.series.id+'.'+state.volumeIdx+'.'+state.chapterIdx:null;
+  if(prevKey!==null&&prevKey!==newKey&&window.readerSpeechOnChapterChange) window.readerSpeechOnChapterChange();
+  var ch=state.chapters[state.chapterIdx];
+  var vol=currentVolume();
+  var vols=sortVolumes(state.series.volumes);
+  els.volumeLabel.textContent=state.series.title+' · '+vol.title+'（第 '+(state.volumeIdx+1)+' / '+vols.length+' 集）';
+  els.chapterTitle.textContent=ch.title;
+  els.chapterBody.innerHTML=ch.content.map(function(p){return '<p>'+esc(p)+'</p>';}).join('');
+  els.pageSubtitle.textContent=state.series.title+' · 第 '+(state.chapterIdx+1)+' / '+state.chapters.length+' 章';
+  els.chapterList.querySelectorAll('button').forEach(function(btn,i){btn.classList.toggle('active',i===state.chapterIdx);});
+  updateNavButtons();
+  updateReadProgress();
+  saveProgress();
+  if(!keepVol&&els.main) els.main.scrollTo({top:0,behavior:'smooth'});
+  closeSidebar();
+}
+function switchVolume(vIdx,chapterIdx){
+  var vols=sortVolumes(state.series.volumes);
+  state.volumeIdx=Math.max(0,Math.min(vIdx,vols.length-1));
+  var vol=vols[state.volumeIdx];
+  state.chapters=parseChapters(vol.content||'');
+  state.chapterIdx=chapterIdx==null?0:Math.max(0,Math.min(chapterIdx,state.chapters.length-1));
+  renderVolumeList();
+  renderChapterList();
+  renderChapter(state.chapterIdx,true);
+}
+function renderVolumeList(){
+  els.volumeSection.hidden=false;
+  var vols=sortVolumes(state.series.volumes);
+  els.volumeList.innerHTML=vols.map(function(v,i){
+    return '<li><button type="button" data-vidx="'+i+'" class="'+(i===state.volumeIdx?'active':'')+'"><span class="item-num">'+(i+1)+'</span><span class="item-title">'+esc(v.title)+'</span></button></li>';
+  }).join('');
+}
+function renderChapterList(){
+  els.chapterSection.hidden=false;
+  els.chapterList.innerHTML=state.chapters.map(function(ch,i){
+    return '<li><button type="button" data-idx="'+i+'" class="'+(i===state.chapterIdx?'active':'')+'"><span class="item-num">'+(i+1)+'</span>'+esc(ch.title)+'</button></li>';
+  }).join('');
+}
+function renderSeriesList(){
+  els.seriesList.innerHTML=state.seriesList.map(function(s){
+    var n=sortVolumes(s.volumes).length;
+    return '<li><button type="button" data-id="'+esc(s.id)+'" class="'+(state.series&&state.series.id===s.id?'active':'')+'"><span class="item-title">'+esc(s.title)+'</span><span class="item-meta">共 '+n+' 集</span></button></li>';
+  }).join('');
+  var sel=els.pasteTargetSeries;
+  sel.innerHTML='<option value="">— 新建系列 —</option>'+state.seriesList.map(function(s){
+    return '<option value="'+esc(s.id)+'">'+esc(s.title)+'（追加集數）</option>';
+  }).join('');
+}
+function shelfHash(id){
+  var h=0,s=String(id);
+  for(var i=0;i<s.length;i++) h=(h*131+s.charCodeAt(i))>>>0;
+  return h;
+}
+function shelfColor(id){return SHELF_COLORS[shelfHash(id)%SHELF_COLORS.length];}
+function shelfVariant(id){
+  var h=shelfHash(id);
+  return {style:SHELF_STYLES[h%SHELF_STYLES.length],width:SHELF_WIDTHS[Math.floor(h/7)%SHELF_WIDTHS.length]};
+}
+function formatWordCount(text){
+  var n=String(text||'').replace(/\s/g,'').length;
+  if(n>=10000) return (n/10000).toFixed(1)+' 萬字';
+  return n+' 字';
+}
+function getShelfSeries(){
+  var list=state.seriesList.slice();
+  var term=(els.shelfSearch&&els.shelfSearch.value.trim().toLowerCase())||'';
+  var sortBy=(els.shelfSort&&els.shelfSort.value)||'newest';
+  if(term) list=list.filter(function(s){return (s.title||'').toLowerCase().indexOf(term)>=0;});
+  function byName(a,b){return (a.title||'').localeCompare(b.title||'','zh-Hant');}
+  list.sort(function(a,b){
+    if(sortBy==='name') return byName(a,b);
+    if(sortBy==='color') return shelfHash(a.id)%SHELF_COLORS.length-shelfHash(b.id)%SHELF_COLORS.length||byName(a,b);
+    if(sortBy==='style') return shelfHash(a.id)%SHELF_STYLES.length-shelfHash(b.id)%SHELF_STYLES.length||byName(a,b);
+    return (b.updatedAt||0)-(a.updatedAt||0);
+  });
+  return list;
+}
+function formatProgressLabel(series){
+  var p=loadProgress(series.id);
+  var vols=sortVolumes(series.volumes);
+  if(!vols.length) return null;
+  var vIdx=Math.min(p.volumeIdx,vols.length-1);
+  var chs=parseChapters(vols[vIdx].content||'');
+  if(!chs.length) return null;
+  var cIdx=Math.min(p.chapterIdx,chs.length-1);
+  if(vIdx===0&&cIdx===0) return null;
+  return vols[vIdx].title+' · '+chs[cIdx].title;
+}
+function openBookDetail(series){
+  state.detailSeries=series;
+  var colors=shelfColor(series.id);
+  var n=sortVolumes(series.volumes).length;
+  var name=(series.title||'未命名').substring(0,30);
+  var prog=formatProgressLabel(series);
+  els.bookDetailCover.style.background='linear-gradient(135deg,'+colors[0]+','+colors[1]+')';
+  els.bookDetailCover.textContent=name.charAt(0)||'書';
+  els.bookDetailTitle.textContent=n>1?name+'（全 '+n+' 集）':name;
+  els.bookDetailMeta.innerHTML='<span>📚 '+n+' 集</span><span>📝 '+formatWordCount(series.volumes.map(function(v){return v.content||'';}).join(''))+'</span>'+(prog?'<span>🔖 '+esc(prog)+'</span>':'');
+  els.bookDetailPreview.textContent=sortVolumes(series.volumes).map(function(v,i){
+    return (i+1)+'. '+v.title+'（'+formatWordCount(v.content)+'）';
+  }).join('　');
+  els.bookDetailRead.textContent=prog?'📖 繼續閱讀':'📖 開始閱讀';
+  els.bookDetail.classList.add('open');
+}
+function closeBookDetail(){
+  els.bookDetail.classList.remove('open');
+  state.detailSeries=null;
+}
+function renderShelf(){
+  var books=getShelfSeries();
+  if(!books.length){
+    els.shelfEmpty.style.display='block';
+    els.shelfGrid.style.display='none';
+    if(els.importBody&&!els.importBody.classList.contains('open')){
+      els.importBody.classList.add('open');
+      if(els.importToggle) els.importToggle.textContent='📥 匯入小說 ▴';
+    }
+  } else {
+    els.shelfEmpty.style.display='none';
+    els.shelfGrid.style.display='flex';
+    els.shelfGrid.innerHTML=books.map(function(s,i){
+      var colors=shelfColor(s.id),variant=shelfVariant(s.id);
+      var n=sortVolumes(s.volumes).length;
+      var name=(s.title||'未命名').substring(0,14);
+      return '<div class="book-spine '+variant.style+' '+variant.width+'" data-id="'+esc(s.id)+'" style="--c1:'+colors[0]+';--c2:'+colors[1]+';animation-delay:'+(i*40)+'ms" title="'+esc(s.title)+'"><span class="book-spine-title">'+esc(name)+'</span>'+(n>1?'<span class="book-spine-series">全'+n+'集</span>':'')+'</div>';
+    }).join('');
+  }
+  renderSeriesList();
+}
+function showReader(){
+  els.shelfView.classList.add('hidden');els.readerView.classList.add('show');
+  if(els.main) els.main.classList.remove('shelf-mode');
+  if(els.layout) els.layout.classList.remove('shelf-layout');
+  els.backShelfBtn.hidden=false;els.exportBtn.hidden=false;els.addVolBtn.hidden=false;
+  if(window.readerSpeechSetVisible) window.readerSpeechSetVisible(true);
+  closeBookDetail();updateReadProgress();
+}
+function showShelf(){
+  if(window.readerSpeechOnLeaveReader) window.readerSpeechOnLeaveReader();
+  els.shelfView.classList.remove('hidden');els.readerView.classList.remove('show');
+  if(els.main) els.main.classList.add('shelf-mode');
+  if(els.layout) els.layout.classList.add('shelf-layout');
+  els.backShelfBtn.hidden=true;els.exportBtn.hidden=true;els.addVolBtn.hidden=true;
+  if(window.readerSpeechSetVisible) window.readerSpeechSetVisible(false);
+  if(els.readProgressWrap) els.readProgressWrap.classList.remove('show');
+  els.pageTitle.textContent='小說閱讀';els.pageSubtitle.textContent='本機書庫 · 雙擊即可使用';
+  els.volumeSection.hidden=true;els.chapterSection.hidden=true;
+  state.series=null;state.chapters=[];renderSeriesList();renderShelf();
+}
+
+function openSeries(series,startProgress){
+  state.series=series;
+  var p=startProgress||loadProgress(series.id);
+  var vols=sortVolumes(series.volumes);
+  if(p.volumeIdx>=vols.length) p.volumeIdx=0;
+  state.volumeIdx=p.volumeIdx;
+  state.chapters=parseChapters(vols[state.volumeIdx].content||'');
+  if(p.chapterIdx>=state.chapters.length) p.chapterIdx=0;
+  state.chapterIdx=p.chapterIdx;
+  els.pageTitle.textContent=series.title;
+  renderSeriesList();renderVolumeList();renderChapterList();showReader();renderChapter(state.chapterIdx,true);
+}
+function openSeriesById(id){
+  var s=state.seriesList.find(function(x){return x.id===id;});
+  if(s) openSeries(s);
+}
+
+function findOrCreateSeries(title){
+  var hit=state.seriesList.find(function(s){return s.title===title;});
+  if(hit) return Promise.resolve(hit);
+  var series={id:uid('s'),title:title,volumes:[],addedAt:Date.now(),updatedAt:Date.now()};
+  return saveSeries(series).then(function(){
+    state.seriesList.unshift(series);
+    return series;
+  });
+}
+function addVolume(series,volTitle,content,order,replaceTitle){
+  series=normalizeSeries(series);
+  volTitle=volTitle||('第'+(series.volumes.length+1)+'集');
+  var existIdx=-1;
+  if(replaceTitle){
+    existIdx=series.volumes.findIndex(function(v){return v.title===volTitle;});
+  }
+  var vol={id:existIdx>=0?series.volumes[existIdx].id:uid('v'),title:volTitle,content:content,order:order||(existIdx>=0?series.volumes[existIdx].order:series.volumes.length+1)};
+  if(existIdx>=0) series.volumes[existIdx]=vol;
+  else series.volumes.push(vol);
+  series.volumes=sortVolumes(series.volumes);
+  return saveSeries(series).then(function(){
+    var idx=state.seriesList.findIndex(function(s){return s.id===series.id;});
+    if(idx>=0) state.seriesList[idx]=series; else state.seriesList.unshift(series);
+    return series;
+  });
+}
+function setSeriesVolumes(series,volumes){
+  series.volumes=volumes.map(function(vol,i){
+    return {id:uid('v'),title:vol.title,content:vol.content,order:i+1};
+  });
+  return saveSeries(series).then(function(){
+    var idx=state.seriesList.findIndex(function(s){return s.id===series.id;});
+    if(idx>=0) state.seriesList[idx]=series; else state.seriesList.unshift(series);
+    return series;
+  });
+}
+function importOmnibus(content,opts){
+  content=String(content||'').trim();
+  if(!content){toast('內容是空的');return Promise.resolve();}
+  opts=opts||{};
+  var info=opts.filename?parseVolumeInfo(opts.filename):{};
+  var parsed=parseOmnibusVolumes(content,opts.seriesTitle||info.seriesTitle||guessTitle(content,opts.fallbackTitle));
+  if(!parsed.volumes.length) return importVolume(content,opts);
+  if(parsed.volumes.length===1){
+    var only=parsed.volumes[0];
+    return importVolume(only.content,{seriesTitle:parsed.seriesTitle,volTitle:only.title,order:only.order,targetSeriesId:opts.targetSeriesId});
+  }
+  var chain;
+  if(opts.targetSeriesId){
+    var ex=state.seriesList.find(function(s){return s.id===opts.targetSeriesId;});
+    chain=ex?Promise.resolve(ex):findOrCreateSeries(parsed.seriesTitle);
+  } else {
+    var same=state.seriesList.find(function(s){return s.title===parsed.seriesTitle;});
+    chain=same?Promise.resolve(same):findOrCreateSeries(parsed.seriesTitle);
+  }
+  return chain.then(function(series){
+    var replaceAll=!!(opts.filename&&parseVolumeInfo(opts.filename).isOmnibus);
+    if(replaceAll){
+      return setSeriesVolumes(series,parsed.volumes).then(function(s){
+        renderShelf();
+        toast('已匯入全系列：'+s.title+'（'+parsed.volumes.length+' 集）');
+        return s;
+      });
+    }
+    var p=Promise.resolve(series);
+    parsed.volumes.forEach(function(vol){
+      p=p.then(function(s){return addVolume(s,vol.title,vol.content,vol.order,true);});
+    });
+    return p.then(function(s){
+      renderShelf();
+      toast('已匯入全系列：'+s.title+'（'+parsed.volumes.length+' 集）');
+      return s;
+    });
+  });
+}
+function importVolume(content,opts){
+  content=String(content||'').trim();
+  if(!content){toast('內容是空的');return Promise.resolve();}
+  opts=opts||{};
+  var info=opts.filename?parseVolumeInfo(opts.filename):null;
+  if((info&&info.isOmnibus)||(!opts.volTitle&&isOmnibusContent(content))){
+    return importOmnibus(content,opts);
+  }
+  var seriesTitle=opts.seriesTitle||(info&&info.seriesTitle)||guessTitle(content,opts.fallbackTitle);
+  var volTitle=opts.volTitle||(info&&info.volTitle)||('第'+(sortVolumes((state.seriesList.find(function(s){return s.title===seriesTitle;})||{volumes:[]}).volumes).length+1)+'集');
+  var order=opts.order||(info&&info.order);
+  var targetId=opts.targetSeriesId;
+  var chain;
+  if(targetId){
+    var existing=state.seriesList.find(function(s){return s.id===targetId;});
+    chain=existing?Promise.resolve(existing):findOrCreateSeries(seriesTitle);
+  } else {
+    var same=state.seriesList.find(function(s){return s.title===seriesTitle;});
+    chain=same?Promise.resolve(same):findOrCreateSeries(seriesTitle);
+  }
+  return chain.then(function(series){
+    return addVolume(series,volTitle,content,order).then(function(s){
+      renderShelf();
+      toast('已加入：'+s.title+' · '+volTitle);
+      return s;
+    });
+  });
+}
+function importFiles(files){
+  var list=Array.from(files||[]).filter(function(f){return /\.txt$/i.test(f.name)||f.type==='text/plain';});
+  if(!list.length){toast('請選擇 .txt 檔案');return;}
+  toast('正在匯入 '+list.length+' 個檔案…');
+  var pending=list.length,loaded=[];
+  list.forEach(function(file){
+    var reader=new FileReader();
+    reader.onload=function(){
+      loaded.push({content:reader.result,file:file,info:parseVolumeInfo(file.name)});
+      if(loaded.length<pending) return;
+      var groups={},omnibusJobs=[];
+      loaded.forEach(function(item){
+        if(item.info.isOmnibus||isOmnibusContent(item.content)){
+          omnibusJobs.push(importOmnibus(item.content,{filename:item.file.name}));
+        } else {
+          if(!groups[item.info.seriesTitle]) groups[item.info.seriesTitle]={title:item.info.seriesTitle,items:[]};
+          groups[item.info.seriesTitle].items.push({content:item.content,info:item.info,filename:item.file.name});
+        }
+      });
+      Promise.all(omnibusJobs).then(function(){
+        finishGroupedImport(groups,function(){
+          toast('已匯入 '+list.length+' 個檔案');
+        });
+      });
+    };
+    reader.readAsText(file,'UTF-8');
+  });
+}
+function finishGroupedImport(groups,cb){
+  var keys=Object.keys(groups);
+  if(!keys.length){if(cb)cb();return;}
+  var left=keys.length;
+  keys.forEach(function(key){
+    var g=groups[key];
+    g.items.sort(function(a,b){return a.info.order-b.info.order;});
+    findOrCreateSeries(g.title).then(function(series){
+      var chain=Promise.resolve(series);
+      g.items.forEach(function(item){
+        chain=chain.then(function(s){return addVolume(s,item.info.volTitle,item.content,item.info.order);});
+      });
+      return chain;
+    }).then(function(){
+      left--;
+      if(!left){renderShelf();if(cb)cb();}
+    });
+  });
+}
+function appendVolToCurrent(file){
+  if(!state.series||!file) return;
+  var reader=new FileReader();
+  reader.onload=function(){
+    var content=reader.result;
+    var info=parseVolumeInfo(file.name);
+    if(info.isOmnibus||isOmnibusContent(content)){
+      var parsed=parseOmnibusVolumes(content,state.series.title);
+      var p=Promise.resolve(state.series);
+      parsed.volumes.forEach(function(vol){
+        p=p.then(function(s){return addVolume(s,vol.title,vol.content,vol.order);});
+      });
+      p.then(function(s){
+        state.series=s;renderVolumeList();
+        switchVolume(sortVolumes(s.volumes).length-1,0);
+        toast('已追加 '+parsed.volumes.length+' 集');
+      });
+      return;
+    }
+    addVolume(state.series,info.volTitle,content,info.order).then(function(s){
+      state.series=s;renderVolumeList();
+      switchVolume(sortVolumes(s.volumes).length-1,0);
+      toast('已追加：'+info.volTitle);
+    });
+  };
+  reader.readAsText(file,'UTF-8');
+}
+function removeSeries(id){
+  deleteSeries(id).then(function(){
+    state.seriesList=state.seriesList.filter(function(s){return s.id!==id;});
+    if(state.series&&state.series.id===id) showShelf();
+    renderShelf();toast('已刪除');
+  }).catch(function(){toast('刪除失敗');});
+}
+function loadLibrary(){
+  getAllSeries().then(function(list){
+    state.seriesList=(list||[]).map(normalizeSeries).sort(function(a,b){return(b.updatedAt||0)-(a.updatedAt||0);});
+    list.forEach(function(s,i){
+      var n=normalizeSeries(s);
+      if(!s.volumes) saveSeries(n);
+      state.seriesList[i]=n;
+    });
+    renderShelf();
+  }).catch(function(){state.seriesList=[];renderShelf();});
+}
+function exportCurrent(){
+  if(!state.series) return;
+  var vols=sortVolumes(state.series.volumes);
+  var all=vols.map(function(v){return '【'+v.title+'】\n\n'+(v.content||'');}).join('\n\n'+'='.repeat(20)+'\n\n');
+  var blob=new Blob([all],{type:'text/plain;charset=utf-8'});
+  var a=document.createElement('a');
+  a.href=URL.createObjectURL(blob);
+  a.download=(state.series.title||'小說').replace(/[\\/:*?"<>|]/g,'_')+'.txt';
+  a.click();URL.revokeObjectURL(a.href);
+  toast('已匯出全部 '+vols.length+' 集');
+}
+function goPrev(){
+  if(state.chapterIdx>0) renderChapter(state.chapterIdx-1);
+  else if(state.volumeIdx>0){
+    var vols=sortVolumes(state.series.volumes);
+    switchVolume(state.volumeIdx-1,parseChapters(vols[state.volumeIdx-1].content||'').length-1);
+  }
+}
+function goNext(){
+  if(state.chapterIdx<state.chapters.length-1) renderChapter(state.chapterIdx+1);
+  else if(state.volumeIdx<sortVolumes(state.series.volumes).length-1) switchVolume(state.volumeIdx+1,0);
+}
+function closeSidebar(){els.sidebar.classList.remove('open');els.sidebarBackdrop.classList.remove('show');}
+function toggleSidebar(){els.sidebar.classList.toggle('open');els.sidebarBackdrop.classList.toggle('show');}
+
+els.prevChapterBtn.onclick=goPrev;
+els.nextChapterBtn.onclick=goNext;
+els.backShelfBtn.onclick=showShelf;
+els.exportBtn.onclick=exportCurrent;
+els.addVolBtn.onclick=function(){els.addVolInput.click();};
+els.addVolInput.onchange=function(){
+  appendVolToCurrent(els.addVolInput.files&&els.addVolInput.files[0]);
+  els.addVolInput.value='';
+};
+els.pickFileBtn.onclick=function(){els.fileInput.click();};
+els.fileInput.onchange=function(){importFiles(els.fileInput.files);els.fileInput.value='';};
+if(els.shelfGrid){
+  els.shelfGrid.onclick=function(e){
+    var spine=e.target.closest('.book-spine');
+    if(!spine||!spine.dataset.id) return;
+    var s=state.seriesList.find(function(x){return x.id===spine.dataset.id;});
+    if(s) openBookDetail(s);
+  };
+}
+if(els.dropZone){
+  els.dropZone.onclick=function(){els.fileInput.click();};
+  ['dragenter','dragover'].forEach(function(ev){
+    els.dropZone.addEventListener(ev,function(e){e.preventDefault();els.dropZone.classList.add('dragover');});
+  });
+  ['dragleave','drop'].forEach(function(ev){
+    els.dropZone.addEventListener(ev,function(e){
+      e.preventDefault();els.dropZone.classList.remove('dragover');
+      if(ev==='drop'&&e.dataTransfer&&e.dataTransfer.files.length) importFiles(e.dataTransfer.files);
+    });
+  });
+}
+if(els.importToggle&&els.importBody){
+  els.importToggle.onclick=function(){
+    var open=els.importBody.classList.toggle('open');
+    els.importToggle.textContent=(open?'📥 匯入小說 ▴':'📥 匯入小說 ▾');
+  };
+}
+els.pasteToggleBtn.onclick=function(){els.pasteBox.hidden=!els.pasteBox.hidden;};
+els.pasteSaveBtn.onclick=function(){
+  var text=els.pasteText.value;
+  var opts={
+    seriesTitle:els.pasteSeriesTitle.value.trim()||undefined,
+    volTitle:els.pasteVolTitle.value.trim()||undefined,
+    targetSeriesId:els.pasteTargetSeries.value||undefined
+  };
+  var runner=isOmnibusContent(text)?importOmnibus(text,opts):importVolume(text,opts);
+  runner.then(function(){
+    els.pasteText.value='';els.pasteSeriesTitle.value='';els.pasteVolTitle.value='';els.pasteBox.hidden=true;
+  });
+};
+els.themeToggle.onclick=function(){
+  var dark=document.documentElement.getAttribute('data-theme')==='dark';
+  if(dark){document.documentElement.removeAttribute('data-theme');localStorage.setItem('novelReader.theme','light');els.themeToggle.textContent='🌙';}
+  else{document.documentElement.setAttribute('data-theme','dark');localStorage.setItem('novelReader.theme','dark');els.themeToggle.textContent='☀️';}
+};
+els.fontSmaller.onclick=function(){setFontSize(Number(localStorage.getItem('novelReader.fontSize'))-1);};
+els.fontLarger.onclick=function(){setFontSize(Number(localStorage.getItem('novelReader.fontSize'))+1);};
+els.sidebarToggle.onclick=toggleSidebar;
+els.sidebarBackdrop.onclick=closeSidebar;
+els.seriesList.onclick=function(e){
+  var btn=e.target.closest('button[data-id]');
+  if(btn) openSeriesById(btn.dataset.id);
+};
+els.volumeList.onclick=function(e){
+  var btn=e.target.closest('button[data-vidx]');
+  if(btn) switchVolume(Number(btn.dataset.vidx),0);
+};
+els.chapterList.onclick=function(e){
+  var btn=e.target.closest('button[data-idx]');
+  if(btn) renderChapter(Number(btn.dataset.idx));
+};
+if(els.shelfSearch) els.shelfSearch.oninput=debounce(renderShelf,180);
+if(els.shelfSort){
+  var savedSort=localStorage.getItem('novelReader.shelfSort');
+  if(savedSort) els.shelfSort.value=savedSort;
+  els.shelfSort.onchange=function(){
+    localStorage.setItem('novelReader.shelfSort',els.shelfSort.value);
+    renderShelf();
+  };
+}
+els.bookDetailClose.onclick=closeBookDetail;
+els.bookDetail.onclick=function(e){if(e.target===els.bookDetail) closeBookDetail();};
+els.bookDetailRead.onclick=function(){
+  if(!state.detailSeries) return;
+  openSeries(state.detailSeries);
+};
+els.bookDetailDelete.onclick=function(){
+  if(!state.detailSeries) return;
+  if(confirm('確定刪除《'+state.detailSeries.title+'》？')) removeSeries(state.detailSeries.id);
+  closeBookDetail();
+};
+document.addEventListener('keydown',function(e){
+  if(e.key==='Escape'&&els.bookDetail.classList.contains('open')) closeBookDetail();
+  if(!els.readerView.classList.contains('show')) return;
+  if(e.key==='ArrowLeft') goPrev();
+  if(e.key==='ArrowRight') goNext();
+});
+
+loadSettings();
+if(document.documentElement.getAttribute('data-theme')==='dark') els.themeToggle.textContent='☀️';
+if(els.main) els.main.classList.add('shelf-mode');
+if(els.layout) els.layout.classList.add('shelf-layout');
+if(window.initReaderSpeech){
+  initReaderSpeech({
+    toast:toast,
+    getChapterContent:function(){
+      var ch=state.chapters[state.chapterIdx];
+      return ch&&ch.content?ch.content:[];
+    },
+    getChapterPlainText:function(){
+      var ch=state.chapters[state.chapterIdx];
+      return ch&&ch.content?ch.content.join('\n\n'):'';
+    },
+    getProgressKey:function(){
+      if(!state.series) return 'none';
+      return state.series.id+'.'+state.volumeIdx+'.'+state.chapterIdx;
+    },
+    highlightParagraph:function(pi){
+      els.chapterBody.querySelectorAll('p').forEach(function(p,i){
+        p.classList.toggle('speaking-segment',i===pi);
+      });
+    },
+    clearHighlight:function(){
+      els.chapterBody.querySelectorAll('p.speaking-segment').forEach(function(p){
+        p.classList.remove('speaking-segment');
+      });
+    },
+    scrollToParagraph:function(pi){
+      var p=els.chapterBody.children[pi];
+      if(p&&els.main) p.scrollIntoView({behavior:'smooth',block:'center'});
+    }
+  });
+}
+loadLibrary();
+})();
+</script>
+</body>
+</html>

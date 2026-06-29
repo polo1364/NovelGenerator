@@ -6,6 +6,7 @@
    ============================================================ */
 
 require('dotenv').config();
+const fs = require('fs');
 const path = require('path');
 const express = require('express');
 const { Readable } = require('stream');
@@ -19,7 +20,82 @@ const DEEPSEEK_URL = process.env.DEEPSEEK_URL || 'https://api.deepseek.com/chat/
 // 故事 prompt 可能很長，放寬 JSON body 上限
 app.use(express.json({ limit: '8mb' }));
 
-// 提供前端靜態檔（HTML/JS/CSS 不快取，確保 PWA 能取得最新版）
+// 小說閱讀站（根目錄）
+const ROOT = __dirname;
+const NOVELS_DIR = path.join(ROOT, 'novels');
+
+app.get('/', (req, res) => {
+  res.sendFile(path.join(ROOT, 'index.html'));
+});
+
+app.get('/index.html', (req, res) => {
+  res.sendFile(path.join(ROOT, 'index.html'));
+});
+
+app.get('/reader.js', (req, res) => {
+  res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
+  res.sendFile(path.join(ROOT, 'reader.js'));
+});
+
+app.get('/reader.css', (req, res) => {
+  res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
+  res.sendFile(path.join(ROOT, 'reader.css'));
+});
+
+app.get('/edge-tts-speech.js', (req, res) => {
+  res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
+  res.sendFile(path.join(ROOT, 'public/js/edge-tts-speech.js'));
+});
+
+app.get('/reader-speech.js', (req, res) => {
+  res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
+  res.sendFile(path.join(ROOT, 'reader-speech.js'));
+});
+
+app.use('/novels', express.static(NOVELS_DIR));
+
+app.get('/api/novels', (req, res) => {
+  try {
+    const manifestPath = path.join(NOVELS_DIR, 'manifest.json');
+    if (fs.existsSync(manifestPath)) {
+      const data = JSON.parse(fs.readFileSync(manifestPath, 'utf8'));
+      return res.json(data);
+    }
+    if (!fs.existsSync(NOVELS_DIR)) {
+      return res.json({ novels: [] });
+    }
+    const files = fs.readdirSync(NOVELS_DIR).filter((f) => f.endsWith('.txt'));
+    res.json({
+      novels: files.map((f) => ({
+        id: f.replace(/\.txt$/i, ''),
+        title: f.replace(/\.txt$/i, ''),
+        file: f,
+      })),
+    });
+  } catch (err) {
+    res.status(500).json({ error: err.message || '讀取書庫失敗' });
+  }
+});
+
+// LINE 記事本轉換工具（LineNote/）
+app.use('/LineNote', express.static(path.join(__dirname, 'LineNote'), {
+  setHeaders(res, filePath) {
+    if (/\.(html|js|css)$/.test(filePath)) {
+      res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
+    }
+  },
+}));
+
+// AI 小說工坊（原 public/，改掛 /workshop）
+app.use('/workshop', express.static(path.join(__dirname, 'public'), {
+  setHeaders(res, filePath) {
+    if (/\.(html|js|css|webmanifest)$/.test(filePath)) {
+      res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
+    }
+  },
+}));
+
+// 保留舊路徑：/css、/js 等仍可直接存取（書籤相容）
 app.use(express.static(path.join(__dirname, 'public'), {
   setHeaders(res, filePath) {
     if (/\.(html|js|css|webmanifest)$/.test(filePath)) {
@@ -187,7 +263,9 @@ app.post('/api/analyze-roles/stream', async (req, res) => {
 });
 
 app.listen(PORT, () => {
-  console.log(`🚀 AI 小說工坊已啟動： http://localhost:${PORT}`);
+  console.log(`📖 小說閱讀站： http://localhost:${PORT}/`);
+  console.log(`🛠️  AI 小說工坊： http://localhost:${PORT}/workshop/`);
+  console.log(`📒 LINE 記事本：  http://localhost:${PORT}/LineNote/`);
   if (!process.env.DEEPSEEK_API_KEY) {
     console.warn('⚠️  尚未設定 DEEPSEEK_API_KEY，/api/chat 將回傳 500。請在 .env 設定金鑰。');
   }

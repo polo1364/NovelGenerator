@@ -426,6 +426,7 @@
   }
 
   async function checkAvailable() {
+    if (typeof location !== 'undefined' && location.protocol === 'file:') return false;
     try {
       const res = await fetch('/api/health', { signal: AbortSignal.timeout(5000) });
       return res.ok;

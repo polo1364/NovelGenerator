@@ -1,0 +1,57 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>小說 TXT → LINE 記事本</title>
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <header>
+    <h1>📒 小說 TXT → LINE 記事本</h1>
+    <p>上傳或貼上小說文字，自動整理格式並切分為可貼上的記事本片段</p>
+  </header>
+
+  <main>
+    <section class="card">
+      <h2>① 匯入小說</h2>
+      <input type="file" id="fileInput" accept=".txt,text/plain" hidden>
+      <label class="drop-zone" id="dropZone" for="fileInput">
+        <p>拖放 <strong>.txt</strong> 檔案到這裡，或<strong>點擊選擇</strong></p>
+        <p class="drop-hint">也可直接在下方貼上文字</p>
+      </label>
+      <div class="import-actions">
+        <button type="button" class="btn btn-primary" id="pickFileBtn">選擇 .txt 檔案</button>
+      </div>
+      <textarea id="sourceText" placeholder="在此貼上小說全文…" style="margin-top:1rem"></textarea>
+      <div class="stats" id="sourceStats"></div>
+    </section>
+
+    <section class="card">
+      <h2>② 轉換設定</h2>
+      <div class="controls">
+        <label class="field">
+          單則字數上限
+          <input type="number" id="charLimit" value="9800" min="500" max="10000" step="100">
+        </label>
+        <button type="button" class="btn btn-primary" id="convertBtn">轉換</button>
+        <button type="button" class="btn btn-secondary" id="copyAllBtn" disabled>複製全部</button>
+      </div>
+      <p style="font-size:0.85rem;color:var(--text-light);margin:0">
+        LINE 記事本單則約 10,000 字上限。預設 9,800 字留緩衝，依章節切分後再依字數分割。
+      </p>
+    </section>
+
+    <section class="card">
+      <h2>③ 記事本片段 <span id="noteCount" style="font-weight:normal;color:var(--text-light)"></span></h2>
+      <div id="noteList" class="note-list">
+        <div class="empty-hint">匯入小說後按「轉換」，片段會顯示在這裡</div>
+      </div>
+    </section>
+  </main>
+
+  <div class="toast" id="toast"></div>
+
+  <script src="app.js"></script>
+</body>
+</html>

@@ -1,0 +1,11 @@
+{
+  "novels": [
+    {
+      "id": "sample",
+      "title": "範例小說（請替換）",
+      "file": "sample.txt",
+      "author": "",
+      "desc": "將從 AI 小說工坊匯出的 .txt 放到 novels 資料夾，並在此登記"
+    }
+  ]
+}
