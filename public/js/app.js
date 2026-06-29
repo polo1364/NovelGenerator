@@ -9472,35 +9472,58 @@ ${continueWordReq}
         }
       });
 
-      // 清除當前模組：重置模板會填入的主題／背景／風格／進階／篇幅設定
+      // 清除當前模組：重置所有設定（保留已生成的小說正文）
       const clearTemplateBtn = document.getElementById('clearTemplateBtn');
       if (clearTemplateBtn) {
         clearTemplateBtn.addEventListener('click', () => {
+          const volEl = document.getElementById('volumes');
           const fields = [
             themeSelect, settingSelect, styleSelect,
             narrativeSelect, eraSelect, pacingSelect, ratingSelect,
             worldComplexitySelect, emotionalToneSelect, endingSelect,
-            chaptersInput, lengthInput
+            chaptersInput, lengthInput, notesInput
           ];
-          const hasFieldData = fields.some(el => el && el.value);
+          const hasFieldData = fields.some(el => el && el.value)
+            || (volEl && String(volEl.value).trim() !== '' && String(volEl.value).trim() !== '1');
           const hasCharData = Array.from(charactersContainer.querySelectorAll('.character-row')).some(r =>
             Array.from(r.querySelectorAll('input, select')).some(el => el.value && el.value.trim() && el.value !== '不明')
           );
-          if (!hasFieldData && !hasCharData) {
+          const hasOutline = !!(currentOutline || currentBookTitle);
+          const hasNamePool = customNamePool.length > 0;
+          const hasSpecial = specialElementsContainer
+            && specialElementsContainer.querySelectorAll('.special-element-item.selected').length > 0;
+          const hasSeries = !!(storySeries && storySeries.totalVolumes > 1);
+          if (!hasFieldData && !hasCharData && !hasOutline && !hasNamePool && !hasSpecial && !hasSeries) {
             showStatus('info', '目前沒有可清除的模組設定');
             setTimeout(hideStatus, 2000);
             return;
           }
-          if (!confirm('確定要清除目前的模組設定嗎？\n\n將重置主題、背景、風格、進階設定與篇幅，並把人物清空為一位空白人物（特殊元素不受影響）。')) return;
+          if (!confirm('確定要清除目前的模組設定嗎？\n\n將重置主題、背景、風格、進階、篇幅、補充說明、大綱預覽、人名清單與特殊元素，並把人物清空為一位空白人物。\n\n已生成的小說正文會保留。')) return;
           fields.forEach(el => { if (el) el.value = ''; });
+          if (volEl) volEl.value = '1';
           quickTemplateSelect.value = '';
-          // 清空人物，只保留一位空白人物
+          if (specialElementsContainer) {
+            specialElementsContainer.querySelectorAll('.special-element-item.selected').forEach(item => {
+              item.classList.remove('selected');
+              const cb = item.querySelector('input[type="checkbox"]');
+              if (cb) cb.checked = false;
+            });
+          }
+          customNamePool = [];
+          updateNamePoolBtnBadge();
+          if (typeof renderNamePoolModal === 'function') renderNamePoolModal();
+          resetOutlineState();
+          storySeries = null;
+          seriesAborted = false;
+          try { localStorage.removeItem('storySeries'); } catch (e) {}
+          if (typeof renderSeriesBar === 'function') renderSeriesBar();
           charactersContainer.innerHTML = '';
           addCharacterRow(false);
           renderCharacterTabs();
           setActiveCharacter(0);
           saveSettingsToLocal();
-          showStatus('success', '已清除當前模組設定');
+          if (typeof updateStepper === 'function') updateStepper();
+          showStatus('success', '已清除模組設定與大綱預覽（小說正文已保留）');
           setTimeout(hideStatus, 2000);
         });
       }
@@ -9730,6 +9753,21 @@ ${currentOutline.slice(0, 1600)}
           outlineTitleText.textContent = '';
           outlineTitleBox.style.display = 'none';
         }
+      }
+
+      function resetOutlineState() {
+        currentOutline = null;
+        currentBookTitle = '';
+        showOutlineTitle('');
+        if (outlineLoading) outlineLoading.style.display = 'none';
+        if (outlineContent) {
+          outlineContent.innerHTML = '';
+          outlineContent.textContent = '';
+          outlineContent.style.display = 'none';
+        }
+        if (generateOutlineBtn) generateOutlineBtn.style.display = 'flex';
+        if (generateFromOutlineBtn) generateFromOutlineBtn.style.display = 'none';
+        if (regenerateOutlineBtn) regenerateOutlineBtn.style.display = 'none';
       }
 
       // 「換一個」：重新取名
