@@ -3,6 +3,24 @@
    （由 index.html 內嵌 <script> 抽離，採傳統 script 全域作用域）
    ============================================================ */
 
+      function getSiteBase() {
+        var path = location.pathname.replace(/\\/g, '/');
+        var low = path.toLowerCase();
+        var idx = low.indexOf('/novelgenerator');
+        if (idx >= 0) {
+          var base = path.substring(0, idx + '/NovelGenerator'.length);
+          return base.endsWith('/') ? base : base + '/';
+        }
+        if (path.endsWith('/')) return path;
+        var dir = path.replace(/\/[^/]*$/, '/');
+        return dir || '/';
+      }
+
+      (function fixReaderSiteLink() {
+        var link = document.getElementById('readerSiteLink');
+        if (link) link.href = getSiteBase() + 'reader/';
+      })();
+
       // ==================== 離線模式檢測 ====================
       const offlineBanner = document.getElementById('offlineBanner');
       let isOnline = navigator.onLine;
@@ -93,7 +111,8 @@
         }
 
         window.addEventListener('load', () => {
-          navigator.serviceWorker.register('sw.js')
+          var base = getSiteBase();
+          navigator.serviceWorker.register(base + 'sw.js', { scope: base })
             .then((reg) => {
               watchSwUpdate(reg);
               if (reg.waiting) promptSwUpdate(reg);
