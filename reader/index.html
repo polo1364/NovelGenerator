@@ -227,28 +227,37 @@ html.no-gh-sync .gh-sync-panel{display:none!important}
 .btn.active-task{box-shadow:0 0 0 2px var(--gold);animation:speakPulse 1.5s ease infinite}
 @keyframes speakPulse{0%,100%{opacity:1}50%{opacity:.75}}
 .speech-modal{
-  position:fixed;inset:0;z-index:210;display:flex;align-items:center;justify-content:center;
+  position:fixed;inset:0;z-index:500;display:flex;align-items:center;justify-content:center;
   padding:20px;background:rgba(0,0,0,.55);backdrop-filter:blur(6px);
   opacity:0;visibility:hidden;transition:opacity .25s var(--ease),visibility .25s;
 }
+body.speech-open{overflow:hidden}
+body.speech-open .topbar{visibility:hidden;pointer-events:none}
 .speech-modal.open{opacity:1;visibility:visible}
 .speech-modal-card{
   background:var(--bg-panel);color:var(--text);border:1px solid var(--border);
-  border-radius:18px;width:100%;max-width:560px;max-height:90vh;overflow:hidden;
+  border-radius:18px;width:100%;max-width:560px;max-height:min(90dvh,90vh);overflow:hidden;
   box-shadow:0 28px 80px rgba(0,0,0,.4);display:flex;flex-direction:column;
   transform:scale(.96) translateY(8px);transition:transform .3s var(--ease);
 }
 .speech-modal.open .speech-modal-card{transform:scale(1) translateY(0)}
 .speech-modal-head{
-  display:flex;align-items:center;justify-content:space-between;padding:16px 20px;
+  display:flex;align-items:center;justify-content:space-between;gap:12px;
+  padding:16px 20px;flex-shrink:0;
   background:linear-gradient(135deg,var(--accent),#7a3540);color:#fff;
 }
-.speech-modal-head h2{margin:0;font-size:1.05rem;font-weight:700}
-.speech-modal-close{
-  width:34px;height:34px;border:none;border-radius:50%;background:rgba(255,255,255,.2);
-  color:#fff;font-size:1rem;cursor:pointer;
+.speech-modal-head h2{margin:0;font-size:1.05rem;font-weight:700;flex:1;min-width:0}
+.speech-modal-head-actions{display:flex;align-items:center;gap:8px;flex-shrink:0}
+.speech-modal-done{
+  display:none;border:1px solid rgba(255,255,255,.45);background:rgba(255,255,255,.16);
+  color:#fff;border-radius:999px;padding:.45rem 1rem;font:inherit;font-size:.88rem;font-weight:600;cursor:pointer;
 }
-.speech-modal-body{padding:18px 20px 22px;overflow-y:auto}
+.speech-modal-close{
+  width:44px;height:44px;border:none;border-radius:50%;background:rgba(255,255,255,.22);
+  color:#fff;font-size:1.15rem;cursor:pointer;flex-shrink:0;
+  display:inline-flex;align-items:center;justify-content:center;touch-action:manipulation;
+}
+.speech-modal-body{padding:18px 20px 22px;overflow-y:auto;overflow-x:hidden;flex:1;min-height:0;-webkit-overflow-scrolling:touch}
 .speech-row{display:flex;align-items:center;gap:10px;margin-bottom:12px;flex-wrap:wrap}
 .speech-row>label{min-width:4.5rem;font-size:.84rem;color:var(--text-muted);flex-shrink:0}
 .speech-row select,.speech-row input[type=number]{flex:1;min-width:120px;padding:.45rem .65rem;border:1px solid var(--border);border-radius:10px;font:inherit;font-size:.84rem;background:var(--bg-panel);color:var(--text)}
@@ -358,8 +367,34 @@ html.no-gh-sync .gh-sync-panel{display:none!important}
   .book-detail-title{margin:0 0 8px;font-size:1.05rem}
   .book-detail-actions{justify-content:center;width:100%}
   .book-detail-actions .bd-btn{flex:1;min-width:0}
-  .speech-modal{padding:0;align-items:stretch}
-  .speech-modal-card{max-width:none;max-height:100dvh;border-radius:0;height:100%}
+  .speech-modal{align-items:flex-end;padding:0}
+  .speech-modal-card{
+    max-width:none;width:100%;height:auto;max-height:min(88dvh,calc(100dvh - var(--safe-top) - 8px));
+    border-radius:18px 18px 0 0;border-bottom:none;transform:translateY(100%);
+  }
+  .speech-modal.open .speech-modal-card{transform:translateY(0)}
+  .speech-modal-head{
+    position:relative;padding:14px 16px calc(12px + var(--safe-top));
+    padding-top:calc(22px + var(--safe-top));
+  }
+  .speech-modal-head::before{
+    content:'';position:absolute;top:calc(8px + var(--safe-top));left:50%;transform:translateX(-50%);
+    width:42px;height:4px;border-radius:999px;background:rgba(255,255,255,.35);
+  }
+  .speech-modal-done{display:inline-flex;align-items:center;justify-content:center;min-height:44px;padding:.5rem 1.15rem}
+  .speech-modal-close{display:none}
+  .speech-modal-body{padding:14px 16px 8px}
+  .speech-row{flex-direction:column;align-items:stretch;gap:6px;margin-bottom:14px}
+  .speech-row>label{min-width:0;font-size:.82rem}
+  .speech-row select,.speech-row input[type=number]{min-width:0;width:100%}
+  .speed-control{min-width:0;width:100%}
+  .speech-btns{
+    position:sticky;bottom:0;z-index:2;display:flex;flex-wrap:wrap;gap:8px;
+    margin:0 -16px -8px;padding:12px 16px calc(12px + var(--safe-bottom));
+    background:linear-gradient(180deg,transparent,var(--bg-panel) 24%);border-top:1px solid var(--border);
+  }
+  .speech-btns .btn{flex:1;min-width:calc(50% - 4px);min-height:2.85rem;font-size:.88rem}
+  .speech-nav{margin-bottom:10px}
   .import-body{padding:0 1rem 1rem}
   .import-toggle{padding:.75rem 1rem;font-size:.86rem}
   .toast{bottom:calc(1.25rem + var(--safe-bottom));max-width:calc(100vw - 2rem);text-align:center;font-size:.82rem}
@@ -515,7 +550,10 @@ html.no-gh-sync .gh-sync-panel{display:none!important}
   <div class="speech-modal-card">
     <div class="speech-modal-head">
       <h2>🎙️ 朗讀控制</h2>
-      <button type="button" class="speech-modal-close" id="closeSpeechModal" aria-label="關閉">✕</button>
+      <div class="speech-modal-head-actions">
+        <button type="button" class="speech-modal-done" id="doneSpeechModal">完成</button>
+        <button type="button" class="speech-modal-close" id="closeSpeechModal" aria-label="關閉">✕</button>
+      </div>
     </div>
     <div class="speech-modal-body">
       <div class="speech-row">
@@ -1480,9 +1518,20 @@ html.no-gh-sync .gh-sync-panel{display:none!important}
     speechInit = true;
   }
 
+  function setSpeechModalOpen(open) {
+    if (!els.speechModal) return;
+    els.speechModal.classList.toggle('open', !!open);
+    document.body.classList.toggle('speech-open', !!open);
+  }
+
+  function closeSpeechPanel() {
+    setSpeechModalOpen(false);
+    if (isSpeaking && api && api.toast) api.toast('🔊 朗讀繼續中…');
+  }
+
   function bindEvents() {
     els.speakBtn.addEventListener('click', async function () {
-      els.speechModal.classList.add('open');
+      setSpeechModalOpen(true);
       if (!speechInit) await loadVoices();
       updateSegmentInputs();
       updateSpeechNav();
@@ -1494,16 +1543,11 @@ html.no-gh-sync .gh-sync-panel{display:none!important}
       }
     });
 
-    els.closeSpeechModal.addEventListener('click', function () {
-      els.speechModal.classList.remove('open');
-      if (isSpeaking && api.toast) api.toast('🔊 朗讀繼續中…');
-    });
+    els.closeSpeechModal.addEventListener('click', closeSpeechPanel);
+    if (els.doneSpeechModal) els.doneSpeechModal.addEventListener('click', closeSpeechPanel);
 
     els.speechModal.addEventListener('click', function (e) {
-      if (e.target === els.speechModal) {
-        els.speechModal.classList.remove('open');
-        if (isSpeaking && api.toast) api.toast('🔊 朗讀繼續中…');
-      }
+      if (e.target === els.speechModal) closeSpeechPanel();
     });
 
     els.playPauseBtn.addEventListener('click', toggleSpeech);
@@ -1584,7 +1628,7 @@ html.no-gh-sync .gh-sync-panel{display:none!important}
 
     document.addEventListener('keydown', function (e) {
       if (e.key === 'Escape' && els.speechModal.classList.contains('open')) {
-        els.speechModal.classList.remove('open');
+        closeSpeechPanel();
       }
     });
   }
@@ -1593,6 +1637,7 @@ html.no-gh-sync .gh-sync-panel{display:none!important}
     els.speakBtn = $('speakBtn');
     els.speechModal = $('speechModal');
     els.closeSpeechModal = $('closeSpeechModal');
+    els.doneSpeechModal = $('doneSpeechModal');
     els.voiceSelect = $('voiceSelect');
     els.speechRate = $('speechRate');
     els.speechPitch = $('speechPitch');
@@ -1636,7 +1681,7 @@ html.no-gh-sync .gh-sync-panel{display:none!important}
 
   global.readerSpeechOnLeaveReader = function () {
     if (isSpeaking) stopSpeech(true);
-    els.speechModal && els.speechModal.classList.remove('open');
+    setSpeechModalOpen(false);
   };
 
   global.readerSpeechSetVisible = function (visible) {
