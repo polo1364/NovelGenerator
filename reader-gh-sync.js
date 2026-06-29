@@ -11,6 +11,17 @@
   var AUTO_SYNC_KEY = 'novelReader.ghAutoSync';
   var REMOTE_VER_KEY = 'novelReader.remoteVer.';
 
+  function isLocalEnvironment() {
+    if (location.protocol === 'file:') return true;
+    var h = location.hostname;
+    return h === 'localhost' || h === '127.0.0.1';
+  }
+
+  /** 上傳 UI 僅本機顯示；GitHub Pages 訪客只讀拉取 */
+  if (!isLocalEnvironment()) {
+    document.documentElement.classList.add('no-gh-sync');
+  }
+
   function getBasePath() {
     var path = location.pathname.replace(/\\/g, '/');
     var low = path.toLowerCase();
@@ -178,6 +189,11 @@
   }
 
   function bindUi(api) {
+    var panel = document.querySelector('.gh-sync-panel');
+    if (!isLocalEnvironment()) {
+      if (panel) panel.hidden = true;
+      return;
+    }
     var tokenEl = document.getElementById('ghToken');
     var autoEl = document.getElementById('ghAutoSync');
     var pullBtn = document.getElementById('ghPullBtn');
@@ -252,6 +268,7 @@
   }
 
   global.NovelGhSync = {
+    isLocalEnvironment: isLocalEnvironment,
     getBasePath: getBasePath,
     getToken: getToken,
     setToken: setToken,
@@ -264,6 +281,7 @@
     pullRemote: pullRemote,
     bindUi: bindUi,
     maybeAutoSync: function (api) {
+      if (!isLocalEnvironment()) return Promise.resolve();
       var tokenEl = document.getElementById('ghToken');
       saveTokenFromInput(tokenEl);
       if (!getAutoSync() || !getToken()) return Promise.resolve();
