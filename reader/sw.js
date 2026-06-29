@@ -1,5 +1,5 @@
 /* 小說閱讀站 — Service Worker（離線閱讀殼層） */
-const CACHE_VERSION = 'reader-v2';
+const CACHE_VERSION = 'reader-v3';
 const CACHE_NAME = 'novel-reader-' + CACHE_VERSION;
 
 const APP_SHELL = [
@@ -9,6 +9,7 @@ const APP_SHELL = [
   './gh-sync.js',
   './icons/icon-192.png',
   './icons/icon-512.png',
+  './icons/icon-512-maskable.png',
   './icons/apple-touch-icon.png'
 ];
 
