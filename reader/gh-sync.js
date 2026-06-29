@@ -31,8 +31,13 @@
       return base.endsWith('/') ? base : base + '/';
     }
     if (location.protocol === 'file:') {
+      if (/\/reader(\/|$)/i.test(path)) return '../';
       var dir = path.replace(/\/[^/]*$/, '/');
       return dir;
+    }
+    if (/\/reader(\/|$)/i.test(path)) {
+      var root = path.replace(/\/reader(\/.*)?$/i, '/');
+      return root.endsWith('/') ? root : root + '/';
     }
     return '/';
   }

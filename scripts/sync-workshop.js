@@ -1,10 +1,12 @@
-/** 將 public/ 同步到 workshop/，供 GitHub Pages 靜態部署 */
+/** 將 public/ 同步到根目錄（GitHub Pages 工坊） */
 const fs = require('fs');
 const path = require('path');
 
 const root = path.join(__dirname, '..');
 const src = path.join(root, 'public');
-const dest = path.join(root, 'workshop');
+
+const COPY_DIRS = ['css', 'js', 'icons', 'assets'];
+const COPY_FILES = ['manifest.webmanifest', 'sw.js'];
 
 function copyDir(from, to) {
   fs.mkdirSync(to, { recursive: true });
@@ -20,6 +22,20 @@ if (!fs.existsSync(src)) {
   console.error('public/ not found');
   process.exit(1);
 }
-if (fs.existsSync(dest)) fs.rmSync(dest, { recursive: true, force: true });
-copyDir(src, dest);
-console.log('Synced public/ → workshop/');
+
+for (const dir of COPY_DIRS) {
+  const from = path.join(src, dir);
+  if (fs.existsSync(from)) {
+    copyDir(from, path.join(root, dir));
+  }
+}
+
+for (const file of COPY_FILES) {
+  const from = path.join(src, file);
+  if (fs.existsSync(from)) {
+    fs.copyFileSync(from, path.join(root, file));
+  }
+}
+
+fs.copyFileSync(path.join(src, 'index.html'), path.join(root, 'index.html'));
+console.log('Synced public/ → root (workshop at /)');

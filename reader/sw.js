@@ -1,29 +1,29 @@
 /* 小說閱讀站 — Service Worker（離線閱讀殼層） */
-const CACHE_VERSION = 'reader-v1';
+const CACHE_VERSION = 'reader-v2';
 const CACHE_NAME = 'novel-reader-' + CACHE_VERSION;
 
 const APP_SHELL = [
   './',
   './index.html',
-  './reader-manifest.webmanifest',
-  './reader-gh-sync.js',
-  './reader-icons/icon-192.png',
-  './reader-icons/icon-512.png',
-  './reader-icons/apple-touch-icon.png'
+  './manifest.webmanifest',
+  './gh-sync.js',
+  './icons/icon-192.png',
+  './icons/icon-512.png',
+  './icons/apple-touch-icon.png'
 ];
 
 function isMutable(pathname) {
   if (pathname === '/' || pathname.endsWith('/')) return true;
   if (pathname.endsWith('.html')) return true;
   if (pathname.endsWith('.webmanifest')) return true;
-  if (pathname.endsWith('reader-sw.js')) return true;
-  if (pathname.endsWith('reader-gh-sync.js')) return true;
+  if (pathname.endsWith('/sw.js')) return true;
+  if (pathname.endsWith('/gh-sync.js')) return true;
   if (pathname.endsWith('/novels/manifest.json')) return true;
   return false;
 }
 
 function isStatic(pathname) {
-  if (pathname.includes('/reader-icons/')) return true;
+  if (pathname.includes('/reader/icons/') || pathname.includes('/icons/')) return true;
   if (pathname.endsWith('.png') || pathname.endsWith('.webp')) return true;
   return false;
 }

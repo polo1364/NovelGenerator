@@ -20,9 +20,11 @@ const DEEPSEEK_URL = process.env.DEEPSEEK_URL || 'https://api.deepseek.com/chat/
 // 故事 prompt 可能很長，放寬 JSON body 上限
 app.use(express.json({ limit: '8mb' }));
 
-// 小說閱讀站（根目錄）
+// 根目錄 = AI 小說工坊；/reader/ = 小說閱讀站
 const ROOT = __dirname;
 const NOVELS_DIR = path.join(ROOT, 'novels');
+const READER_DIR = path.join(ROOT, 'reader');
+const PUBLIC_DIR = path.join(__dirname, 'public');
 
 app.get('/', (req, res) => {
   res.sendFile(path.join(ROOT, 'index.html'));
@@ -32,46 +34,34 @@ app.get('/index.html', (req, res) => {
   res.sendFile(path.join(ROOT, 'index.html'));
 });
 
-app.get('/reader.js', (req, res) => {
-  res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
-  res.sendFile(path.join(ROOT, 'reader.js'));
+app.get('/reader', (req, res) => {
+  res.redirect('/reader/');
 });
 
-app.get('/reader.css', (req, res) => {
-  res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
-  res.sendFile(path.join(ROOT, 'reader.css'));
+app.get('/reader/', (req, res) => {
+  res.sendFile(path.join(READER_DIR, 'index.html'));
+});
+
+app.use('/reader', express.static(READER_DIR, {
+  setHeaders(res, filePath) {
+    if (/\.(html|js|css|webmanifest)$/.test(filePath)) {
+      res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
+    }
+  },
+}));
+
+app.get('/workshop', (req, res) => {
+  res.redirect('/');
+});
+
+app.get('/workshop/', (req, res) => {
+  res.redirect('/');
 });
 
 app.get('/edge-tts-speech.js', (req, res) => {
   res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
-  res.sendFile(path.join(ROOT, 'public/js/edge-tts-speech.js'));
+  res.sendFile(path.join(PUBLIC_DIR, 'js', 'edge-tts-speech.js'));
 });
-
-app.get('/reader-speech.js', (req, res) => {
-  res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
-  res.sendFile(path.join(ROOT, 'reader-speech.js'));
-});
-
-app.get('/reader-gh-sync.js', (req, res) => {
-  res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
-  res.sendFile(path.join(ROOT, 'reader-gh-sync.js'));
-});
-
-app.get('/reader-manifest.webmanifest', (req, res) => {
-  res.setHeader('Content-Type', 'application/manifest+json');
-  res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
-  res.sendFile(path.join(ROOT, 'reader-manifest.webmanifest'));
-});
-
-app.get('/reader-sw.js', (req, res) => {
-  res.setHeader('Content-Type', 'application/javascript');
-  res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
-  res.sendFile(path.join(ROOT, 'reader-sw.js'));
-});
-
-app.use('/reader-icons', express.static(path.join(ROOT, 'reader-icons'), {
-  maxAge: '7d'
-}));
 
 app.use('/novels', express.static(NOVELS_DIR));
 
@@ -107,17 +97,8 @@ app.use('/LineNote', express.static(path.join(__dirname, 'LineNote'), {
   },
 }));
 
-// AI 小說工坊（原 public/，改掛 /workshop）
-app.use('/workshop', express.static(path.join(__dirname, 'public'), {
-  setHeaders(res, filePath) {
-    if (/\.(html|js|css|webmanifest)$/.test(filePath)) {
-      res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
-    }
-  },
-}));
-
-// 保留舊路徑：/css、/js 等仍可直接存取（書籤相容）
-app.use(express.static(path.join(__dirname, 'public'), {
+// AI 小說工坊靜態資源（css、js、icons 等，根目錄 index.html 引用）
+app.use(express.static(PUBLIC_DIR, {
   setHeaders(res, filePath) {
     if (/\.(html|js|css|webmanifest)$/.test(filePath)) {
       res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
@@ -284,8 +265,8 @@ app.post('/api/analyze-roles/stream', async (req, res) => {
 });
 
 app.listen(PORT, () => {
-  console.log(`📖 小說閱讀站： http://localhost:${PORT}/`);
-  console.log(`🛠️  AI 小說工坊： http://localhost:${PORT}/workshop/`);
+  console.log(`🛠️  AI 小說工坊： http://localhost:${PORT}/`);
+  console.log(`📖 小說閱讀站： http://localhost:${PORT}/reader/`);
   console.log(`📒 LINE 記事本：  http://localhost:${PORT}/LineNote/`);
   if (!process.env.DEEPSEEK_API_KEY) {
     console.warn('⚠️  尚未設定 DEEPSEEK_API_KEY，/api/chat 將回傳 500。請在 .env 設定金鑰。');
