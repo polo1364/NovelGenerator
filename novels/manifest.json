@@ -1,10 +1,17 @@
 {
   "novels": [
     {
+      "id": "s_1782746980800_wnefaa",
+      "title": "業火糖心",
+      "file": "業火糖心.txt",
+      "updatedAt": 1782747033585,
+      "volumes": 1
+    },
+    {
       "id": "s_1782735181728_z513tw",
       "title": "血月獻祭",
       "file": "血月獻祭_全系列.txt",
-      "updatedAt": 1782746523770,
+      "updatedAt": 1782747036101,
       "volumes": 2
     }
   ]
