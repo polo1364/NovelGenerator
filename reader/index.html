@@ -1144,6 +1144,8 @@ body.speech-open .topbar{visibility:hidden;pointer-events:none}
   var edgeAudioUrl = null;
   var edgeAbort = null;
   var edgeSession = 0;
+  var audioCtx = null;
+  var edgeSource = null;
   var speechStartOffset = 0;
   var speechLogicalTotal = 0;
   var lastShownLogicalNum = -1;
@@ -1388,7 +1390,38 @@ body.speech-open .topbar{visibility:hidden;pointer-events:none}
     els._pendingSpeechResume = null;
   }
 
+  // 行動裝置（iOS/Android）對非手勢觸發的連續 HTMLAudio 播放限制嚴格，
+  // 改用 Web Audio：在使用者手勢中解鎖一次 AudioContext，之後即可連續播放解碼後的 buffer。
+  function ensureAudioCtx() {
+    try {
+      if (!audioCtx) {
+        var AC = window.AudioContext || window.webkitAudioContext;
+        if (AC) audioCtx = new AC();
+      }
+      if (audioCtx && audioCtx.state === 'suspended' && audioCtx.resume) {
+        audioCtx.resume();
+      }
+    } catch (e) { /* ignore */ }
+    return audioCtx;
+  }
+
+  function decodeAudio(ctx, arrbuf) {
+    return new Promise(function (resolve, reject) {
+      var p;
+      try {
+        p = ctx.decodeAudioData(arrbuf, resolve, reject);
+      } catch (e) { reject(e); return; }
+      if (p && p.then) p.then(resolve, reject);
+    });
+  }
+
   function stopEdgeAudio() {
+    if (edgeSource) {
+      try { edgeSource.onended = null; } catch (e) { /* ignore */ }
+      try { edgeSource.stop(0); } catch (e) { /* ignore */ }
+      try { edgeSource.disconnect(); } catch (e) { /* ignore */ }
+      edgeSource = null;
+    }
     if (edgeAudio) {
       edgeAudio.onended = null;
       edgeAudio.onerror = null;
@@ -1603,9 +1636,47 @@ body.speech-open .topbar{visibility:hidden;pointer-events:none}
       });
       if (!isSpeaking || session !== edgeSession) return;
 
+      // 優先使用 Web Audio（行動裝置上 HTMLAudio 連續播放常被自動播放政策阻擋）
+      var ctx = ensureAudioCtx();
+      if (ctx) {
+        var decoded = null;
+        try {
+          decoded = await decodeAudio(ctx, buf.slice(0));
+        } catch (decErr) { decoded = null; }
+        if (!isSpeaking || session !== edgeSession) return;
+        if (decoded) {
+          if (ctx.state === 'suspended') { try { await ctx.resume(); } catch (e) { /* ignore */ } }
+          if (!isSpeaking || session !== edgeSession) return;
+          if (ctx.state === 'suspended') {
+            isPaused = true;
+            els.playPauseBtn.textContent = '▶️ 繼續朗讀';
+            els.speechProgressText.textContent = '⚠️ 請點「繼續朗讀」以開始播放';
+            return;
+          }
+          var src = ctx.createBufferSource();
+          src.buffer = decoded;
+          src.connect(ctx.destination);
+          edgeSource = src;
+          src.onended = function () {
+            if (edgeSource !== src) return;
+            edgeSource = null;
+            if (isSpeaking && !isPaused) {
+              setTimeout(function () { speakSegment(findNextQueueIdx(index)); }, pause);
+            }
+          };
+          els.speechProgressText.textContent = formatSegmentProgressText(index, '正在朗讀');
+          try {
+            src.start(0);
+          } catch (startErr) {
+            edgeSource = null;
+            throw startErr;
+          }
+          return;
+        }
+      }
+
+      // 後備：HTMLAudioElement（重用同一個已解鎖的元素）
       edgeAudioUrl = URL.createObjectURL(new Blob([buf], { type: 'audio/mpeg' }));
-      // 重複使用同一個（已被使用者手勢解鎖的）音訊元素，避免每段都 new Audio()
-      // 導致超過瀏覽器暫時授權視窗後被自動播放政策阻擋
       if (!edgeAudio) edgeAudio = new Audio();
       edgeAudio.onended = function () {
         stopEdgeAudio();
@@ -1723,6 +1794,7 @@ body.speech-open .topbar{visibility:hidden;pointer-events:none}
 
   function resumeSpeechFromSaved(saved) {
     if (!saved) return;
+    ensureAudioCtx();
     applySavedSpeechSettings(saved);
     if (saved.scope && els.speechScope) els.speechScope.value = saved.scope;
     if (saved.scope === 'chapter') {
@@ -1780,8 +1852,9 @@ body.speech-open .topbar{visibility:hidden;pointer-events:none}
 
     if (isSpeaking) {
       if (!isPaused) {
-        edgeAudio && edgeAudio.pause();
         isPaused = true;
+        if (audioCtx && audioCtx.suspend) { try { audioCtx.suspend(); } catch (e) { /* ignore */ } }
+        if (edgeAudio) { try { edgeAudio.pause(); } catch (e) { /* ignore */ } }
         saveSpeechProgress();
         els.playPauseBtn.textContent = '▶️ 繼續朗讀';
         els.speechProgressText.textContent = '⏸️ 已暫停';
@@ -1789,7 +1862,9 @@ body.speech-open .topbar{visibility:hidden;pointer-events:none}
         isPaused = false;
         els.playPauseBtn.textContent = '⏸️ 暫停';
         els.speechProgressText.textContent = formatSegmentProgressText(currentIdx, '正在朗讀');
-        if (edgeAudio) {
+        if (edgeSource && audioCtx) {
+          if (audioCtx.state === 'suspended') audioCtx.resume();
+        } else if (edgeAudio && edgeAudio.src && !edgeAudio.ended) {
           edgeAudio.play().catch(function () { speakSegment(currentIdx); });
         } else {
           speakSegment(currentIdx);
@@ -1821,6 +1896,7 @@ body.speech-open .topbar{visibility:hidden;pointer-events:none}
 
   function prevSegment() {
     if (!isSpeaking) return;
+    ensureAudioCtx();
     var target = findPrevLogicalQueueIdx(currentIdx);
     if (target === currentIdx && currentIdx <= 0) return;
     stopEdgePlaybackOnly();
@@ -1830,6 +1906,7 @@ body.speech-open .topbar{visibility:hidden;pointer-events:none}
 
   function nextSegment() {
     if (!isSpeaking) return;
+    ensureAudioCtx();
     var target = findNextLogicalQueueIdx(currentIdx);
     if (target >= speechQueue.length) return;
     stopEdgePlaybackOnly();
@@ -1863,6 +1940,7 @@ body.speech-open .topbar{visibility:hidden;pointer-events:none}
 
   function bindEvents() {
     els.speakBtn.addEventListener('click', async function () {
+      ensureAudioCtx();
       setSpeechModalOpen(true);
       if (!speechInit) await loadVoices();
       syncSpeechScopeUi();
@@ -1883,7 +1961,7 @@ body.speech-open .topbar{visibility:hidden;pointer-events:none}
       if (e.target === els.speechModal) closeSpeechPanel();
     });
 
-    els.playPauseBtn.addEventListener('click', function () { toggleSpeech(); });
+    els.playPauseBtn.addEventListener('click', function () { ensureAudioCtx(); toggleSpeech(); });
     els.stopSpeechBtn.addEventListener('click', function () { stopSpeech(); });
     els.resetSpeechBtn.addEventListener('click', resetSpeech);
     els.prevSegmentBtn.addEventListener('click', prevSegment);
