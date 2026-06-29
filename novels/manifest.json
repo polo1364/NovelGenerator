@@ -1,11 +1,11 @@
 {
   "novels": [
     {
-      "id": "sample",
-      "title": "範例小說（請替換）",
-      "file": "sample.txt",
-      "author": "",
-      "desc": "將從 AI 小說工坊匯出的 .txt 放到 novels 資料夾，並在此登記"
+      "id": "s_1782735181728_z513tw",
+      "title": "血月獻祭",
+      "file": "血月獻祭_全系列.txt",
+      "updatedAt": 1782737332040,
+      "volumes": 2
     }
   ]
 }
