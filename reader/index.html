@@ -1420,20 +1420,28 @@ body.speech-open .topbar{visibility:hidden;pointer-events:none}
     if (!item || item.sourceSegmentIndex == null) return;
     var globalSegIdx = item.sourceSegmentIndex + speechStartOffset;
     var loc = segmentMeta[globalSegIdx];
-    if (loc && api.navigateToChapter) {
+    var pi = loc ? loc.paraIdx : segmentParaMap[globalSegIdx];
+    if (pi == null) return;
+
+    var needNav = false;
+    if (loc && api.navigateToChapter && getSpeechScope() !== 'chapter') {
+      var curV = api.getVolumeIdx ? api.getVolumeIdx() : 0;
+      var curC = api.getChapterIdx ? api.getChapterIdx() : 0;
+      needNav = loc.volumeIdx !== curV || loc.chapterIdx !== curC;
+    }
+    if (needNav) {
       api.navigateToChapter(loc.volumeIdx, loc.chapterIdx, { keepSpeech: true });
-    } else {
-      var pi = segmentParaMap[globalSegIdx];
-      if (pi == null) return;
-      if (api.highlightParagraph) api.highlightParagraph(pi);
-      if (els.autoScrollCheck && els.autoScrollCheck.checked && api.scrollToParagraph) {
-        setTimeout(function () { api.scrollToParagraph(pi); }, 50);
-      }
+      setTimeout(function () {
+        if (api.highlightParagraph) api.highlightParagraph(loc.paraIdx);
+        if (els.autoScrollCheck && els.autoScrollCheck.checked && api.scrollToParagraph) {
+          api.scrollToParagraph(loc.paraIdx);
+        }
+      }, 80);
       return;
     }
-    if (loc.paraIdx != null && api.highlightParagraph) api.highlightParagraph(loc.paraIdx);
+    if (api.highlightParagraph) api.highlightParagraph(pi);
     if (els.autoScrollCheck && els.autoScrollCheck.checked && api.scrollToParagraph) {
-      setTimeout(function () { api.scrollToParagraph(loc.paraIdx); }, 80);
+      setTimeout(function () { api.scrollToParagraph(pi); }, 50);
     }
   }
 
@@ -1703,9 +1711,7 @@ body.speech-open .topbar{visibility:hidden;pointer-events:none}
       return;
     }
 
-    if (els._pendingSpeechResume && els._pendingSpeechResume.segmentIndex > 0) {
-      return;
-    }
+    hideSpeechResumeBanner();
 
     if (!buildSpeechQueueFromScope(null, null)) {
       if (api.toast) api.toast('沒有可朗讀的內容');
@@ -1713,7 +1719,6 @@ body.speech-open .topbar{visibility:hidden;pointer-events:none}
     }
 
     currentIdx = 0;
-    hideSpeechResumeBanner();
     beginSpeechAtIndex(0);
   }
 
