@@ -263,7 +263,7 @@
               <label>主要人物設定</label>
               <div style="display: flex; gap: 8px; flex-wrap: wrap;">
                 <button id="aiGenerateCharactersBtn" type="button" class="btn-outline btn-small" title="依你目前的人物列數量，呼叫 AI 完整設計一組彼此關聯、貼合劇情的角色，所有欄位一次生成好供你微調（會覆蓋現有內容，覆蓋前會先詢問；想要幾位就先用「+ 新增人物」調整列數）">✨ AI 設計角色群</button>
-                <button id="namePoolBtn" type="button" class="btn-outline btn-small" title="管理自訂人名清單；勾選的名字供 AI 設計角色群時挑選">📋 人名清單</button>
+                <button id="namePoolBtn" type="button" class="btn-outline btn-small" title="管理自訂人名清單；勾選的名字供 AI 挑選（不必依順序）">📋 人名清單</button>
                 <button id="randomAllCharactersBtn" type="button" class="btn-outline btn-small" title="不參考故事設定，純從內建詞庫隨機抽選，把目前每一列重新填滿（免費、瞬間完成）">🎲 隨機湊組</button>
                 <button id="addCharacterBtn" type="button" class="btn-outline btn-small" title="新增一位空白人物">+ 新增人物</button>
               </div>
@@ -915,7 +915,7 @@
           <button id="closeNamePoolModal" type="button" class="modal-close">✕</button>
         </div>
         <div class="modal-body">
-          <p class="name-pool-hint">自行新增人名與性別；<strong>勾選</strong>代表 AI 設計角色群／補完人物時，姓名必須從勾選清單中挑選。</p>
+          <p class="name-pool-hint">自行新增人名與性別；<strong>勾選</strong>代表 AI 可從清單中挑選姓名（不必依清單順序，依角色性別與定位合理配對即可）。</p>
           <div class="name-pool-add">
             <input type="text" id="namePoolInput" placeholder="姓名" maxlength="24" autocomplete="off" />
             <select id="namePoolGender">

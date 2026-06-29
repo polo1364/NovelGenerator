@@ -3023,6 +3023,15 @@
         return pool.map(e => ({ name: e.name, gender: e.gender }));
       }
 
+      function shuffleArray(arr) {
+        const a = arr.slice();
+        for (let i = a.length - 1; i > 0; i--) {
+          const j = Math.floor(Math.random() * (i + 1));
+          [a[i], a[j]] = [a[j], a[i]];
+        }
+        return a;
+      }
+
       function getNamePoolPromptBlock(count, genderFilter) {
         const pool = getSelectedNamePool(genderFilter);
         if (!pool.length) return '';
@@ -3032,12 +3041,13 @@
           byGender[g].push(e.name);
         });
         const lines = [];
-        if (byGender['男'].length) lines.push(`男：${byGender['男'].join('、')}`);
-        if (byGender['女'].length) lines.push(`女：${byGender['女'].join('、')}`);
-        if (byGender['不明'].length) lines.push(`不明：${byGender['不明'].join('、')}`);
-        return `\n使用者指定的「優先姓名清單」（共 ${pool.length} 個，優先於自由取名）：
+        if (byGender['男'].length) lines.push(`男：${shuffleArray(byGender['男']).join('、')}`);
+        if (byGender['女'].length) lines.push(`女：${shuffleArray(byGender['女']).join('、')}`);
+        if (byGender['不明'].length) lines.push(`不明：${shuffleArray(byGender['不明']).join('、')}`);
+        return `\n使用者指定的「優先姓名清單」（共 ${pool.length} 個，優先於自由取名；清單順序已打亂，僅供參考）：
   ${lines.join('；')}
 - 需設計 ${count} 位人物：請「優先」從上述清單挑選姓名（不可改字、不可重複使用同一個名字），依各角色 gender/role 合理對應。
+- 不必依清單列出的順序使用；可任意打亂配對，以劇情與性別／定位合適為準。
 - 清單只有 ${pool.length} 個名字；若人物數多於清單，用完後其餘人物再依上述「姓名硬性規則」自行取合適的真實人名（不要重複清單已用過的名字）。`;
       }
 
@@ -3051,14 +3061,15 @@
           byGender[g].push(e.name);
         });
         const lines = [];
-        if (byGender['男'].length) lines.push(`男：${byGender['男'].join('、')}`);
-        if (byGender['女'].length) lines.push(`女：${byGender['女'].join('、')}`);
-        if (byGender['不明'].length) lines.push(`不明：${byGender['不明'].join('、')}`);
+        if (byGender['男'].length) lines.push(`男：${shuffleArray(byGender['男']).join('、')}`);
+        if (byGender['女'].length) lines.push(`女：${shuffleArray(byGender['女']).join('、')}`);
+        if (byGender['不明'].length) lines.push(`不明：${shuffleArray(byGender['不明']).join('、')}`);
         return `【姓名清單與取名規則（★必須遵守★）】
-使用者指定的「優先姓名清單」（共 ${pool.length} 個）：
+使用者指定的「優先姓名清單」（共 ${pool.length} 個；清單順序已打亂，僅供參考）：
 ${lines.join('\n')}
 • 已在【登場人物】指定姓名的角色，沿用其既有姓名。
 • 其餘需要命名的角色，請「優先」依性別從上述清單挑選（不可改字、不可重複使用同一個名字）。
+• 不必依清單列出的順序使用；可任意打亂配對，以角色性別、身分與劇情需要為準。
 • 清單只有 ${pool.length} 個名字；當角色數多於清單時，用完清單後，其餘角色由你依故事背景「自行取合適的真實人名」（不要硬湊、不要重複清單已用過的名字）。
 • 自行取名時，務必遵守下列姓名規則：
 ${getCharacterNamingRules(setting)}
