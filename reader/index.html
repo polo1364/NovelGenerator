@@ -1392,9 +1392,7 @@ body.speech-open .topbar{visibility:hidden;pointer-events:none}
     if (edgeAudio) {
       edgeAudio.onended = null;
       edgeAudio.onerror = null;
-      edgeAudio.pause();
-      edgeAudio.src = '';
-      edgeAudio = null;
+      try { edgeAudio.pause(); } catch (e) { /* ignore */ }
     }
     if (edgeAudioUrl) {
       URL.revokeObjectURL(edgeAudioUrl);
@@ -1606,7 +1604,9 @@ body.speech-open .topbar{visibility:hidden;pointer-events:none}
       if (!isSpeaking || session !== edgeSession) return;
 
       edgeAudioUrl = URL.createObjectURL(new Blob([buf], { type: 'audio/mpeg' }));
-      edgeAudio = new Audio(edgeAudioUrl);
+      // 重複使用同一個（已被使用者手勢解鎖的）音訊元素，避免每段都 new Audio()
+      // 導致超過瀏覽器暫時授權視窗後被自動播放政策阻擋
+      if (!edgeAudio) edgeAudio = new Audio();
       edgeAudio.onended = function () {
         stopEdgeAudio();
         if (isSpeaking && !isPaused) {
@@ -1619,8 +1619,20 @@ body.speech-open .topbar{visibility:hidden;pointer-events:none}
           setTimeout(function () { speakSegment(findNextQueueIdx(index)); }, 100);
         }
       };
+      edgeAudio.src = edgeAudioUrl;
       els.speechProgressText.textContent = formatSegmentProgressText(index, '正在朗讀');
-      await edgeAudio.play();
+      try {
+        await edgeAudio.play();
+      } catch (playErr) {
+        if (playErr && playErr.name === 'AbortError') return;
+        if (playErr && playErr.name === 'NotAllowedError') {
+          isPaused = true;
+          els.playPauseBtn.textContent = '▶️ 繼續朗讀';
+          els.speechProgressText.textContent = '⚠️ 瀏覽器阻擋自動播放，請點「繼續朗讀」';
+          return;
+        }
+        throw playErr;
+      }
     } catch (err) {
       if (err && err.name === 'AbortError') return;
       console.warn('Edge 朗讀失敗:', err);

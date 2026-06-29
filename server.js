@@ -36,8 +36,10 @@ app.get('/index.html', (req, res) => {
   res.sendFile(path.join(PUBLIC_DIR, 'index.html'));
 });
 
-app.get('/reader', (req, res) => {
-  res.redirect('/reader/');
+app.get('/reader', (req, res, next) => {
+  // 非嚴格路由下 '/reader' 也會匹配 '/reader/'，需排除以免無限轉址
+  if (req.path === '/reader') return res.redirect('/reader/');
+  return next();
 });
 
 app.get('/reader/', (req, res) => {
