@@ -262,6 +262,20 @@ body.speech-open .topbar{visibility:hidden;pointer-events:none}
 .speech-row>label{min-width:4.5rem;font-size:.84rem;color:var(--text-muted);flex-shrink:0}
 .speech-row select,.speech-row input[type=number]{flex:1;min-width:120px;padding:.45rem .65rem;border:1px solid var(--border);border-radius:10px;font:inherit;font-size:.84rem;background:var(--bg-panel);color:var(--text)}
 .speech-hint{font-size:.78rem;color:var(--text-muted);margin:-6px 0 10px}
+.speech-resume-banner{
+  display:flex;flex-wrap:wrap;align-items:center;gap:8px;margin:0 0 12px;padding:10px 12px;
+  border-radius:10px;background:var(--gold-soft);border:1px solid var(--border);font-size:.82rem;
+}
+.speech-resume-banner[hidden]{display:none!important}
+.speech-resume-banner .btn{font-size:.78rem;padding:.35rem .75rem}
+.speech-scope-segment.hidden{display:none!important}
+.book-spine-has-mark::after{
+  content:'';position:absolute;top:6px;right:4px;width:7px;height:7px;border-radius:50%;
+  background:#ffe9b8;box-shadow:0 0 0 2px rgba(0,0,0,.35);
+}
+.book-spine-has-speech::before{
+  content:'🔊';position:absolute;top:4px;left:2px;font-size:.55rem;z-index:2;opacity:.95;
+}
 .speed-control{display:flex;align-items:center;gap:8px;flex:1;min-width:180px}
 .speed-control input[type=range]{flex:1;accent-color:var(--accent)}
 .speed-btn{width:30px;height:30px;border:1px solid var(--border);border-radius:8px;background:var(--bg-panel);cursor:pointer;font-weight:700}
@@ -541,6 +555,7 @@ body.speech-open .topbar{visibility:hidden;pointer-events:none}
       <div class="book-detail-preview" id="bookDetailPreview"></div>
       <div class="book-detail-actions">
         <button type="button" class="bd-btn bd-btn-primary" id="bookDetailRead">📖 閱讀</button>
+        <button type="button" class="bd-btn" id="bookDetailResumeSpeech" hidden>🔊 繼續朗讀</button>
         <button type="button" class="bd-btn bd-btn-danger" id="bookDetailDelete">🗑 刪除</button>
       </div>
     </div>
@@ -593,6 +608,14 @@ body.speech-open .topbar{visibility:hidden;pointer-events:none}
       </div>
       <div class="speech-row">
         <label>朗讀範圍</label>
+        <select id="speechScope">
+          <option value="chapter">本章</option>
+          <option value="volume">本集</option>
+          <option value="series">全系列</option>
+        </select>
+      </div>
+      <div id="segmentRangeRow" class="speech-row speech-scope-segment">
+        <label>段落</label>
         <div class="range-selector">
           <span>第</span>
           <input type="number" id="startSegment" min="1" value="1" class="segment-input">
@@ -601,6 +624,11 @@ body.speech-open .topbar{visibility:hidden;pointer-events:none}
           <span>段</span>
           <button type="button" class="btn" id="readAllBtn" style="font-size:.78rem;padding:.35rem .7rem">全部</button>
         </div>
+      </div>
+      <div id="speechResumeBanner" class="speech-resume-banner" hidden>
+        <span id="speechResumeText">可從上次位置繼續</span>
+        <button type="button" class="btn btn-primary" id="speechResumeBtn">▶ 繼續上次</button>
+        <button type="button" class="btn" id="speechResumeDismiss">略過</button>
       </div>
       <div id="segmentInfo" class="segment-info">本章共 0 段</div>
       <div class="speech-btns">
@@ -1114,6 +1142,7 @@ body.speech-open .topbar{visibility:hidden;pointer-events:none}
   var isPaused = false;
   var speechQueue = [];
   var segmentParaMap = [];
+  var segmentMeta = [];
   var currentIdx = 0;
   var edgeAudio = null;
   var edgeAudioUrl = null;
@@ -1183,9 +1212,13 @@ body.speech-open .topbar{visibility:hidden;pointer-events:none}
 
   function buildChapterSegments() {
     var ch = api.getChapterContent && api.getChapterContent();
-    if (!ch || !ch.length) return { segments: [], paraMap: [] };
+    if (!ch || !ch.length) return { segments: [], paraMap: [], meta: [] };
     var segments = [];
     var paraMap = [];
+    var meta = [];
+    var vIdx = api.getVolumeIdx ? api.getVolumeIdx() : 0;
+    var cIdx = api.getChapterIdx ? api.getChapterIdx() : 0;
+    var title = api.getChapterTitle ? api.getChapterTitle() : '';
     ch.forEach(function (para, pi) {
       var processed = preprocessTextForSpeech(para);
       if (!processed) return;
@@ -1193,19 +1226,87 @@ body.speech-open .topbar{visibility:hidden;pointer-events:none}
       pieces.forEach(function (p) {
         segments.push(p);
         paraMap.push(pi);
+        meta.push({ volumeIdx: vIdx, chapterIdx: cIdx, paraIdx: pi, chapterTitle: title });
       });
     });
-    return { segments: segments, paraMap: paraMap };
+    return { segments: segments, paraMap: paraMap, meta: meta };
+  }
+
+  function getSpeechScope() {
+    return (els.speechScope && els.speechScope.value) || 'chapter';
+  }
+
+  function appendChapterSegments(segments, meta, volumeIdx, chapterIdx, ch) {
+    if (!ch || !ch.content || !ch.content.length) return;
+    ch.content.forEach(function (para, pi) {
+      var processed = preprocessTextForSpeech(para);
+      if (!processed) return;
+      var pieces = processed.length > 200 ? splitLongText(processed) : [processed];
+      pieces.forEach(function (p) {
+        segments.push(p);
+        meta.push({ volumeIdx: volumeIdx, chapterIdx: chapterIdx, paraIdx: pi, chapterTitle: ch.title || '' });
+      });
+    });
+  }
+
+  function buildScopeSegments(scope) {
+    scope = scope || getSpeechScope();
+    if (scope === 'chapter') return buildChapterSegments();
+    var segments = [];
+    var meta = [];
+    var vols = api.getVolumes ? api.getVolumes() : [];
+    if (scope === 'volume') {
+      var vIdx = api.getVolumeIdx ? api.getVolumeIdx() : 0;
+      var chapters = api.parseChaptersForVolume ? api.parseChaptersForVolume(vIdx) : [];
+      chapters.forEach(function (ch, cIdx) {
+        appendChapterSegments(segments, meta, vIdx, cIdx, ch);
+      });
+    } else if (scope === 'series') {
+      vols.forEach(function (vol, vIdx) {
+        var chapters = api.parseChaptersForVolume ? api.parseChaptersForVolume(vIdx) : [];
+        chapters.forEach(function (ch, cIdx) {
+          appendChapterSegments(segments, meta, vIdx, cIdx, ch);
+        });
+      });
+    }
+    return { segments: segments, paraMap: [], meta: meta };
+  }
+
+  function countScopeChapters(scope) {
+    scope = scope || getSpeechScope();
+    if (scope === 'chapter') return 1;
+    if (scope === 'volume') {
+      var chs = api.parseChaptersForVolume ? api.parseChaptersForVolume(api.getVolumeIdx()) : [];
+      return chs.length;
+    }
+    var n = 0;
+    var vols = api.getVolumes ? api.getVolumes() : [];
+    vols.forEach(function (vol, vIdx) {
+      n += (api.parseChaptersForVolume ? api.parseChaptersForVolume(vIdx) : []).length;
+    });
+    return n;
   }
 
   function progressKey() {
-    return api.getProgressKey ? api.getProgressKey() : 'default';
+    return api.getSeriesId ? api.getSeriesId() : 'default';
   }
 
   function saveSpeechProgress() {
+    if (!progressKey() || progressKey() === 'none') return;
     try {
+      var globalIdx = speechStartOffset + currentIdx;
+      var loc = segmentMeta[globalIdx] || {};
+      var queueItem = speechQueue[currentIdx] || {};
+      var srcIdx = queueItem.sourceSegmentIndex != null ? queueItem.sourceSegmentIndex + speechStartOffset : globalIdx;
+      if (segmentMeta[srcIdx]) loc = segmentMeta[srcIdx];
       localStorage.setItem('novelReader.speech.' + progressKey(), JSON.stringify({
+        scope: getSpeechScope(),
+        volumeIdx: loc.volumeIdx != null ? loc.volumeIdx : (api.getVolumeIdx ? api.getVolumeIdx() : 0),
+        chapterIdx: loc.chapterIdx != null ? loc.chapterIdx : (api.getChapterIdx ? api.getChapterIdx() : 0),
         segmentIndex: currentIdx,
+        speechStartOffset: speechStartOffset,
+        queueLength: speechQueue.length,
+        updatedAt: Date.now(),
         rate: els.speechRate.value,
         pitch: els.speechPitch.value,
         voice: els.voiceSelect.value,
@@ -1221,8 +1322,69 @@ body.speech-open .topbar{visibility:hidden;pointer-events:none}
     } catch (e) { return null; }
   }
 
+  function loadSpeechProgressForSeries(seriesId) {
+    try {
+      var raw = localStorage.getItem('novelReader.speech.' + seriesId);
+      return raw ? JSON.parse(raw) : null;
+    } catch (e) { return null; }
+  }
+
   function clearSpeechProgress() {
     try { localStorage.removeItem('novelReader.speech.' + progressKey()); } catch (e) { /* ignore */ }
+  }
+
+  function applySavedSpeechSettings(saved) {
+    if (!saved) return;
+    if (saved.rate) els.speechRate.value = saved.rate;
+    if (saved.pitch) els.speechPitch.value = saved.pitch;
+    if (saved.voice && els.voiceSelect.querySelector('option[value="' + saved.voice + '"]')) {
+      els.voiceSelect.value = saved.voice;
+    }
+    if (saved.emotion) els.emotionMode.value = saved.emotion;
+    if (saved.scope && els.speechScope) els.speechScope.value = saved.scope;
+    els.rateValue.textContent = parseFloat(els.speechRate.value).toFixed(1) + 'x';
+    els.pitchValue.textContent = parseFloat(els.speechPitch.value).toFixed(1);
+    syncSpeechScopeUi();
+  }
+
+  function syncSpeechScopeUi() {
+    var scope = getSpeechScope();
+    if (els.segmentRangeRow) els.segmentRangeRow.classList.toggle('hidden', scope !== 'chapter');
+    updateSegmentInputs();
+  }
+
+  function formatSpeechResumeLabel(saved, series) {
+    if (!saved || !series) return '';
+    var vols = api.sortVolumes ? api.sortVolumes(series.volumes) : series.volumes;
+    var vIdx = Math.min(saved.volumeIdx || 0, Math.max(0, vols.length - 1));
+    var chs = api.parseChaptersForVolume ? api.parseChaptersForVolume(vIdx, series) : [];
+    var cIdx = Math.min(saved.chapterIdx || 0, Math.max(0, chs.length - 1));
+    var chTitle = (chs[cIdx] && chs[cIdx].title) || ('第 ' + (cIdx + 1) + ' 章');
+    var seg = (saved.segmentIndex != null ? saved.segmentIndex + 1 : 1);
+    var total = saved.queueLength || '?';
+    return vols[vIdx].title + ' · ' + chTitle + ' · 第 ' + seg + '/' + total + ' 段';
+  }
+
+  function showSpeechResumeBanner() {
+    if (!els.speechResumeBanner) return;
+    var saved = loadSpeechProgress();
+    if (!saved || saved.segmentIndex == null || saved.segmentIndex <= 0) {
+      els.speechResumeBanner.hidden = true;
+      return;
+    }
+    var label = formatSpeechResumeLabel(saved, api.getSeries ? api.getSeries() : null);
+    if (els.speechResumeText) {
+      els.speechResumeText.textContent = label
+        ? '上次朗讀：' + label
+        : '可從第 ' + (saved.segmentIndex + 1) + ' 段繼續';
+    }
+    els.speechResumeBanner.hidden = false;
+    els._pendingSpeechResume = saved;
+  }
+
+  function hideSpeechResumeBanner() {
+    if (els.speechResumeBanner) els.speechResumeBanner.hidden = true;
+    els._pendingSpeechResume = null;
   }
 
   function stopEdgeAudio() {
@@ -1256,12 +1418,22 @@ body.speech-open .topbar{visibility:hidden;pointer-events:none}
     if (!els.highlightCheck || !els.highlightCheck.checked) return;
     var item = speechQueue[queueIdx];
     if (!item || item.sourceSegmentIndex == null) return;
-    var segIdx = item.sourceSegmentIndex + speechStartOffset;
-    var pi = segmentParaMap[segIdx];
-    if (pi == null) return;
-    if (api.highlightParagraph) api.highlightParagraph(pi);
+    var globalSegIdx = item.sourceSegmentIndex + speechStartOffset;
+    var loc = segmentMeta[globalSegIdx];
+    if (loc && api.navigateToChapter) {
+      api.navigateToChapter(loc.volumeIdx, loc.chapterIdx, { keepSpeech: true });
+    } else {
+      var pi = segmentParaMap[globalSegIdx];
+      if (pi == null) return;
+      if (api.highlightParagraph) api.highlightParagraph(pi);
+      if (els.autoScrollCheck && els.autoScrollCheck.checked && api.scrollToParagraph) {
+        setTimeout(function () { api.scrollToParagraph(pi); }, 50);
+      }
+      return;
+    }
+    if (loc.paraIdx != null && api.highlightParagraph) api.highlightParagraph(loc.paraIdx);
     if (els.autoScrollCheck && els.autoScrollCheck.checked && api.scrollToParagraph) {
-      setTimeout(function () { api.scrollToParagraph(pi); }, 50);
+      setTimeout(function () { api.scrollToParagraph(loc.paraIdx); }, 80);
     }
   }
 
@@ -1276,14 +1448,24 @@ body.speech-open .topbar{visibility:hidden;pointer-events:none}
   }
 
   function updateSegmentInputs() {
-    var built = buildChapterSegments();
+    var scope = getSpeechScope();
+    var built = buildScopeSegments(scope);
+    segmentMeta = built.meta || [];
+    segmentParaMap = built.paraMap || [];
     var total = built.segments.length;
-    els.startSegment.max = total || 1;
-    els.endSegment.max = total || 1;
-    if (parseInt(els.endSegment.value, 10) > total || !els.endSegment.value) {
-      els.endSegment.value = total || 1;
+    var chapterCount = countScopeChapters(scope);
+    if (scope === 'chapter') {
+      els.startSegment.max = total || 1;
+      els.endSegment.max = total || 1;
+      if (parseInt(els.endSegment.value, 10) > total || !els.endSegment.value) {
+        els.endSegment.value = total || 1;
+      }
+      els.segmentInfo.textContent = '本章共 ' + total + ' 段';
+    } else if (scope === 'volume') {
+      els.segmentInfo.textContent = '本集共 ' + chapterCount + ' 章 · ' + total + ' 段';
+    } else {
+      els.segmentInfo.textContent = '全系列共 ' + chapterCount + ' 章 · ' + total + ' 段';
     }
-    els.segmentInfo.textContent = '本章共 ' + total + ' 段';
     return built.segments;
   }
 
@@ -1301,7 +1483,9 @@ body.speech-open .topbar{visibility:hidden;pointer-events:none}
 
     if (index >= speechQueue.length) {
       stopSpeech(true);
-      els.speechProgressText.textContent = '✅ 朗讀完成';
+      clearSpeechProgress();
+      var doneScope = getSpeechScope();
+      els.speechProgressText.textContent = doneScope === 'series' ? '✅ 全書朗讀完成' : '✅ 朗讀完成';
       return;
     }
 
@@ -1391,7 +1575,83 @@ body.speech-open .topbar{visibility:hidden;pointer-events:none}
     els.speechProgressText.textContent = '已重置，準備從頭開始';
   }
 
-  async function toggleSpeech() {
+  function buildSpeechQueueFromScope(startIdx, endIdx) {
+    var scope = getSpeechScope();
+    var built = buildScopeSegments(scope);
+    var allSegments = built.segments;
+    segmentMeta = built.meta || [];
+    segmentParaMap = built.paraMap || [];
+    if (!allSegments.length) return null;
+
+    if (scope === 'chapter') {
+      startIdx = startIdx != null ? startIdx : (parseInt(els.startSegment.value, 10) - 1 || 0);
+      endIdx = endIdx != null ? endIdx : (parseInt(els.endSegment.value, 10) || allSegments.length);
+      startIdx = Math.max(0, Math.min(startIdx, allSegments.length - 1));
+      endIdx = Math.max(startIdx + 1, Math.min(endIdx, allSegments.length));
+    } else {
+      startIdx = 0;
+      endIdx = allSegments.length;
+    }
+    speechStartOffset = startIdx;
+
+    var voiceId = els.voiceSelect.value || EdgeTtsSpeech.DEFAULT_VOICE;
+    var baseRate = parseFloat(els.speechRate.value) || 1;
+    var basePitch = parseFloat(els.speechPitch.value) || 1;
+    var emotionMode = els.emotionMode.value;
+
+    speechQueue = EdgeTtsSpeech.buildSimplePlayQueue(
+      allSegments.slice(startIdx, endIdx),
+      voiceId,
+      emotionMode,
+      baseRate,
+      basePitch
+    );
+    return speechQueue.length ? speechQueue : null;
+  }
+
+  function beginSpeechAtIndex(idx) {
+    currentIdx = Math.max(0, Math.min(idx, speechQueue.length - 1));
+    isSpeaking = true;
+    isPaused = false;
+    els.playPauseBtn.textContent = '⏸️ 暫停';
+    els.speakBtn.classList.add('active-task');
+    var scope = getSpeechScope();
+    if (scope === 'chapter') {
+      var s = speechStartOffset + 1;
+      var e = speechStartOffset + speechQueue.length;
+      els.speechProgressText.textContent = '朗讀範圍：第 ' + s + ' - ' + e + ' 段';
+    } else {
+      els.speechProgressText.textContent = (scope === 'volume' ? '本集' : '全系列') + '朗讀中…';
+    }
+    updateSpeechNav();
+    speakSegment(currentIdx);
+  }
+
+  function resumeSpeechFromSaved(saved) {
+    if (!saved) return;
+    applySavedSpeechSettings(saved);
+    if (saved.scope && els.speechScope) els.speechScope.value = saved.scope;
+    if (saved.scope === 'chapter') {
+      if (saved.speechStartOffset != null) els.startSegment.value = saved.speechStartOffset + 1;
+      if (saved.queueLength != null && saved.speechStartOffset != null) {
+        els.endSegment.value = saved.speechStartOffset + saved.queueLength;
+      }
+    }
+    syncSpeechScopeUi();
+    if (saved.volumeIdx != null && saved.chapterIdx != null && api.navigateToChapter) {
+      api.navigateToChapter(saved.volumeIdx, saved.chapterIdx, { keepSpeech: false });
+    }
+    if (!buildSpeechQueueFromScope(null, null)) {
+      if (api.toast) api.toast('沒有可朗讀的內容');
+      return;
+    }
+    var idx = saved.segmentIndex != null ? saved.segmentIndex : 0;
+    if (idx >= speechQueue.length) idx = 0;
+    hideSpeechResumeBanner();
+    beginSpeechAtIndex(idx);
+  }
+
+  async function toggleSpeech(forcedStartIdx) {
     if (!edgeReady) {
       edgeReady = await EdgeTtsSpeech.checkAvailable();
       if (!edgeReady) {
@@ -1401,9 +1661,15 @@ body.speech-open .topbar{visibility:hidden;pointer-events:none}
       }
     }
 
-    var chapterText = api.getChapterPlainText ? api.getChapterPlainText() : '';
-    if (!chapterText.trim()) {
-      if (api.toast) api.toast('本章沒有可朗讀的內容');
+    var scope = getSpeechScope();
+    var hasContent = false;
+    if (scope === 'chapter') {
+      hasContent = !!(api.getChapterPlainText && api.getChapterPlainText().trim());
+    } else {
+      hasContent = updateSegmentInputs().length > 0;
+    }
+    if (!hasContent) {
+      if (api.toast) api.toast('沒有可朗讀的內容');
       return;
     }
 
@@ -1427,68 +1693,28 @@ body.speech-open .topbar{visibility:hidden;pointer-events:none}
       return;
     }
 
-    var built = buildChapterSegments();
-    var allSegments = built.segments;
-    segmentParaMap = built.paraMap;
-    if (!allSegments.length) {
-      if (api.toast) api.toast('沒有可朗讀的內容');
-      return;
-    }
-
-    var startIdx = parseInt(els.startSegment.value, 10) - 1 || 0;
-    var endIdx = parseInt(els.endSegment.value, 10) || allSegments.length;
-    startIdx = Math.max(0, Math.min(startIdx, allSegments.length - 1));
-    endIdx = Math.max(startIdx + 1, Math.min(endIdx, allSegments.length));
-    speechStartOffset = startIdx;
-
-    var voiceId = els.voiceSelect.value || EdgeTtsSpeech.DEFAULT_VOICE;
-    var baseRate = parseFloat(els.speechRate.value) || 1;
-    var basePitch = parseFloat(els.speechPitch.value) || 1;
-    var emotionMode = els.emotionMode.value;
-
-    speechQueue = EdgeTtsSpeech.buildSimplePlayQueue(
-      allSegments.slice(startIdx, endIdx),
-      voiceId,
-      emotionMode,
-      baseRate,
-      basePitch
-    );
-
-    if (!speechQueue.length) {
-      if (api.toast) api.toast('沒有可朗讀的內容');
-      return;
-    }
-
-    var saved = loadSpeechProgress();
-    if (saved && saved.segmentIndex > 0 && saved.segmentIndex < speechQueue.length) {
-      var resume = confirm(
-        '發現上次朗讀進度（第 ' + (saved.segmentIndex + 1) + '/' + speechQueue.length + ' 段）\n\n要從上次位置繼續嗎？'
-      );
-      if (resume) {
-        currentIdx = saved.segmentIndex;
-        if (saved.rate) els.speechRate.value = saved.rate;
-        if (saved.pitch) els.speechPitch.value = saved.pitch;
-        if (saved.voice && els.voiceSelect.querySelector('option[value="' + saved.voice + '"]')) {
-          els.voiceSelect.value = saved.voice;
-        }
-        if (saved.emotion) els.emotionMode.value = saved.emotion;
-        els.rateValue.textContent = parseFloat(els.speechRate.value).toFixed(1) + 'x';
-        els.pitchValue.textContent = parseFloat(els.speechPitch.value).toFixed(1);
-      } else {
-        currentIdx = 0;
-        clearSpeechProgress();
+    if (forcedStartIdx != null) {
+      if (!buildSpeechQueueFromScope(0, null)) {
+        if (api.toast) api.toast('沒有可朗讀的內容');
+        return;
       }
-    } else {
-      currentIdx = 0;
+      hideSpeechResumeBanner();
+      beginSpeechAtIndex(forcedStartIdx);
+      return;
     }
 
-    isSpeaking = true;
-    isPaused = false;
-    els.playPauseBtn.textContent = '⏸️ 暫停';
-    els.speakBtn.classList.add('active-task');
-    els.speechProgressText.textContent = '朗讀範圍：第 ' + (startIdx + 1) + ' - ' + endIdx + ' 段';
-    updateSpeechNav();
-    speakSegment(currentIdx);
+    if (els._pendingSpeechResume && els._pendingSpeechResume.segmentIndex > 0) {
+      return;
+    }
+
+    if (!buildSpeechQueueFromScope(null, null)) {
+      if (api.toast) api.toast('沒有可朗讀的內容');
+      return;
+    }
+
+    currentIdx = 0;
+    hideSpeechResumeBanner();
+    beginSpeechAtIndex(0);
   }
 
   function prevSegment() {
@@ -1533,8 +1759,9 @@ body.speech-open .topbar{visibility:hidden;pointer-events:none}
     els.speakBtn.addEventListener('click', async function () {
       setSpeechModalOpen(true);
       if (!speechInit) await loadVoices();
-      updateSegmentInputs();
+      syncSpeechScopeUi();
       updateSpeechNav();
+      showSpeechResumeBanner();
       if (!edgeReady) {
         edgeReady = await EdgeTtsSpeech.checkAvailable();
         if (!edgeReady) {
@@ -1567,6 +1794,24 @@ body.speech-open .topbar{visibility:hidden;pointer-events:none}
       els.startSegment.value = 1;
       updateSegmentInputs();
     });
+
+    if (els.speechScope) {
+      els.speechScope.addEventListener('change', function () {
+        syncSpeechScopeUi();
+      });
+    }
+
+    if (els.speechResumeBtn) {
+      els.speechResumeBtn.addEventListener('click', function () {
+        if (els._pendingSpeechResume) resumeSpeechFromSaved(els._pendingSpeechResume);
+      });
+    }
+
+    if (els.speechResumeDismiss) {
+      els.speechResumeDismiss.addEventListener('click', function () {
+        hideSpeechResumeBanner();
+      });
+    }
 
     els.startSegment.addEventListener('change', function () {
       if (parseInt(this.value, 10) > parseInt(els.endSegment.value, 10)) {
@@ -1660,6 +1905,12 @@ body.speech-open .topbar{visibility:hidden;pointer-events:none}
     els.highlightCheck = $('highlightCheck');
     els.readAllBtn = $('readAllBtn');
     els.copyChapterBtn = $('copyChapterBtn');
+    els.speechScope = $('speechScope');
+    els.segmentRangeRow = $('segmentRangeRow');
+    els.speechResumeBanner = $('speechResumeBanner');
+    els.speechResumeText = $('speechResumeText');
+    els.speechResumeBtn = $('speechResumeBtn');
+    els.speechResumeDismiss = $('speechResumeDismiss');
   }
 
   global.initReaderSpeech = function (readerApi) {
@@ -1678,6 +1929,22 @@ body.speech-open .topbar{visibility:hidden;pointer-events:none}
     if (isSpeaking) stopSpeech(true);
     clearHighlight();
   };
+
+  global.readerSpeechSaveProgress = function () {
+    if (isSpeaking || currentIdx > 0) saveSpeechProgress();
+  };
+
+  global.readerSpeechResumeForSeries = function (seriesId, saved) {
+    if (!saved) saved = loadSpeechProgressForSeries(seriesId);
+    if (!saved) return false;
+    setSpeechModalOpen(true);
+    var run = function () { resumeSpeechFromSaved(saved); };
+    if (!speechInit) return loadVoices().then(run).then(function () { return true; });
+    run();
+    return true;
+  };
+
+  global.readerSpeechLoadForSeries = loadSpeechProgressForSeries;
 
   global.readerSpeechOnLeaveReader = function () {
     if (isSpeaking) stopSpeech(true);
@@ -1701,7 +1968,7 @@ var CHAPTER_TOKEN='(?:第'+CHAPTER_NUM+'章|序章|楔子|引子|前言|尾聲|�
 var HEADING_RE=new RegExp('^(#{0,4})\\s*('+CHAPTER_TOKEN+')$','i');
 var CHAPTER_ID_RE=new RegExp('第'+CHAPTER_NUM+'章|序章|楔子|引子|前言|尾聲|終章|番外|後記','i');
 var CN_NUM={零:0,一:1,二:2,三:3,四:4,五:5,六:6,七:7,八:8,九:9,十:10,百:100};
-var state={seriesList:[],series:null,volumeIdx:0,chapters:[],chapterIdx:0,detailSeries:null};
+var state={seriesList:[],series:null,volumeIdx:0,chapters:[],chapterIdx:0,detailSeries:null,_speechNavKeep:false};
 var SHELF_COLORS=[['#8b4513','#6b3410'],['#2d5a4a','#1a3d32'],['#5c4033','#3d2a22'],['#4a5568','#2d3748'],['#744c9e','#553a7a'],['#9c4221','#7a3318'],['#1e5631','#0f3520'],['#8b2252','#6b1a3f'],['#2c5282','#1a365d'],['#975a16','#744210'],['#285e61','#234e52'],['#702459','#521b41'],['#6d214f','#4f1638'],['#3d5a4c','#2a4035'],['#925e26','#6e451a']];
 var SHELF_STYLES=['bk-leather','bk-cloth','bk-stripe','bk-modern','bk-vintage'];
 var SHELF_WIDTHS=['bk-w-thin','bk-w-std','bk-w-std','bk-w-std','bk-w-thick'];
@@ -1715,8 +1982,9 @@ var els={
   shelfSearch:document.getElementById('shelfSearch'),shelfSort:document.getElementById('shelfSort'),
   bookDetail:document.getElementById('bookDetail'),bookDetailCover:document.getElementById('bookDetailCover'),
   bookDetailTitle:document.getElementById('bookDetailTitle'),bookDetailMeta:document.getElementById('bookDetailMeta'),
-  bookDetailPreview:document.getElementById('bookDetailPreview'),bookDetailRead:document.getElementById('bookDetailRead'),
-  bookDetailDelete:document.getElementById('bookDetailDelete'),bookDetailClose:document.getElementById('bookDetailClose'),
+  bookDetailPreview:document.getElementById('bookDetailPreview'),  bookDetailRead:document.getElementById('bookDetailRead'),
+  bookDetailDelete:document.getElementById('bookDetailDelete'),bookDetailResumeSpeech:document.getElementById('bookDetailResumeSpeech'),
+  bookDetailClose:document.getElementById('bookDetailClose'),
   readerView:document.getElementById('readerView'),volumeLabel:document.getElementById('volumeLabel'),
   chapterTitle:document.getElementById('chapterTitle'),chapterBody:document.getElementById('chapterBody'),
   prevChapterBtn:document.getElementById('prevChapterBtn'),nextChapterBtn:document.getElementById('nextChapterBtn'),
@@ -1907,17 +2175,61 @@ function setFontSize(size){
   els.fontSizeLabel.textContent=String(size);
   localStorage.setItem('novelReader.fontSize',String(size));
 }
+function formatRelativeTime(ts){
+  if(!ts) return '';
+  var diff=Date.now()-ts;
+  if(diff<60000) return '剛剛';
+  var m=Math.floor(diff/60000);
+  if(m<60) return m+' 分鐘前';
+  var h=Math.floor(m/60);
+  if(h<24) return h+' 小時前';
+  var d=Math.floor(h/24);
+  if(d===1) return '昨天';
+  if(d<7) return d+' 天前';
+  return new Date(ts).toLocaleDateString('zh-Hant');
+}
+function loadSpeechProgressForSeries(id){
+  try{
+    var raw=localStorage.getItem('novelReader.speech.'+id);
+    return raw?JSON.parse(raw):null;
+  }catch(e){return null;}
+}
+function clearSeriesProgress(id){
+  try{
+    localStorage.removeItem('novelReader.progress.'+id);
+    localStorage.removeItem('novelReader.speech.'+id);
+    var prefix='novelReader.speech.'+id+'.';
+    for(var i=localStorage.length-1;i>=0;i--){
+      var k=localStorage.key(i);
+      if(k&&k.indexOf(prefix)===0) localStorage.removeItem(k);
+    }
+  }catch(e){/* ignore */}
+}
+function saveAllProgress(){
+  if(!state.series) return;
+  saveProgress();
+  if(window.readerSpeechSaveProgress) window.readerSpeechSaveProgress();
+}
 function saveProgress(){
   if(!state.series) return;
-  localStorage.setItem('novelReader.progress.'+state.series.id,JSON.stringify({volumeIdx:state.volumeIdx,chapterIdx:state.chapterIdx}));
+  var ch=state.chapters[state.chapterIdx];
+  localStorage.setItem('novelReader.progress.'+state.series.id,JSON.stringify({
+    volumeIdx:state.volumeIdx,
+    chapterIdx:state.chapterIdx,
+    updatedAt:Date.now(),
+    chapterTitle:ch&&ch.title?ch.title:''
+  }));
 }
 function loadProgress(id){
   try{
     var r=localStorage.getItem('novelReader.progress.'+id);
     if(!r) return {volumeIdx:0,chapterIdx:0};
     var p=JSON.parse(r);
-    return {volumeIdx:p.volumeIdx||0,chapterIdx:p.chapterIdx||0};
+    return {volumeIdx:p.volumeIdx||0,chapterIdx:p.chapterIdx||0,updatedAt:p.updatedAt,chapterTitle:p.chapterTitle};
   }catch(e){return {volumeIdx:0,chapterIdx:0};}
+}
+function hasReadProgressRecord(series){
+  return !!localStorage.getItem('novelReader.progress.'+series.id);
 }
 
 function collapseSymbols(t){
@@ -1978,12 +2290,21 @@ function updateNavButtons(){
   els.nextChapterBtn.disabled=atLast&&!hasNextVol;
 }
 
-function renderChapter(idx,keepVol){
+function navigateToChapter(vIdx,cIdx,opts){
+  if(!state.series) return;
+  opts=opts||{};
+  if(opts.keepSpeech) state._speechNavKeep=true;
+  if(vIdx!==state.volumeIdx) switchVolume(vIdx,cIdx,opts.keepSpeech);
+  else renderChapter(cIdx,true,opts.keepSpeech);
+}
+function renderChapter(idx,keepVol,keepSpeech,prevLoc){
   if(!state.chapters.length) return;
-  var prevKey=state.series?state.series.id+'.'+state.volumeIdx+'.'+state.chapterIdx:null;
+  var prevKey=state.series?(state.series.id+'.'+(prevLoc?prevLoc.volumeIdx:state.volumeIdx)+'.'+(prevLoc?prevLoc.chapterIdx:state.chapterIdx)):null;
   state.chapterIdx=Math.max(0,Math.min(idx,state.chapters.length-1));
   var newKey=state.series?state.series.id+'.'+state.volumeIdx+'.'+state.chapterIdx:null;
-  if(prevKey!==null&&prevKey!==newKey&&window.readerSpeechOnChapterChange) window.readerSpeechOnChapterChange();
+  var skipSpeechStop=keepSpeech||state._speechNavKeep;
+  if(prevKey!==null&&prevKey!==newKey&&!skipSpeechStop&&window.readerSpeechOnChapterChange) window.readerSpeechOnChapterChange();
+  if(state._speechNavKeep) state._speechNavKeep=false;
   var ch=state.chapters[state.chapterIdx];
   var vol=currentVolume();
   var vols=sortVolumes(state.series.volumes);
@@ -1998,7 +2319,8 @@ function renderChapter(idx,keepVol){
   if(!keepVol&&els.main) els.main.scrollTo({top:0,behavior:'smooth'});
   closeSidebar();
 }
-function switchVolume(vIdx,chapterIdx){
+function switchVolume(vIdx,chapterIdx,keepSpeech){
+  var prevLoc={volumeIdx:state.volumeIdx,chapterIdx:state.chapterIdx};
   var vols=sortVolumes(state.series.volumes);
   state.volumeIdx=Math.max(0,Math.min(vIdx,vols.length-1));
   var vol=vols[state.volumeIdx];
@@ -2006,7 +2328,7 @@ function switchVolume(vIdx,chapterIdx){
   state.chapterIdx=chapterIdx==null?0:Math.max(0,Math.min(chapterIdx,state.chapters.length-1));
   renderVolumeList();
   renderChapterList();
-  renderChapter(state.chapterIdx,true);
+  renderChapter(state.chapterIdx,true,keepSpeech,prevLoc);
 }
 function renderVolumeList(){
   els.volumeSection.hidden=false;
@@ -2061,15 +2383,34 @@ function getShelfSeries(){
   return list;
 }
 function formatProgressLabel(series){
+  if(!hasReadProgressRecord(series)) return null;
   var p=loadProgress(series.id);
   var vols=sortVolumes(series.volumes);
   if(!vols.length) return null;
-  var vIdx=Math.min(p.volumeIdx,vols.length-1);
+  var vIdx=Math.min(p.volumeIdx||0,vols.length-1);
   var chs=parseChapters(vols[vIdx].content||'');
   if(!chs.length) return null;
-  var cIdx=Math.min(p.chapterIdx,chs.length-1);
-  if(vIdx===0&&cIdx===0) return null;
-  return vols[vIdx].title+' · '+chs[cIdx].title;
+  var cIdx=Math.min(p.chapterIdx||0,chs.length-1);
+  var title=p.chapterTitle||chs[cIdx].title;
+  var loc=vols.length>1?vols[vIdx].title+' · '+title:title;
+  var time=p.updatedAt?' · '+formatRelativeTime(p.updatedAt):'';
+  return '讀至 '+loc+time;
+}
+function formatSpeechProgressLabel(series){
+  var saved=loadSpeechProgressForSeries(series.id);
+  if(!saved||saved.segmentIndex==null) return null;
+  var vols=sortVolumes(series.volumes);
+  if(!vols.length) return null;
+  var vIdx=Math.min(saved.volumeIdx||0,vols.length-1);
+  var chs=parseChapters(vols[vIdx].content||'');
+  var cIdx=Math.min(saved.chapterIdx||0,Math.max(0,chs.length-1));
+  var chTitle=(chs[cIdx]&&chs[cIdx].title)||('第 '+(cIdx+1)+' 章');
+  var seg=(saved.segmentIndex!=null?saved.segmentIndex+1:1);
+  var total=saved.queueLength||'?';
+  var time=saved.updatedAt?' · '+formatRelativeTime(saved.updatedAt):'';
+  var scopeLabel=saved.scope==='series'?'全系列':(saved.scope==='volume'?'本集':'');
+  var loc=vols.length>1?vols[vIdx].title+' · '+chTitle:chTitle;
+  return '朗讀至 '+loc+(scopeLabel?'（'+scopeLabel+'）':'')+' · 第 '+seg+'/'+total+' 段'+time;
 }
 function openBookDetail(series){
   state.detailSeries=series;
@@ -2077,14 +2418,19 @@ function openBookDetail(series){
   var n=sortVolumes(series.volumes).length;
   var name=(series.title||'未命名').substring(0,30);
   var prog=formatProgressLabel(series);
+  var speech=formatSpeechProgressLabel(series);
+  var savedSpeech=loadSpeechProgressForSeries(series.id);
   els.bookDetailCover.style.background='linear-gradient(135deg,'+colors[0]+','+colors[1]+')';
   els.bookDetailCover.textContent=name.charAt(0)||'書';
   els.bookDetailTitle.textContent=n>1?name+'（全 '+n+' 集）':name;
-  els.bookDetailMeta.innerHTML='<span>📚 '+n+' 集</span><span>📝 '+formatWordCount(series.volumes.map(function(v){return v.content||'';}).join(''))+'</span>'+(prog?'<span>🔖 '+esc(prog)+'</span>':'');
+  els.bookDetailMeta.innerHTML='<span>📚 '+n+' 集</span><span>📝 '+formatWordCount(series.volumes.map(function(v){return v.content||'';}).join(''))+'</span>'
+    +(prog?'<span>🔖 '+esc(prog)+'</span>':'')
+    +(speech?'<span>🔊 '+esc(speech)+'</span>':'');
   els.bookDetailPreview.textContent=sortVolumes(series.volumes).map(function(v,i){
     return (i+1)+'. '+v.title+'（'+formatWordCount(v.content)+'）';
   }).join('　');
-  els.bookDetailRead.textContent=prog?'📖 繼續閱讀':'📖 開始閱讀';
+  els.bookDetailRead.textContent=hasReadProgressRecord(series)?'📖 繼續閱讀':'📖 開始閱讀';
+  if(els.bookDetailResumeSpeech) els.bookDetailResumeSpeech.hidden=!savedSpeech;
   els.bookDetail.classList.add('open');
 }
 function closeBookDetail(){
@@ -2107,7 +2453,12 @@ function renderShelf(){
       var colors=shelfColor(s.id),variant=shelfVariant(s.id);
       var n=sortVolumes(s.volumes).length;
       var name=(s.title||'未命名').substring(0,14);
-      return '<div class="book-spine '+variant.style+' '+variant.width+'" data-id="'+esc(s.id)+'" style="--c1:'+colors[0]+';--c2:'+colors[1]+';animation-delay:'+(i*40)+'ms" title="'+esc(s.title)+'"><span class="book-spine-title">'+esc(name)+'</span>'+(n>1?'<span class="book-spine-series">全'+n+'集</span>':'')+'</div>';
+      var prog=formatProgressLabel(s);
+      var speech=loadSpeechProgressForSeries(s.id);
+      var markClass=(prog||speech)?' book-spine-has-mark':'';
+      var speechClass=speech?' book-spine-has-speech':'';
+      var tip=s.title+(prog?'\n🔖 '+prog:'')+(speech?'\n🔊 '+formatSpeechProgressLabel(s):'');
+      return '<div class="book-spine'+markClass+speechClass+' '+variant.style+' '+variant.width+'" data-id="'+esc(s.id)+'" style="--c1:'+colors[0]+';--c2:'+colors[1]+';animation-delay:'+(i*40)+'ms" title="'+esc(tip)+'"><span class="book-spine-title">'+esc(name)+'</span>'+(n>1?'<span class="book-spine-series">全'+n+'集</span>':'')+'</div>';
     }).join('');
   }
   renderSeriesList();
@@ -2124,6 +2475,7 @@ function showReader(){
   closeBookDetail();updateReadProgress();
 }
 function showShelf(){
+  saveAllProgress();
   if(window.readerSpeechOnLeaveReader) window.readerSpeechOnLeaveReader();
   els.shelfView.classList.remove('hidden');els.readerView.classList.remove('show');
   if(els.main) els.main.classList.add('shelf-mode');
@@ -2140,6 +2492,10 @@ function showShelf(){
 }
 
 function openSeries(series,startProgress){
+  if(state.series&&(!series||state.series.id!==series.id)){
+    saveAllProgress();
+    if(window.readerSpeechOnLeaveReader) window.readerSpeechOnLeaveReader();
+  }
   state.series=series;
   var p=startProgress||loadProgress(series.id);
   var vols=sortVolumes(series.volumes);
@@ -2368,6 +2724,7 @@ function importRemote(text,opts){
 }
 var ghPulledOnce=false;
 function removeSeries(id){
+  clearSeriesProgress(id);
   deleteSeries(id).then(function(){
     state.seriesList=state.seriesList.filter(function(s){return s.id!==id;});
     if(state.series&&state.series.id===id) showShelf();
@@ -2524,6 +2881,19 @@ els.bookDetailRead.onclick=function(){
   if(!state.detailSeries) return;
   openSeries(state.detailSeries);
 };
+if(els.bookDetailResumeSpeech){
+  els.bookDetailResumeSpeech.onclick=function(){
+    if(!state.detailSeries) return;
+    var saved=loadSpeechProgressForSeries(state.detailSeries.id);
+    if(!saved) return;
+    var series=state.detailSeries;
+    closeBookDetail();
+    openSeries(series,{volumeIdx:saved.volumeIdx||0,chapterIdx:saved.chapterIdx||0});
+    setTimeout(function(){
+      if(window.readerSpeechResumeForSeries) window.readerSpeechResumeForSeries(series.id,saved);
+    },80);
+  };
+}
 els.bookDetailDelete.onclick=function(){
   if(!state.detailSeries) return;
   if(confirm('確定刪除《'+state.detailSeries.title+'》？')) removeSeries(state.detailSeries.id);
@@ -2544,6 +2914,26 @@ document.body.classList.add('shelf-mode');
 if(window.initReaderSpeech){
   initReaderSpeech({
     toast:toast,
+    getSeriesId:function(){return state.series?state.series.id:'none';},
+    getSeries:function(){return state.series;},
+    getVolumes:function(){return state.series?sortVolumes(state.series.volumes):[];},
+    parseChaptersForVolume:function(vIdx,series){
+      series=series||state.series;
+      if(!series) return [];
+      var vols=sortVolumes(series.volumes);
+      var vol=vols[vIdx];
+      return vol?parseChapters(vol.content||''):[];
+    },
+    getVolumeIdx:function(){return state.volumeIdx;},
+    getChapterIdx:function(){return state.chapterIdx;},
+    getChapterTitle:function(){
+      var ch=state.chapters[state.chapterIdx];
+      return ch?ch.title:'';
+    },
+    navigateToChapter:navigateToChapter,
+    sortVolumes:sortVolumes,
+    saveAllProgress:saveAllProgress,
+    clearSeriesProgress:clearSeriesProgress,
     getChapterContent:function(){
       var ch=state.chapters[state.chapterIdx];
       return ch&&ch.content?ch.content:[];
@@ -2551,10 +2941,6 @@ if(window.initReaderSpeech){
     getChapterPlainText:function(){
       var ch=state.chapters[state.chapterIdx];
       return ch&&ch.content?ch.content.join('\n\n'):'';
-    },
-    getProgressKey:function(){
-      if(!state.series) return 'none';
-      return state.series.id+'.'+state.volumeIdx+'.'+state.chapterIdx;
     },
     highlightParagraph:function(pi){
       els.chapterBody.querySelectorAll('p').forEach(function(p,i){
