@@ -157,20 +157,6 @@ body::before{
 .book-spine:hover{transform:translateY(-12px) rotate(-2deg);box-shadow:inset -3px 0 6px rgba(0,0,0,.35),4px 16px 24px rgba(0,0,0,.55)}
 .book-spine-title{writing-mode:vertical-rl;text-orientation:upright;font-size:.88rem;font-weight:600;line-height:1.15;letter-spacing:.05em;color:#fff;max-height:150px;overflow:hidden;text-shadow:0 1px 2px rgba(0,0,0,.45);padding:6px 0}
 .book-spine-series{position:absolute;bottom:6px;left:50%;transform:translateX(-50%);font-size:.58rem;font-weight:700;padding:2px 5px;border-radius:3px;background:rgba(0,0,0,.5);color:#ffe9b8;white-space:nowrap}
-.bookshelf-body.shelf-mobile-grid{
-  display:grid;grid-template-columns:repeat(auto-fill,minmax(148px,1fr));gap:12px;
-  align-items:stretch;align-content:start;padding:4px 0 16px;background-image:none;
-}
-.book-card{
-  position:relative;min-height:112px;padding:14px 14px 12px;border-radius:14px;cursor:pointer;
-  background:linear-gradient(145deg,var(--c1,#555),var(--c2,#333));
-  box-shadow:0 8px 20px rgba(0,0,0,.35);border:1px solid rgba(255,255,255,.12);
-  display:flex;flex-direction:column;justify-content:flex-end;gap:6px;
-  animation:spineIn .35s var(--ease) both;
-}
-.book-card-title{font-size:.95rem;font-weight:700;line-height:1.35;color:#fff;text-shadow:0 1px 2px rgba(0,0,0,.35);word-break:break-word;display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;overflow:hidden}
-.book-card-meta{font-size:.72rem;color:rgba(255,255,255,.78)}
-.book-card-badge{align-self:flex-start;font-size:.68rem;font-weight:700;padding:2px 8px;border-radius:999px;background:rgba(0,0,0,.35);color:#ffe9b8}
 .bookshelf-empty{text-align:center;color:#d8c4a2;padding:70px 20px;display:none}
 .bookshelf-empty span{font-size:3.2rem;display:block;margin-bottom:14px;opacity:.85}
 .bookshelf-empty p{margin:6px 0}.bookshelf-empty .hint{font-size:.85rem;opacity:.65}
@@ -357,7 +343,10 @@ html.no-gh-sync .gh-sync-panel{display:none!important}
   .bookshelf-sort{width:100%;padding:10px 12px;font-size:.9rem}
   .bookshelf-tools{grid-template-columns:1fr}
   .bookshelf-scroll{padding:10px 14px calc(14px + var(--safe-bottom));-webkit-overflow-scrolling:touch}
-  .bookshelf-body{gap:32px 16px;justify-content:center}
+  .bookshelf-body{gap:36px 18px;justify-content:center;padding-bottom:28px}
+  .book-spine{height:170px;touch-action:manipulation}
+  .book-spine.bk-w-thin{width:44px}.book-spine.bk-w-std{width:54px}.book-spine.bk-w-thick{width:66px}
+  .book-spine-title{font-size:.84rem;max-height:148px}
   .main{padding:1rem .85rem 2rem}
   .main.shelf-mode{padding:0}
   .reader-paper{padding:1.35rem 1rem 1.25rem;border-radius:12px}
@@ -378,7 +367,7 @@ html.no-gh-sync .gh-sync-panel{display:none!important}
 }
 @media(max-width:860px) and (pointer:coarse){
   .book-spine:hover{transform:none}
-  .book-card:active{transform:scale(.98);opacity:.92}
+  .book-spine:active{transform:translateY(-6px) scale(1.02)}
 }
 @media(prefers-reduced-motion:reduce){*,*::before,*::after{animation:none!important;transition:none!important}}
 </style>
@@ -2048,35 +2037,21 @@ function renderShelf(){
   if(!books.length){
     els.shelfEmpty.style.display='block';
     els.shelfGrid.style.display='none';
-    els.shelfGrid.classList.remove('shelf-mobile-grid');
     if(els.importBody&&!els.importBody.classList.contains('open')){
       els.importBody.classList.add('open');
       if(els.importToggle) els.importToggle.textContent='📥 匯入小說 ▴';
     }
   } else {
     els.shelfEmpty.style.display='none';
-    var mobile=shelfUseMobileLayout();
-    els.shelfGrid.classList.toggle('shelf-mobile-grid',mobile);
-    els.shelfGrid.style.display=mobile?'grid':'flex';
+    els.shelfGrid.style.display='flex';
     els.shelfGrid.innerHTML=books.map(function(s,i){
       var colors=shelfColor(s.id),variant=shelfVariant(s.id);
       var n=sortVolumes(s.volumes).length;
-      var name=s.title||'未命名';
-      var words=formatWordCount(s.volumes.map(function(v){return v.content||'';}).join(''));
-      if(mobile){
-        return '<div class="book-card" data-id="'+esc(s.id)+'" style="--c1:'+colors[0]+';--c2:'+colors[1]+';animation-delay:'+(i*35)+'ms" title="'+esc(name)+'">'+
-          (n>1?'<span class="book-card-badge">全 '+n+' 集</span>':'')+
-          '<span class="book-card-title">'+esc(name)+'</span>'+
-          '<span class="book-card-meta">'+words+'</span></div>';
-      }
-      var short=name.substring(0,14);
-      return '<div class="book-spine '+variant.style+' '+variant.width+'" data-id="'+esc(s.id)+'" style="--c1:'+colors[0]+';--c2:'+colors[1]+';animation-delay:'+(i*40)+'ms" title="'+esc(name)+'"><span class="book-spine-title">'+esc(short)+'</span>'+(n>1?'<span class="book-spine-series">全'+n+'集</span>':'')+'</div>';
+      var name=(s.title||'未命名').substring(0,14);
+      return '<div class="book-spine '+variant.style+' '+variant.width+'" data-id="'+esc(s.id)+'" style="--c1:'+colors[0]+';--c2:'+colors[1]+';animation-delay:'+(i*40)+'ms" title="'+esc(s.title)+'"><span class="book-spine-title">'+esc(name)+'</span>'+(n>1?'<span class="book-spine-series">全'+n+'集</span>':'')+'</div>';
     }).join('');
   }
   renderSeriesList();
-}
-function shelfUseMobileLayout(){
-  return window.matchMedia('(max-width:640px)').matches;
 }
 function showReader(){
   els.shelfView.classList.add('hidden');els.readerView.classList.add('show');
@@ -2409,7 +2384,7 @@ els.pickFileBtn.onclick=function(){els.fileInput.click();};
 els.fileInput.onchange=function(){importFiles(els.fileInput.files);els.fileInput.value='';};
 if(els.shelfGrid){
   els.shelfGrid.onclick=function(e){
-    var spine=e.target.closest('.book-spine,.book-card');
+    var spine=e.target.closest('.book-spine');
     if(!spine||!spine.dataset.id) return;
     var s=state.seriesList.find(function(x){return x.id===spine.dataset.id;});
     if(s) openBookDetail(s);
@@ -2462,12 +2437,6 @@ document.addEventListener('click',function(e){
     if(!e.target.closest('.topbar-actions')) closeTopbarMenu();
   }
 });
-var shelfLayoutMq=window.matchMedia('(max-width:640px)');
-if(shelfLayoutMq.addEventListener){
-  shelfLayoutMq.addEventListener('change',function(){if(els.shelfView&&!els.shelfView.classList.contains('hidden')) renderShelf();});
-}else if(shelfLayoutMq.addListener){
-  shelfLayoutMq.addListener(function(){if(els.shelfView&&!els.shelfView.classList.contains('hidden')) renderShelf();});
-}
 els.sidebarBackdrop.onclick=closeSidebar;
 els.seriesList.onclick=function(e){
   var btn=e.target.closest('button[data-id]');
