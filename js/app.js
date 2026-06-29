@@ -6826,6 +6826,9 @@ ${continueWordReq}
       let edgeAudioUrl = null;
       let edgeSynthAbort = null;
       let edgeSpeechSession = 0;
+      let audioCtx = null;
+      let edgeSource = null;
+      let edgeSegCache = {};
       let edgeTtsReady = false;
       let isSpeaking = false;
       let isPaused = false;
@@ -6924,12 +6927,16 @@ ${continueWordReq}
       });
       
       function stopEdgeAudio() {
+        if (edgeSource) {
+          try { edgeSource.onended = null; } catch (e) { /* ignore */ }
+          try { edgeSource.stop(0); } catch (e) { /* ignore */ }
+          try { edgeSource.disconnect(); } catch (e) { /* ignore */ }
+          edgeSource = null;
+        }
         if (edgeCurrentAudio) {
           edgeCurrentAudio.onended = null;
           edgeCurrentAudio.onerror = null;
-          edgeCurrentAudio.pause();
-          edgeCurrentAudio.src = '';
-          edgeCurrentAudio = null;
+          try { edgeCurrentAudio.pause(); } catch (e) { /* ignore */ }
         }
         if (edgeAudioUrl) {
           URL.revokeObjectURL(edgeAudioUrl);
@@ -6939,6 +6946,66 @@ ${continueWordReq}
           edgeSynthAbort.abort();
           edgeSynthAbort = null;
         }
+      }
+
+      // 行動裝置（iOS/Android）對非手勢觸發的連續 HTMLAudio 播放限制嚴格，
+      // 改用 Web Audio：在使用者手勢中解鎖一次 AudioContext，之後即可連續播放解碼後的 buffer。
+      function ensureAudioCtx() {
+        try {
+          if (!audioCtx) {
+            const AC = window.AudioContext || window.webkitAudioContext;
+            if (AC) audioCtx = new AC();
+          }
+          if (audioCtx && audioCtx.state === 'suspended' && audioCtx.resume) {
+            audioCtx.resume();
+          }
+        } catch (e) { /* ignore */ }
+        return audioCtx;
+      }
+
+      function decodeAudio(ctx, arrbuf) {
+        return new Promise((resolve, reject) => {
+          let p;
+          try { p = ctx.decodeAudioData(arrbuf, resolve, reject); }
+          catch (e) { reject(e); return; }
+          if (p && p.then) p.then(resolve, reject);
+        });
+      }
+
+      // 取得（並快取）某段已合成、已解碼的音訊；用於邊播邊預取下一段，消除段間停頓
+      function getSegmentAudio(index) {
+        if (edgeSegCache[index]) return edgeSegCache[index];
+        const queueItem = speechPlayQueue[index];
+        if (!queueItem) return Promise.reject(new Error('no segment'));
+        const processedText = EdgeTtsSpeech.sanitizeTtsText(queueItem.text || '');
+        if (!processedText || !processedText.trim()) return Promise.reject(new Error('empty segment'));
+        const voice = queueItem.voice || voiceSelect.value || EdgeTtsSpeech.DEFAULT_VOICE;
+        const style = queueItem.style || 'general';
+        const rate = queueItem.rate ?? 1;
+        const pitch = queueItem.pitch ?? 1;
+        const p = EdgeTtsSpeech.synthesize({ text: processedText, voice, style, rate, pitch })
+          .then((buf) => {
+            const result = { buf, decoded: null };
+            const ctx = ensureAudioCtx();
+            if (ctx) {
+              return decodeAudio(ctx, buf.slice(0)).then((d) => { result.decoded = d; return result; }, () => result);
+            }
+            return result;
+          });
+        edgeSegCache[index] = p;
+        return p;
+      }
+
+      function prefetchNext(index) {
+        const n = index + 1;
+        Object.keys(edgeSegCache).forEach((k) => { if (+k !== n) delete edgeSegCache[k]; });
+        if (n < speechPlayQueue.length && !edgeSegCache[n]) {
+          getSegmentAudio(n).catch(() => { /* 預取失敗忽略，播放時再重試 */ });
+        }
+      }
+
+      function clearSegmentCache() {
+        edgeSegCache = {};
       }
 
       // 儲存朗讀進度
@@ -7299,18 +7366,43 @@ ${continueWordReq}
         const pause = queueItem.pause ?? params.pause ?? 300;
 
         try {
-          const buf = await EdgeTtsSpeech.synthesize({
-            text: processedText,
-            voice,
-            style,
-            rate,
-            pitch,
-            signal: edgeSynthAbort.signal
-          });
+          const audio = await getSegmentAudio(index);
           if (!isSpeaking || session !== edgeSpeechSession) return;
+          delete edgeSegCache[index];
 
-          edgeAudioUrl = URL.createObjectURL(new Blob([buf], { type: 'audio/mpeg' }));
-          edgeCurrentAudio = new Audio(edgeAudioUrl);
+          // 背景預取下一段，消除段與段之間的合成等待
+          prefetchNext(index);
+
+          // 優先使用 Web Audio（行動裝置上 HTMLAudio 連續播放常被自動播放政策阻擋）
+          const ctx = ensureAudioCtx();
+          if (ctx && audio.decoded) {
+            if (ctx.state === 'suspended') { try { await ctx.resume(); } catch (e) { /* ignore */ } }
+            if (!isSpeaking || session !== edgeSpeechSession) return;
+            if (ctx.state === 'suspended') {
+              isPaused = true;
+              playPauseBtn.textContent = '▶️ 繼續朗讀';
+              speechProgressText.textContent = '⚠️ 請點「繼續朗讀」以開始播放';
+              return;
+            }
+            const src = ctx.createBufferSource();
+            src.buffer = audio.decoded;
+            src.connect(ctx.destination);
+            edgeSource = src;
+            src.onended = () => {
+              if (edgeSource !== src) return;
+              edgeSource = null;
+              if (isSpeaking && !isPaused) {
+                setTimeout(() => speakSegment(index + 1), pause);
+              }
+            };
+            speechProgressText.textContent = `正在朗讀 ${index + 1}/${speechPlayQueue.length} 段…`;
+            try { src.start(0); } catch (startErr) { edgeSource = null; throw startErr; }
+            return;
+          }
+
+          // 後備：HTMLAudioElement（重用同一個已解鎖的元素）
+          edgeAudioUrl = URL.createObjectURL(new Blob([audio.buf], { type: 'audio/mpeg' }));
+          if (!edgeCurrentAudio) edgeCurrentAudio = new Audio();
 
           edgeCurrentAudio.onended = () => {
             stopEdgeAudio();
@@ -7322,9 +7414,21 @@ ${continueWordReq}
             stopEdgeAudio();
             if (isSpeaking && !isPaused) setTimeout(() => speakSegment(index + 1), 100);
           };
+          edgeCurrentAudio.src = edgeAudioUrl;
 
           speechProgressText.textContent = `正在朗讀 ${index + 1}/${speechPlayQueue.length} 段…`;
-          await edgeCurrentAudio.play();
+          try {
+            await edgeCurrentAudio.play();
+          } catch (playErr) {
+            if (playErr?.name === 'AbortError') return;
+            if (playErr?.name === 'NotAllowedError') {
+              isPaused = true;
+              playPauseBtn.textContent = '▶️ 繼續朗讀';
+              speechProgressText.textContent = '⚠️ 瀏覽器阻擋自動播放，請點「繼續朗讀」';
+              return;
+            }
+            throw playErr;
+          }
         } catch (err) {
           if (err?.name === 'AbortError') return;
           console.warn('Edge 朗讀失敗:', err);
@@ -7337,6 +7441,7 @@ ${continueWordReq}
 
       function stopEdgePlaybackOnly() {
         edgeSpeechSession++;
+        clearSegmentCache();
         stopEdgeAudio();
       }
 
@@ -7361,6 +7466,7 @@ ${continueWordReq}
 
       // 開始/暫停朗讀（Edge 神經語音）
       async function toggleSpeech() {
+        ensureAudioCtx();
         if (!edgeTtsReady) {
           const ok = await EdgeTtsSpeech.checkAvailable();
           edgeTtsReady = ok;
@@ -7377,8 +7483,9 @@ ${continueWordReq}
 
         if (isSpeaking) {
           if (!isPaused) {
-            edgeCurrentAudio?.pause();
             isPaused = true;
+            if (audioCtx && audioCtx.suspend) { try { audioCtx.suspend(); } catch (e) { /* ignore */ } }
+            if (edgeCurrentAudio) { try { edgeCurrentAudio.pause(); } catch (e) { /* ignore */ } }
             saveSpeechProgress();
             playPauseBtn.textContent = '▶️ 繼續朗讀';
             speechProgressText.textContent = '⏸️ 已暫停';
@@ -7386,7 +7493,9 @@ ${continueWordReq}
             isPaused = false;
             playPauseBtn.textContent = '⏸️ 暫停';
             speechProgressText.textContent = `正在朗讀 ${currentSegmentIndex + 1}/${speechPlayQueue.length} 段…`;
-            if (edgeCurrentAudio) {
+            if (edgeSource && audioCtx) {
+              if (audioCtx.state === 'suspended') audioCtx.resume();
+            } else if (edgeCurrentAudio && edgeCurrentAudio.src && !edgeCurrentAudio.ended) {
               edgeCurrentAudio.play().catch(() => speakSegment(currentSegmentIndex));
             } else {
               speakSegment(currentSegmentIndex);
@@ -7565,6 +7674,7 @@ ${continueWordReq}
       
       function prevSegment() {
         if (!isSpeaking || currentSegmentIndex <= 0) return;
+        ensureAudioCtx();
         stopEdgePlaybackOnly();
         isPaused = false;
         speakSegment(currentSegmentIndex - 1);
@@ -7572,6 +7682,7 @@ ${continueWordReq}
 
       function nextSegment() {
         if (!isSpeaking || currentSegmentIndex >= speechPlayQueue.length - 1) return;
+        ensureAudioCtx();
         stopEdgePlaybackOnly();
         isPaused = false;
         speakSegment(currentSegmentIndex + 1);
@@ -7579,6 +7690,7 @@ ${continueWordReq}
 
       function jumpToSegment(segmentIndex) {
         if (!isSpeaking || segmentIndex < 0 || segmentIndex >= speechPlayQueue.length) return;
+        ensureAudioCtx();
         stopEdgePlaybackOnly();
         isPaused = false;
         speakSegment(segmentIndex);
