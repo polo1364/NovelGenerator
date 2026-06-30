@@ -99,10 +99,22 @@ body::before{
   margin:0 0 .65rem;padding-bottom:.4rem;font-size:.78rem;letter-spacing:.1em;
   color:var(--text-muted);text-transform:uppercase;border-bottom:1px solid var(--border);
 }
+.sidebar-tabs{display:flex;gap:0;margin:0 0 .85rem;border-bottom:1px solid var(--border)}
+.sidebar-tab{
+  flex:1;border:none;background:transparent;padding:.62rem .5rem;font:inherit;font-size:.82rem;font-weight:600;
+  color:var(--text-muted);cursor:pointer;border-bottom:2px solid transparent;margin-bottom:-1px;
+  transition:color .15s var(--ease),border-color .15s var(--ease),background .15s var(--ease);
+  touch-action:manipulation;-webkit-tap-highlight-color:transparent;
+}
+.sidebar-tab:hover{color:var(--text);background:var(--accent-soft)}
+.sidebar-tab.active{color:var(--accent);border-bottom-color:var(--accent)}
+.sidebar-panel{display:none}
+.sidebar-panel.active{display:block}
 .volume-list,.chapter-list{list-style:none;margin:0 0 1.5rem;padding:0}
 .volume-list button,.chapter-list button{
   width:100%;text-align:left;border:none;background:transparent;color:var(--text);font:inherit;
   padding:.6rem .75rem;border-radius:10px;cursor:pointer;transition:background .15s var(--ease),color .15s var(--ease);
+  touch-action:manipulation;-webkit-tap-highlight-color:rgba(0,0,0,.06);
 }
 .volume-list button:hover,.chapter-list button:hover{background:var(--accent-soft)}
 .volume-list button.active,.chapter-list button.active{
@@ -193,7 +205,7 @@ html.no-gh-sync .gh-sync-panel{display:none!important}
 .field-row{display:grid;grid-template-columns:1fr 1fr;gap:.5rem;margin-top:.65rem}
 .view-reader{display:none;max-width:calc(var(--reader-width) + 4rem);margin:0 auto;animation:fadeUp .35s var(--ease)}
 .view-reader.show{display:block}
-@keyframes fadeUp{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:translateY(0)}}
+@keyframes fadeUp{from{opacity:0}to{opacity:1}}
 .view-shelf.hidden{display:none}
 .reader-paper{
   background:var(--bg-panel);border:1px solid var(--border);border-radius:var(--radius);
@@ -296,9 +308,13 @@ body.speech-open .topbar{visibility:hidden;pointer-events:none}
 .speech-extra{border-top:1px dashed var(--border);padding-top:12px}
 .speech-extra .btn{width:100%;justify-content:center}
 .chapter-nav-bar{
-  display:flex;justify-content:space-between;gap:1rem;margin-top:2rem;padding-top:1.25rem;
-  border-top:1px solid var(--border);flex-wrap:wrap;position:relative;z-index:1;
+  display:none;justify-content:space-between;gap:1rem;flex-wrap:wrap;position:relative;z-index:50;
+  touch-action:manipulation;-webkit-tap-highlight-color:transparent;
+  max-width:calc(var(--reader-width) + 4rem);margin:0 auto;padding:1.25rem 1.25rem 2rem;
+  border-top:1px solid var(--border);
 }
+body.reading-mode .chapter-nav-bar{display:flex}
+.chapter-nav-bar .btn{touch-action:manipulation;-webkit-tap-highlight-color:rgba(0,0,0,.06)}
 .book-detail{
   position:fixed;inset:0;z-index:200;display:none;align-items:center;justify-content:center;
   background:rgba(0,0,0,.6);backdrop-filter:blur(6px);padding:20px;
@@ -352,8 +368,9 @@ body.speech-open .topbar{visibility:hidden;pointer-events:none}
   .brand-text p{font-size:.68rem;max-width:42vw}
   body.shelf-mode .brand-text p{display:none}
   body.reading-mode .chapter-nav-bar{
-    position:fixed;left:0;right:0;bottom:0;z-index:24;margin:0;padding:.65rem .85rem calc(.65rem + var(--safe-bottom));
-    border-top:1px solid var(--border);background:color-mix(in srgb,var(--bg-panel) 92%,transparent);
+    position:fixed;left:0;right:0;bottom:0;z-index:50;max-width:none;margin:0;
+    padding:.65rem .85rem calc(.65rem + var(--safe-bottom));border-top:1px solid var(--border);
+    background:color-mix(in srgb,var(--bg-panel) 96%,transparent);
     backdrop-filter:blur(12px);box-shadow:0 -8px 24px rgba(0,0,0,.08);
   }
   body.reading-mode .chapter-nav-bar .btn{flex:1;min-height:2.75rem;font-size:.88rem}
@@ -414,6 +431,15 @@ body.speech-open .topbar{visibility:hidden;pointer-events:none}
   .toast{bottom:calc(1.25rem + var(--safe-bottom));max-width:calc(100vw - 2rem);text-align:center;font-size:.82rem}
   body.reading-mode .toast{bottom:calc(4.75rem + var(--safe-bottom))}
 }
+@media(min-width:861px){
+  body.reading-mode .chapter-nav-bar{
+    position:fixed;left:300px;right:0;bottom:0;max-width:none;margin:0;
+    padding:.85rem 1.25rem;border-top:1px solid var(--border);
+    background:color-mix(in srgb,var(--bg-panel) 96%,transparent);
+    backdrop-filter:blur(12px);box-shadow:0 -4px 16px rgba(0,0,0,.06);
+  }
+  body.reading-mode .main{padding-bottom:calc(4.25rem)}
+}
 @media(max-width:860px) and (pointer:coarse){
   .book-spine:hover{transform:none}
   .book-spine:active{transform:translateY(-6px) scale(1.02)}
@@ -455,12 +481,14 @@ body.speech-open .topbar{visibility:hidden;pointer-events:none}
 <input type="file" id="addVolInput" accept=".txt,text/plain" hidden>
 <div class="layout">
   <aside class="sidebar" id="sidebar">
-    <section id="volumeSection" hidden>
-      <h2>集數</h2>
+    <div class="sidebar-tabs" id="sidebarTabs" role="tablist" hidden>
+      <button type="button" class="sidebar-tab" data-tab="volume" role="tab" aria-selected="false">集數</button>
+      <button type="button" class="sidebar-tab active" data-tab="chapter" role="tab" aria-selected="true">章節</button>
+    </div>
+    <section id="volumeSection" class="sidebar-panel" hidden>
       <ul class="volume-list" id="volumeList"></ul>
     </section>
-    <section id="chapterSection" hidden>
-      <h2>章節</h2>
+    <section id="chapterSection" class="sidebar-panel active" hidden>
       <ul class="chapter-list" id="chapterList"></ul>
     </section>
   </aside>
@@ -533,14 +561,14 @@ body.speech-open .topbar{visibility:hidden;pointer-events:none}
         <p class="volume-label" id="volumeLabel"></p>
         <h2 class="chapter-title" id="chapterTitle"></h2>
         <div class="chapter-body" id="chapterBody"></div>
-        <nav class="chapter-nav-bar">
-          <button type="button" class="btn" id="prevChapterBtn">← 上一章</button>
-          <button type="button" class="btn btn-primary" id="nextChapterBtn">下一章 →</button>
-        </nav>
       </div>
     </article>
   </main>
 </div>
+<nav class="chapter-nav-bar" id="chapterNavBar" aria-label="章節導航" hidden>
+  <button type="button" class="btn" id="prevChapterBtn">← 上一章</button>
+  <button type="button" class="btn btn-primary" id="nextChapterBtn">下一章 →</button>
+</nav>
 <div id="bookDetail" class="book-detail">
   <div class="book-detail-card">
     <button type="button" class="book-detail-close" id="bookDetailClose" aria-label="關閉">✕</button>
@@ -2192,7 +2220,7 @@ var els={
   pageTitle:document.getElementById('pageTitle'),pageSubtitle:document.getElementById('pageSubtitle'),
   volumeList:document.getElementById('volumeList'),
   volumeSection:document.getElementById('volumeSection'),chapterList:document.getElementById('chapterList'),
-  chapterSection:document.getElementById('chapterSection'),shelfView:document.getElementById('shelfView'),
+  chapterSection:document.getElementById('chapterSection'),sidebarTabs:document.getElementById('sidebarTabs'),shelfView:document.getElementById('shelfView'),
   shelfGrid:document.getElementById('shelfGrid'),shelfEmpty:document.getElementById('shelfEmpty'),
   shelfSearch:document.getElementById('shelfSearch'),shelfSort:document.getElementById('shelfSort'),
   bookDetail:document.getElementById('bookDetail'),bookDetailCover:document.getElementById('bookDetailCover'),
@@ -2203,6 +2231,7 @@ var els={
   readerView:document.getElementById('readerView'),volumeLabel:document.getElementById('volumeLabel'),
   chapterTitle:document.getElementById('chapterTitle'),chapterBody:document.getElementById('chapterBody'),
   prevChapterBtn:document.getElementById('prevChapterBtn'),nextChapterBtn:document.getElementById('nextChapterBtn'),
+  chapterNavBar:document.getElementById('chapterNavBar'),
   backShelfBtn:document.getElementById('backShelfBtn'),exportBtn:document.getElementById('exportBtn'),
   addVolBtn:document.getElementById('addVolBtn'),addVolInput:document.getElementById('addVolInput'),
   fileInput:document.getElementById('fileInput'),pickFileBtn:document.getElementById('pickFileBtn'),
@@ -2612,6 +2641,25 @@ function updateNavButtons(){
   els.nextChapterBtn.disabled=atLast&&!hasNextVol;
 }
 
+var sidebarTab='chapter';
+function setSidebarTab(tab){
+  sidebarTab=tab==='volume'?'volume':'chapter';
+  if(els.sidebarTabs){
+    els.sidebarTabs.querySelectorAll('.sidebar-tab').forEach(function(btn){
+      var on=btn.dataset.tab===sidebarTab;
+      btn.classList.toggle('active',on);
+      btn.setAttribute('aria-selected',on?'true':'false');
+    });
+  }
+  if(els.volumeSection) els.volumeSection.classList.toggle('active',sidebarTab==='volume');
+  if(els.chapterSection) els.chapterSection.classList.toggle('active',sidebarTab==='chapter');
+}
+function syncSidebarPanels(){
+  if(els.volumeSection) els.volumeSection.hidden=!state.series;
+  if(els.chapterSection) els.chapterSection.hidden=!state.series;
+  if(els.sidebarTabs) els.sidebarTabs.hidden=!state.series;
+}
+
 function navigateToChapter(vIdx,cIdx,opts){
   if(!state.series) return;
   opts=opts||{};
@@ -2653,14 +2701,14 @@ function switchVolume(vIdx,chapterIdx,keepSpeech){
   renderChapter(state.chapterIdx,true,keepSpeech,prevLoc);
 }
 function renderVolumeList(){
-  els.volumeSection.hidden=false;
+  syncSidebarPanels();
   var vols=sortVolumes(state.series.volumes);
   els.volumeList.innerHTML=vols.map(function(v,i){
     return '<li><button type="button" data-vidx="'+i+'" class="'+(i===state.volumeIdx?'active':'')+'"><span class="item-num">'+(i+1)+'</span><span class="item-title">'+esc(v.title)+'</span></button></li>';
   }).join('');
 }
 function renderChapterList(){
-  els.chapterSection.hidden=false;
+  syncSidebarPanels();
   els.chapterList.innerHTML=state.chapters.map(function(ch,i){
     return '<li><button type="button" data-idx="'+i+'" class="'+(i===state.chapterIdx?'active':'')+'"><span class="item-num">'+(i+1)+'</span>'+esc(ch.title)+'</button></li>';
   }).join('');
@@ -2791,6 +2839,8 @@ function showReader(){
   document.body.classList.remove('shelf-mode');
   closeTopbarMenu();
   els.backShelfBtn.hidden=false;els.exportBtn.hidden=false;els.addVolBtn.hidden=false;
+  if(els.chapterNavBar) els.chapterNavBar.hidden=false;
+  syncSidebarPanels();
   if(window.readerSpeechSetVisible) window.readerSpeechSetVisible(true);
   closeBookDetail();updateReadProgress();
 }
@@ -2804,10 +2854,11 @@ function showShelf(){
   document.body.classList.add('shelf-mode');
   closeTopbarMenu();
   els.backShelfBtn.hidden=true;els.exportBtn.hidden=true;els.addVolBtn.hidden=true;
+  if(els.chapterNavBar) els.chapterNavBar.hidden=true;
   if(window.readerSpeechSetVisible) window.readerSpeechSetVisible(false);
   if(els.readProgressWrap) els.readProgressWrap.classList.remove('show');
   els.pageTitle.textContent='小說閱讀';els.pageSubtitle.textContent='本機書庫 · 雙擊即可使用';
-  els.volumeSection.hidden=true;els.chapterSection.hidden=true;
+  syncSidebarPanels();
   state.series=null;state.chapters=[];renderPasteTargetSeries();renderShelf();
 }
 
@@ -2825,7 +2876,7 @@ function openSeries(series,startProgress){
   if(p.chapterIdx>=state.chapters.length) p.chapterIdx=0;
   state.chapterIdx=p.chapterIdx;
   els.pageTitle.textContent=series.title;
-  renderPasteTargetSeries();renderVolumeList();renderChapterList();showReader();renderChapter(state.chapterIdx,true);
+  renderPasteTargetSeries();renderVolumeList();renderChapterList();setSidebarTab('chapter');showReader();renderChapter(state.chapterIdx,true);
 }
 
 function findOrCreateSeries(title){
@@ -3088,6 +3139,7 @@ function exportCurrent(){
   toast('已匯出全部 '+vols.length+' 集');
 }
 function goPrev(){
+  if(!state.series) return;
   if(state.chapterIdx>0) renderChapter(state.chapterIdx-1);
   else if(state.volumeIdx>0){
     var vols=sortVolumes(state.series.volumes);
@@ -3095,11 +3147,26 @@ function goPrev(){
   }
 }
 function goNext(){
+  if(!state.series) return;
   if(state.chapterIdx<state.chapters.length-1) renderChapter(state.chapterIdx+1);
   else if(state.volumeIdx<sortVolumes(state.series.volumes).length-1) switchVolume(state.volumeIdx+1,0);
 }
+function bindChapterNavBtn(btn,fn){
+  if(!btn) return;
+  btn.addEventListener('click',function(e){
+    e.preventDefault();
+    e.stopPropagation();
+    if(btn.disabled) return;
+    fn();
+  });
+}
 function closeSidebar(){els.sidebar.classList.remove('open');els.sidebarBackdrop.classList.remove('show');}
-function toggleSidebar(){els.sidebar.classList.toggle('open');els.sidebarBackdrop.classList.toggle('show');}
+function toggleSidebar(){
+  var opening=!els.sidebar.classList.contains('open');
+  els.sidebar.classList.toggle('open');
+  els.sidebarBackdrop.classList.toggle('show');
+  if(opening) setSidebarTab('chapter');
+}
 function closeTopbarMenu(){
   if(els.topbarMenu) els.topbarMenu.classList.remove('open');
   if(els.topbarMoreBtn) els.topbarMoreBtn.setAttribute('aria-expanded','false');
@@ -3110,8 +3177,8 @@ function toggleTopbarMenu(){
   if(els.topbarMoreBtn) els.topbarMoreBtn.setAttribute('aria-expanded',open?'true':'false');
 }
 
-els.prevChapterBtn.onclick=goPrev;
-els.nextChapterBtn.onclick=goNext;
+bindChapterNavBtn(els.prevChapterBtn,goPrev);
+bindChapterNavBtn(els.nextChapterBtn,goNext);
 els.backShelfBtn.onclick=showShelf;
 els.exportBtn.onclick=exportCurrent;
 els.addVolBtn.onclick=function(){els.addVolInput.click();};
@@ -3177,14 +3244,29 @@ document.addEventListener('click',function(e){
   }
 });
 els.sidebarBackdrop.onclick=closeSidebar;
-els.volumeList.onclick=function(e){
+if(els.sidebarTabs){
+  els.sidebarTabs.addEventListener('click',function(e){
+    var tabBtn=e.target.closest('.sidebar-tab[data-tab]');
+    if(!tabBtn) return;
+    setSidebarTab(tabBtn.dataset.tab);
+  });
+}
+function handleVolumePick(vidx){
+  if(vidx===state.volumeIdx){ setSidebarTab('chapter'); return; }
+  switchVolume(vidx,0);
+  setSidebarTab('chapter');
+}
+function handleChapterPick(idx){
+  renderChapter(idx);
+}
+els.volumeList.addEventListener('click',function(e){
   var btn=e.target.closest('button[data-vidx]');
-  if(btn) switchVolume(Number(btn.dataset.vidx),0);
-};
-els.chapterList.onclick=function(e){
+  if(btn) handleVolumePick(Number(btn.dataset.vidx));
+});
+els.chapterList.addEventListener('click',function(e){
   var btn=e.target.closest('button[data-idx]');
-  if(btn) renderChapter(Number(btn.dataset.idx));
-};
+  if(btn) handleChapterPick(Number(btn.dataset.idx));
+});
 if(els.shelfSearch) els.shelfSearch.oninput=debounce(renderShelf,180);
 if(els.shelfSort){
   var savedSort=localStorage.getItem('novelReader.shelfSort');
