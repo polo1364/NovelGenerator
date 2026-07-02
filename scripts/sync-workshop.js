@@ -38,4 +38,10 @@ for (const file of COPY_FILES) {
 }
 
 fs.copyFileSync(path.join(src, 'index.html'), path.join(root, 'index.html'));
+
+// reader 站自帶一份多音字模組（供離線快取），從 public 同步避免漂移
+fs.copyFileSync(
+  path.join(src, 'js', 'tts-polyphone-hints.js'),
+  path.join(root, 'reader', 'tts-polyphone-hints.js')
+);
 console.log('Synced public/ → root (workshop at /)');

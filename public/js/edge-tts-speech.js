@@ -60,10 +60,16 @@
 
   let cachedVoices = RECOMMENDED_VOICES;
   let ttsModeCache = null;
+  let ttsModeCheckedAt = 0;
+  const TTS_PROXY_MODE_TTL = 60000;
 
   async function detectTtsMode() {
     if (typeof location !== 'undefined' && location.protocol === 'file:') return null;
-    if (ttsModeCache) return ttsModeCache;
+    // local 一經確認即固定；proxy 可能是本機伺服器尚未啟動，定期重測
+    if (ttsModeCache === 'local') return ttsModeCache;
+    if (ttsModeCache === 'proxy' && Date.now() - ttsModeCheckedAt < TTS_PROXY_MODE_TTL) {
+      return ttsModeCache;
+    }
     try {
       const res = await fetch('/api/health', { signal: AbortSignal.timeout(4000) });
       if (res.ok) {
@@ -72,6 +78,7 @@
       }
     } catch { /* GitHub Pages 等靜態站 */ }
     ttsModeCache = 'proxy';
+    ttsModeCheckedAt = Date.now();
     return ttsModeCache;
   }
 
@@ -184,31 +191,24 @@
     s = s.replace(/睡\u89c9醒/g, '睡醒');
     s = s.replace(/睡着/g, '睡著');
     s = s.replace(/听着/g, '聽著');
-    const hinted = (global.TtsPolyphoneHints && global.TtsPolyphoneHints.applyPolyphoneHints)
-      ? global.TtsPolyphoneHints.applyPolyphoneHints(s.trim())
-      : s.trim();
-    return applyTtsWordJoiners(hinted);
+    // 注意：這裡回傳「乾淨純文字」。phoneme / word joiner 於 synthesize() 送出前才套用，
+    // 避免 SSML 標籤汙染角色分析、切段與畫面 highlight 的文字範圍。
+    return s.trim();
   }
 
-  /** 詞內字元加入字元連接符，降低被拆開唸錯的機率（代理站無 SSML 時仍有效） */
-  function applyTtsWordJoiners(text) {
-    const WJ = '\u2060';
-    const words = [
-      '還沒睡覺', '睡覺時間', '想睡覺', '去睡覺', '要睡覺', '睡一覺', '睡覺了', '睡覺', '睡醒', '一覺',
-      '睡著了', '睡著', '聽著', '看著', '走著', '坐著', '站著', '躺著', '等著', '拿著', '笑著', '哭著',
-      '說著', '想著', '活著', '愛著', '扶著', '抱著', '握著', '閉著', '睜著', '牽著', '舉著', '望著', '盯著',
-      '倒了一杯酒', '倒了一杯', '倒了酒', '倒入', '倒出', '倒進', '倒滿', '倒水', '倒酒',
-      '沒問題', '沒關係', '沒想到', '沒什麼', '沒有', '沒事', '沒錯',
-      '什麼時候', '什麼東西', '什麼事', '幹什麼', '做什麼', '有什麼', '是什麼', '為什麼',
-      '什麼', '什麽', '怎麼辦', '怎麼樣', '怎麼了', '怎麼', '怎麽', '為什麽',
-      '有没有', '有沒有', '很長', '好長', '太長', '多長', '變長', '拉長', '延長',
-      '頗長', '極長', '尤長', '甚長', '調酒', '調味', '調料'
-    ];
-    let s = text;
-    for (const w of words.sort((a, b) => b.length - a.length)) {
-      const joined = [...w].join(WJ);
-      if (!s.includes(w)) continue;
-      s = s.split(w).join(joined);
+  /**
+   * 合成前的最終文字處理：
+   * - local 模式：送純文字，由後端統一做發音安全改寫 + word joiner
+   * - proxy 模式：前端直連 Worker，須自行做發音安全改寫 + word joiner
+   *   （Edge 服務不支援 SSML phoneme，改寫是唯一可靠的多音字修正手段）
+   */
+  function prepareTextForSynthesis(text, mode) {
+    const hints = global.TtsPolyphoneHints;
+    let s = String(text || '');
+    if (hints && hints.stripPhonemeTags) s = hints.stripPhonemeTags(s);
+    if (mode === 'proxy' && hints) {
+      if (hints.applyPolyphoneHints) s = hints.applyPolyphoneHints(s);
+      if (hints.applyWordJoiners) s = hints.applyWordJoiners(s);
     }
     return s;
   }
@@ -603,7 +603,7 @@
       headers: { 'Content-Type': 'application/json' },
       signal,
       body: JSON.stringify({
-        text,
+        text: prepareTextForSynthesis(text, mode),
         voice: voice || DEFAULT_VOICE,
         style: style || 'general',
         rate: rate ?? 1,

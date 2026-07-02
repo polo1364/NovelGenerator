@@ -20,6 +20,25 @@ const DEEPSEEK_URL = process.env.DEEPSEEK_URL || 'https://api.deepseek.com/chat/
 // 故事 prompt 可能很長，放寬 JSON body 上限
 app.use(express.json({ limit: '8mb' }));
 
+/**
+ * 選用的 API 保護：設定 API_TOKEN 環境變數後，
+ * 所有 /api/*（health 除外）須帶 X-Api-Token 或 ?token= 才能使用。
+ * 未設定時行為不變（本機使用免設定）。
+ */
+const API_TOKEN = (process.env.API_TOKEN || '').trim();
+app.use('/api', (req, res, next) => {
+  if (!API_TOKEN || req.path === '/health') return next();
+  const provided = req.get('x-api-token') || req.query.token;
+  if (provided === API_TOKEN) return next();
+  res.status(401).json({ error: '未授權：缺少或錯誤的 API token' });
+});
+
+/** 統一錯誤回應：細節記在伺服器日誌，不外洩給客戶端 */
+function sendServerError(res, status, publicMessage, err) {
+  if (err) console.error(`[server] ${publicMessage}:`, err.message || err);
+  res.status(status).json({ error: publicMessage });
+}
+
 // 根目錄 = AI 小說工坊；/reader/ = 小說閱讀站
 const ROOT = __dirname;
 const NOVELS_DIR = path.join(ROOT, 'novels');
@@ -88,7 +107,7 @@ app.get('/api/novels', (req, res) => {
       })),
     });
   } catch (err) {
-    res.status(500).json({ error: err.message || '讀取書庫失敗' });
+    sendServerError(res, 500, '讀取書庫失敗', err);
   }
 });
 
@@ -113,6 +132,9 @@ app.post('/api/chat', async (req, res) => {
       error: { message: '伺服器尚未設定 DEEPSEEK_API_KEY 環境變數，請聯絡管理員。' },
     });
   }
+  if (!Array.isArray(req.body?.messages) || req.body.messages.length === 0) {
+    return res.status(400).json({ error: { message: '請求格式錯誤：缺少 messages' } });
+  }
 
   // 客戶端中斷（按下「停止生成」或關閉分頁）時，連帶中止上游請求
   const controller = new AbortController();
@@ -131,8 +153,9 @@ app.post('/api/chat', async (req, res) => {
     });
   } catch (err) {
     if (controller.signal.aborted) return; // 客戶端已斷線
+    console.error('[server] 無法連線至 DeepSeek:', err?.message || err);
     return res.status(502).json({
-      error: { message: '無法連線至 DeepSeek：' + (err && err.message ? err.message : String(err)) },
+      error: { message: '無法連線至 DeepSeek，請稍後再試' },
     });
   }
 
@@ -166,6 +189,23 @@ app.get('/api/tts/voices', (req, res) => {
   res.json({ voices: RECOMMENDED_VOICES });
 });
 
+/** voice/style 白名單，避免任意字串注入 SSML 屬性 */
+const VALID_VOICE_IDS = new Set(RECOMMENDED_VOICES.map((v) => v.id));
+const VALID_STYLE_RE = /^[a-z][a-z-]{0,39}$/;
+
+function sanitizeTtsOptions({ voice, style, rate, pitch }) {
+  const clampNum = (v, min, max, dflt) => {
+    const n = Number(v);
+    return Number.isFinite(n) ? Math.min(max, Math.max(min, n)) : dflt;
+  };
+  return {
+    voice: VALID_VOICE_IDS.has(voice) ? voice : 'zh-CN-YunjianNeural',
+    style: (typeof style === 'string' && VALID_STYLE_RE.test(style)) ? style : 'general',
+    rate: clampNum(rate, 0.5, 2, 1),
+    pitch: clampNum(pitch, 0.5, 2, 1)
+  };
+}
+
 /** Edge 神經語音：合成 MP3（依情緒風格、語速、音調） */
 app.post('/api/tts', async (req, res) => {
   const { text, voice, style, rate, pitch } = req.body || {};
@@ -178,14 +218,12 @@ app.post('/api/tts', async (req, res) => {
   }
 
   try {
-    const audio = await synthesizeEdgeTts(trimmed, { voice, style, rate, pitch });
+    const audio = await synthesizeEdgeTts(trimmed, sanitizeTtsOptions({ voice, style, rate, pitch }));
     res.setHeader('Content-Type', 'audio/mpeg');
     res.setHeader('Cache-Control', 'no-store');
     res.send(audio);
   } catch (err) {
-    res.status(502).json({
-      error: err?.message || 'Edge 語音合成失敗'
-    });
+    sendServerError(res, 502, 'Edge 語音合成失敗，請稍後再試', err);
   }
 });
 
@@ -211,10 +249,10 @@ app.post('/api/analyze-roles', async (req, res) => {
     return res.status(400).json({ error: validated.error });
   }
   try {
-    const { segments, usage } = await analyzeDialogueRoles(apiKey, validated.text);
-    res.json({ ok: true, segments, usage });
+    const { segments, usage, degradedBlocks } = await analyzeDialogueRoles(apiKey, validated.text);
+    res.json({ ok: true, segments, usage, degradedBlocks });
   } catch (err) {
-    res.status(502).json({ error: err?.message || '角色分析失敗' });
+    sendServerError(res, 502, '角色分析失敗，請稍後再試', err);
   }
 });
 
@@ -248,13 +286,14 @@ app.post('/api/analyze-roles/stream', async (req, res) => {
   send({ type: 'start', total: blocks.length });
 
   try {
-    const { segments, usage } = await analyzeDialogueRoles(apiKey, validated.text, (done, total) => {
+    const { segments, usage, degradedBlocks } = await analyzeDialogueRoles(apiKey, validated.text, (done, total) => {
       send({ type: 'progress', done, total });
     });
-    send({ type: 'complete', segments, usage });
+    send({ type: 'complete', segments, usage, degradedBlocks });
     if (!res.writableEnded) res.end();
   } catch (err) {
-    send({ type: 'error', error: err?.message || '角色分析失敗' });
+    console.error('[server] 角色分析失敗:', err?.message || err);
+    send({ type: 'error', error: '角色分析失敗，請稍後再試' });
     if (!res.writableEnded) res.end();
   }
 });

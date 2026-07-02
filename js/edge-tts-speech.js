@@ -9,7 +9,7 @@
   const ANALYZE_STREAM_ENDPOINT = '/api/analyze-roles/stream';
   const DEFAULT_VOICE = 'zh-CN-YunjianNeural';
   const VOICE_STORAGE_KEY = 'edgeSpeechVoice';
-  const CHUNK_LEN = 200;
+  const CHUNK_LEN = 480;
 
   const RECOMMENDED_VOICES = [
     { id: 'zh-TW-HsiaoChenNeural', name: '曉臻（女聲・繁中）', lang: 'zh-TW', styles: ['general', 'calm', 'cheerful', 'sad', 'angry', 'fearful', 'gentle', 'serious', 'affectionate'] },
@@ -60,10 +60,16 @@
 
   let cachedVoices = RECOMMENDED_VOICES;
   let ttsModeCache = null;
+  let ttsModeCheckedAt = 0;
+  const TTS_PROXY_MODE_TTL = 60000;
 
   async function detectTtsMode() {
     if (typeof location !== 'undefined' && location.protocol === 'file:') return null;
-    if (ttsModeCache) return ttsModeCache;
+    // local 一經確認即固定；proxy 可能是本機伺服器尚未啟動，定期重測
+    if (ttsModeCache === 'local') return ttsModeCache;
+    if (ttsModeCache === 'proxy' && Date.now() - ttsModeCheckedAt < TTS_PROXY_MODE_TTL) {
+      return ttsModeCache;
+    }
     try {
       const res = await fetch('/api/health', { signal: AbortSignal.timeout(4000) });
       if (res.ok) {
@@ -72,6 +78,7 @@
       }
     } catch { /* GitHub Pages 等靜態站 */ }
     ttsModeCache = 'proxy';
+    ttsModeCheckedAt = Date.now();
     return ttsModeCache;
   }
 
@@ -156,29 +163,148 @@
   function sanitizeTtsText(text) {
     if (!text) return '';
     let s = String(text);
+    s = s.replace(/\uFFFD/g, '');
     s = s.replace(/[#＃*＊_＿`´^＾~～｜|\\<>＜＞{}\[\]【】〖〗〔〕［］]/g, '');
     s = s.replace(/[\u{1F000}-\u{1FAFF}\u{2600}-\u{27BF}\u{FE0F}\u{200D}]/gu, '');
     s = s.replace(/[—–\-=＝]{3,}/g, '');
     s = s.replace(/[ \t\u00A0]{2,}/g, ' ');
+    // 中文字間不應有空格，否則 TTS 會拆開唸（如「調 酒」）
+    s = s.replace(/([\u4e00-\u9fff])\s+([\u4e00-\u9fff])/g, '$1$2');
+    // 常見簡繁混用詞
+    s = s.replace(/什么/g, '什麼');
+    s = s.replace(/怎么/g, '怎麼');
+    s = s.replace(/为什么/g, '為什麼');
+    s = s.replace(/没有/g, '沒有');
+    s = s.replace(/没什么/g, '沒什麼');
+    s = s.replace(/调酒/g, '調酒');
+    s = s.replace(/调味/g, '調味');
+    s = s.replace(/调料/g, '調料');
+    s = s.replace(/很长/g, '很長');
+    s = s.replace(/好长/g, '好長');
+    s = s.replace(/太长/g, '太長');
+    s = s.replace(/多长/g, '多長');
+    s = s.replace(/没问题/g, '沒問題');
+    s = s.replace(/没关系/g, '沒關係');
+    s = s.replace(/没事/g, '沒事');
+    s = s.replace(/睡觉/g, '睡覺');
+    s = s.replace(/一觉/g, '一覺');
+    s = s.replace(/睡\u89c9醒/g, '睡醒');
+    s = s.replace(/睡着/g, '睡著');
+    s = s.replace(/听着/g, '聽著');
+    // 注意：這裡回傳「乾淨純文字」。phoneme / word joiner 於 synthesize() 送出前才套用，
+    // 避免 SSML 標籤汙染角色分析、切段與畫面 highlight 的文字範圍。
     return s.trim();
+  }
+
+  /**
+   * 合成前的最終文字處理：
+   * - local 模式：送純文字，由後端統一做發音安全改寫 + word joiner
+   * - proxy 模式：前端直連 Worker，須自行做發音安全改寫 + word joiner
+   *   （Edge 服務不支援 SSML phoneme，改寫是唯一可靠的多音字修正手段）
+   */
+  function prepareTextForSynthesis(text, mode) {
+    const hints = global.TtsPolyphoneHints;
+    let s = String(text || '');
+    if (hints && hints.stripPhonemeTags) s = hints.stripPhonemeTags(s);
+    if (mode === 'proxy' && hints) {
+      if (hints.applyPolyphoneHints) s = hints.applyPolyphoneHints(s);
+      if (hints.applyWordJoiners) s = hints.applyWordJoiners(s);
+    }
+    return s;
   }
 
   function hasSpeakableText(s) {
     return /[\p{L}\p{N}]/u.test(s || '');
   }
 
-  function splitTextIntoChunks(text, maxLen = CHUNK_LEN) {
+  function isHanChar(ch) {
+    return ch ? /\p{Script=Han}/u.test(ch) : false;
+  }
+
+  /** 兩個漢字之間切開，TTS 常唸錯音（什麼→ㄕˊㄇㄛˊ、調酒→ㄉ一ㄠˋ酒） */
+  function isUnsafeHanSplit(text, cut) {
+    if (!text || cut <= 0 || cut >= text.length) return false;
+    return isHanChar(text[cut - 1]) && isHanChar(text[cut]);
+  }
+
+  const TTS_SPLIT_PUNCT = ['。', '！', '？', '.', '!', '?', '，', '、', '；', '：', '」', '』', '）', ')', '\n', ' '];
+
+  function findSafeCutIndex(text, maxLen) {
+    if (!text || text.length <= maxLen) return text.length;
+    const window = text.slice(0, maxLen + 1);
+    let best = -1;
+    for (const ch of TTS_SPLIT_PUNCT) {
+      const i = window.lastIndexOf(ch);
+      if (i > maxLen * 0.2 && i > best) best = i + 1;
+    }
+    if (best > 0 && !isUnsafeHanSplit(text, best)) return best;
+    for (let c = maxLen; c > Math.max(8, maxLen * 0.45); c--) {
+      if (!isUnsafeHanSplit(text, c)) return c;
+    }
+    return text.length;
+  }
+
+  /** 下一段若以助詞／詞尾開頭，單獨合成容易唸成怪音 */
+  const TTS_ORPHAN_LEAD = /^[的了嗎嘛吧呢啊呀哦喔欸麼麽没沒有是在與和及而或被把將給讓對從向以于於這那哪啥其就也都还還又再很更最]/u;
+
+  function endsWithHangingChar(s) {
+    return /[什怎那這那哪為为没沒調调倒睡]$/.test(s || '');
+  }
+
+  function shouldMergeTtsChunk(prev, next) {
+    if (!prev || !next) return false;
+    const n = next.trim();
+    if (!n) return false;
+    if (isUnsafeHanSplit(prev + n, prev.length)) return true;
+    if (endsWithHangingChar(prev)) return true;
+    if (n.length <= 2) return true;
+    if (TTS_ORPHAN_LEAD.test(n)) return true;
+    return false;
+  }
+
+  function mergeOrphanTtsChunks(chunks) {
+    const out = [];
+    for (const raw of chunks) {
+      const piece = (raw || '').trim();
+      if (!piece) continue;
+      if (out.length && shouldMergeTtsChunk(out[out.length - 1], piece)) {
+        out[out.length - 1] += piece;
+      } else {
+        out.push(piece);
+      }
+    }
+    return out.filter((c) => hasSpeakableText(c));
+  }
+
+  function splitLongSegment(text, maxLen) {
     if (text.length <= maxLen) return [text.trim()].filter(Boolean);
+    const parts = [];
+    let rest = text;
+    while (rest.length > maxLen) {
+      let cut = findSafeCutIndex(rest, maxLen);
+      if (cut <= 0 || cut > rest.length) cut = rest.length;
+      const head = rest.slice(0, cut).trim();
+      if (head) parts.push(head);
+      rest = rest.slice(cut).trim();
+      if (!rest) break;
+    }
+    if (rest) parts.push(rest);
+    return mergeOrphanTtsChunks(parts);
+  }
+
+  function splitTextIntoChunks(text, maxLen = CHUNK_LEN) {
+    const trimmed = (text || '').trim();
+    if (!trimmed) return [];
+    if (trimmed.length <= maxLen) return mergeOrphanTtsChunks([trimmed]);
+
     const chunks = [];
-    const sentences = text.match(/[^。！？.!?\n]+[。！？.!?\n]?/g) || [text];
+    const sentences = trimmed.match(/[^。！？.!?\n]+[。！？.!?\n]?/g) || [trimmed];
     let current = '';
     for (const sentence of sentences) {
       if (current.length + sentence.length > maxLen) {
-        if (current) chunks.push(current.trim());
+        if (current.trim()) chunks.push(current.trim());
         if (sentence.length > maxLen) {
-          for (let i = 0; i < sentence.length; i += maxLen) {
-            chunks.push(sentence.slice(i, i + maxLen).trim());
-          }
+          chunks.push(...splitLongSegment(sentence, maxLen));
           current = '';
         } else {
           current = sentence;
@@ -188,7 +314,57 @@
       }
     }
     if (current.trim()) chunks.push(current.trim());
-    return chunks.filter(Boolean);
+    return mergeOrphanTtsChunks(chunks);
+  }
+
+  function samePlayParams(a, b) {
+    return a.voice === b.voice && a.style === b.style
+      && Math.abs((a.rate || 1) - (b.rate || 1)) < 0.001
+      && Math.abs((a.pitch || 1) - (b.pitch || 1)) < 0.001;
+  }
+
+  /** 合併播放佇列中因切段而拆散的詞（跨 segment 也適用） */
+  function mergeAdjacentPlayQueue(queue) {
+    const out = [];
+    for (const item of queue) {
+      const prev = out[out.length - 1];
+      const merge = prev && (
+        shouldMergeTtsChunk(prev.text, item.text)
+        || isUnsafeHanSplit((prev.text || '') + (item.text || ''), (prev.text || '').length)
+      );
+      if (merge && (samePlayParams(prev, item) || isUnsafeHanSplit((prev.text || '') + (item.text || ''), (prev.text || '').length))) {
+        prev.text += item.text;
+        continue;
+      }
+      out.push({ ...item });
+    }
+    return out;
+  }
+
+  /** 合併朗讀段落列表，避免段界落在兩個漢字中間 */
+  function mergeSpeechSegments(segments, ranges) {
+    const outS = [];
+    const outR = [];
+    for (let i = 0; i < segments.length; i++) {
+      const s = (segments[i] || '').trim();
+      const r = ranges && ranges[i];
+      if (!s) continue;
+      const prev = outS[outS.length - 1];
+      if (prev && shouldMergeTtsChunk(prev, s)) {
+        outS[outS.length - 1] = prev + s;
+        if (outR.length && r) {
+          outR[outR.length - 1] = {
+            start: outR[outR.length - 1].start,
+            end: r.end,
+            text: outS[outS.length - 1]
+          };
+        }
+      } else {
+        outS.push(s);
+        if (r) outR.push({ ...r, text: s });
+      }
+    }
+    return { segments: outS, ranges: outR };
   }
 
   async function fetchVoices() {
@@ -353,8 +529,13 @@
       const t = seg.t || '';
       if (!t) continue;
       const last = merged[merged.length - 1];
-      if (last && last.g === g && last.e === e) last.t += t;
-      else merged.push({ g, e, t });
+      if (last && last.g === g && last.e === e) {
+        last.t += t;
+      } else if (last && shouldMergeTtsChunk(last.t, t)) {
+        last.t += t;
+      } else {
+        merged.push({ g, e, t });
+      }
     }
 
     const queue = [];
@@ -382,7 +563,7 @@
         });
       }
     }
-    return queue;
+    return mergeAdjacentPlayQueue(queue);
   }
 
   function buildSimplePlayQueue(segments, voiceId, emotionMode, baseRate, basePitch) {
@@ -410,7 +591,7 @@
         });
       }
     }
-    return queue;
+    return mergeAdjacentPlayQueue(queue);
   }
 
   async function synthesize({ text, voice, style, rate, pitch, signal }) {
@@ -422,7 +603,7 @@
       headers: { 'Content-Type': 'application/json' },
       signal,
       body: JSON.stringify({
-        text,
+        text: prepareTextForSynthesis(text, mode),
         voice: voice || DEFAULT_VOICE,
         style: style || 'general',
         rate: rate ?? 1,
@@ -460,6 +641,9 @@
     buildEmotionParams,
     detectEmotionFromText,
     sanitizeTtsText,
+    isUnsafeHanSplit,
+    shouldMergeTtsChunk,
+    mergeSpeechSegments,
     analyzeRoles,
     buildRolePlayQueue,
     buildSimplePlayQueue,

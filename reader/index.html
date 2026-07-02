@@ -652,6 +652,7 @@ body.speech-open .topbar{visibility:hidden;pointer-events:none}
   </div>
 </div>
 <div class="toast" id="toast"></div>
+<script src="tts-polyphone-hints.js"></script>
 <script>
 /**
  * 小說工坊 — Edge 神經語音＋情緒朗讀（對齊 extx 擴充元件邏輯）
@@ -811,11 +812,30 @@ body.speech-open .topbar{visibility:hidden;pointer-events:none}
   function sanitizeTtsText(text) {
     if (!text) return '';
     let s = String(text);
+    s = s.replace(/\uFFFD/g, '');
     s = s.replace(/[#＃*＊_＿`´^＾~～｜|\\<>＜＞{}\[\]【】〖〗〔〕［］]/g, '');
     s = s.replace(/[\u{1F000}-\u{1FAFF}\u{2600}-\u{27BF}\u{FE0F}\u{200D}]/gu, '');
     s = s.replace(/[—–\-=＝]{3,}/g, '');
     s = s.replace(/[ \t\u00A0]{2,}/g, ' ');
+    // 中文字間不應有空格，否則 TTS 會拆開唸（如「調 酒」）
+    s = s.replace(/([\u4e00-\u9fff])\s+([\u4e00-\u9fff])/g, '$1$2');
     return s.trim();
+  }
+
+  /**
+   * 合成前最終處理：local 送純文字由後端統一改寫；
+   * proxy 直連 Worker，前端自行做發音安全改寫 + word joiner
+   * （Edge 服務不支援 SSML phoneme，改寫是唯一可靠的多音字修正手段）。
+   */
+  function prepareTextForSynthesis(text, mode) {
+    const hints = global.TtsPolyphoneHints;
+    let s = String(text || '');
+    if (hints && hints.stripPhonemeTags) s = hints.stripPhonemeTags(s);
+    if (mode === 'proxy' && hints) {
+      if (hints.applyPolyphoneHints) s = hints.applyPolyphoneHints(s);
+      if (hints.applyWordJoiners) s = hints.applyWordJoiners(s);
+    }
+    return s;
   }
 
   function hasSpeakableText(s) {
@@ -1077,7 +1097,7 @@ body.speech-open .topbar{visibility:hidden;pointer-events:none}
       headers: { 'Content-Type': 'application/json' },
       signal,
       body: JSON.stringify({
-        text,
+        text: prepareTextForSynthesis(text, mode),
         voice: voice || DEFAULT_VOICE,
         style: style || 'general',
         rate: rate ?? 1,

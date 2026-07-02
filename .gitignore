@@ -8,6 +8,10 @@ node_modules/
 # 備份與暫存
 *.bak
 _*.js
+backup/
+
+# 編輯器工具目錄
+.cursor/
 
 # 系統檔
 .DS_Store

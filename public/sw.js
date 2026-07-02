@@ -1,11 +1,12 @@
 /* ============================================================
    AI 小說工坊 — Service Worker
-   - 可變資源（HTML / JS / CSS）：Network First，部署後自動取得新版
+   - 導覽（HTML）：Network First
+   - JS / CSS：Stale-While-Revalidate（先回快取、背景更新）
    - 圖示 / 字型：Cache First，離線仍可用
-   - /api/* 不走 SW
+   - /api/* 與 /reader/* 不走 SW
    ============================================================ */
 
-const CACHE_VERSION = 'v78';
+const CACHE_VERSION = 'v79';
 const CACHE_NAME = `novel-workshop-${CACHE_VERSION}`;
 
 const APP_SHELL = [
@@ -14,6 +15,8 @@ const APP_SHELL = [
   './css/styles.css',
   './css/layout-polish.css',
   './js/app.js',
+  './js/edge-tts-speech.js',
+  './js/tts-polyphone-hints.js',
   './manifest.webmanifest',
   './icons/icon-192.png',
   './icons/icon-512.png',
