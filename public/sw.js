@@ -5,13 +5,14 @@
    - /api/* 不走 SW
    ============================================================ */
 
-const CACHE_VERSION = 'v9';
+const CACHE_VERSION = 'v68';
 const CACHE_NAME = `novel-workshop-${CACHE_VERSION}`;
 
 const APP_SHELL = [
   './',
   './index.html',
   './css/styles.css',
+  './css/layout-polish.css',
   './js/app.js',
   './manifest.webmanifest',
   './icons/icon-192.png',
