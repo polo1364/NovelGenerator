@@ -179,16 +179,28 @@
     s = s.replace(/没问题/g, '沒問題');
     s = s.replace(/没关系/g, '沒關係');
     s = s.replace(/没事/g, '沒事');
-    return applyTtsWordJoiners(s.trim());
+    s = s.replace(/睡觉/g, '睡覺');
+    s = s.replace(/一觉/g, '一覺');
+    s = s.replace(/睡\u89c9醒/g, '睡醒');
+    s = s.replace(/睡着/g, '睡著');
+    s = s.replace(/听着/g, '聽著');
+    const hinted = (global.TtsPolyphoneHints && global.TtsPolyphoneHints.applyPolyphoneHints)
+      ? global.TtsPolyphoneHints.applyPolyphoneHints(s.trim())
+      : s.trim();
+    return applyTtsWordJoiners(hinted);
   }
 
   /** 詞內字元加入字元連接符，降低被拆開唸錯的機率（代理站無 SSML 時仍有效） */
   function applyTtsWordJoiners(text) {
     const WJ = '\u2060';
     const words = [
+      '還沒睡覺', '睡覺時間', '想睡覺', '去睡覺', '要睡覺', '睡一覺', '睡覺了', '睡覺', '睡醒', '一覺',
+      '睡著了', '睡著', '聽著', '看著', '走著', '坐著', '站著', '躺著', '等著', '拿著', '笑著', '哭著',
+      '說著', '想著', '活著', '愛著', '扶著', '抱著', '握著', '閉著', '睜著', '牽著', '舉著', '望著', '盯著',
       '倒了一杯酒', '倒了一杯', '倒了酒', '倒入', '倒出', '倒進', '倒滿', '倒水', '倒酒',
       '沒問題', '沒關係', '沒想到', '沒什麼', '沒有', '沒事', '沒錯',
-      '什麼', '什麽', '怎麼', '怎麽', '為什麼', '為什麽',
+      '什麼時候', '什麼東西', '什麼事', '幹什麼', '做什麼', '有什麼', '是什麼', '為什麼',
+      '什麼', '什麽', '怎麼辦', '怎麼樣', '怎麼了', '怎麼', '怎麽', '為什麽',
       '有没有', '有沒有', '很長', '好長', '太長', '多長', '變長', '拉長', '延長',
       '頗長', '極長', '尤長', '甚長', '調酒', '調味', '調料'
     ];
@@ -236,7 +248,7 @@
   const TTS_ORPHAN_LEAD = /^[的了嗎嘛吧呢啊呀哦喔欸麼麽没沒有是在與和及而或被把將給讓對從向以于於這那哪啥其就也都还還又再很更最]/u;
 
   function endsWithHangingChar(s) {
-    return /[什怎那這那哪為为没沒調调倒]$/.test(s || '');
+    return /[什怎那這那哪為为没沒調调倒睡]$/.test(s || '');
   }
 
   function shouldMergeTtsChunk(prev, next) {
