@@ -9757,28 +9757,26 @@ ${continueWordReq}
       function preprocessTextForSpeech(text) {
         if (!text || text.trim().length === 0) return '';
         
-        let processed = text.trim();
+        let processed = EdgeTtsSpeech.sanitizeTtsText(text.trim());
         
         // 移除 Markdown 標記
         processed = processed.replace(/^#+\s*/gm, '');
         processed = processed.replace(/\*+/g, '');
         
-        // 移除所有不需要唸的符號
-        processed = processed.replace(/[「」『』【】〈〉《》（）()\[\]{}""'']/g, '');
-        processed = processed.replace(/[：:；;]/g, '，'); // 冒號分號轉逗號停頓
-        processed = processed.replace(/[⋯…]+/g, '，'); // 省略號轉停頓
-        processed = processed.replace(/[——–—−]+/g, '，'); // 破折號轉停頓
-        processed = processed.replace(/[～~]+/g, ''); // 移除波浪號
-        processed = processed.replace(/[★☆●○◆◇■□▲△▼▽※＊\*#＃@＠&＆]/g, ''); // 移除特殊符號
-        processed = processed.replace(/[─━┃│┄┅┆┇]+/g, ''); // 移除線條符號
+        // 引號改逗號停頓，保留語意連貫（勿整段刪除以免詞被拆散）
+        processed = processed.replace(/[「」『』【】〈〉《》（）()\[\]{}""'']/g, '，');
+        processed = processed.replace(/[：:；;]/g, '，');
+        processed = processed.replace(/[⋯…]+/g, '，');
+        processed = processed.replace(/[——–—−]+/g, '，');
+        processed = processed.replace(/[～~]+/g, '');
+        processed = processed.replace(/[★☆●○◆◇■□▲△▼▽※＊\*#＃@＠&＆]/g, '');
+        processed = processed.replace(/[─━┃│┄┅┆┇]+/g, '');
         
-        // 清理多餘的標點和空格
         processed = processed.replace(/，+/g, '，');
         processed = processed.replace(/。+/g, '。');
         processed = processed.replace(/\s+/g, ' ');
         processed = processed.trim();
         
-        // 確保文字不為空
         if (!processed || processed.length === 0) {
           return '';
         }
@@ -9808,7 +9806,11 @@ ${continueWordReq}
             let chunkSearch = paraStart;
 
             for (const sentence of sentences) {
-              if ((chunk + sentence).length > 150 && chunk.trim()) {
+              const combined = chunk + sentence;
+              const chunkFull = chunk.trim() && combined.length > 150;
+              const unsafeSplit = chunk.trim() && EdgeTtsSpeech.isUnsafeHanSplit
+                && EdgeTtsSpeech.isUnsafeHanSplit(combined, chunk.trim().length);
+              if (chunkFull && !unsafeSplit) {
                 const chunkTrim = chunk.trim();
                 const chunkStart = text.indexOf(chunkTrim, chunkSearch);
                 if (chunkStart !== -1) {
@@ -9822,7 +9824,7 @@ ${continueWordReq}
                 }
                 chunk = sentence;
               } else {
-                chunk += sentence;
+                chunk = combined;
               }
             }
 
@@ -9850,7 +9852,11 @@ ${continueWordReq}
           searchFrom = paraStart + trimmed.length;
         }
 
-        return segments.filter((s) => s.length > 0);
+        const merged = EdgeTtsSpeech.mergeSpeechSegments
+          ? EdgeTtsSpeech.mergeSpeechSegments(segments, segmentRanges)
+          : { segments, ranges: segmentRanges };
+        segmentRanges = merged.ranges;
+        return merged.segments.filter((s) => s.length > 0);
       }
 
       function escapeHighlightHtml(text) {
