@@ -5,7 +5,7 @@
    - /api/* 不走 SW
    ============================================================ */
 
-const CACHE_VERSION = 'v74';
+const CACHE_VERSION = 'v75';
 const CACHE_NAME = `novel-workshop-${CACHE_VERSION}`;
 
 const APP_SHELL = [

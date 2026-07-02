@@ -172,7 +172,28 @@
     s = s.replace(/调酒/g, '調酒');
     s = s.replace(/调味/g, '調味');
     s = s.replace(/调料/g, '調料');
-    return s.trim();
+    s = s.replace(/很长/g, '很長');
+    s = s.replace(/好长/g, '好長');
+    s = s.replace(/太长/g, '太長');
+    s = s.replace(/多长/g, '多長');
+    return applyTtsWordJoiners(s.trim());
+  }
+
+  /** 詞內字元加入字元連接符，降低被拆開唸錯的機率（代理站無 SSML 時仍有效） */
+  function applyTtsWordJoiners(text) {
+    const WJ = '\u2060';
+    const words = [
+      '什麼', '什麽', '怎麼', '怎麽', '為什麼', '為什麽', '沒什麼', '沒什麽',
+      '沒有', '有没有', '有沒有', '很長', '好長', '太長', '多長', '變長', '拉長', '延長',
+      '頗長', '極長', '尤長', '甚長', '調酒', '調味', '調料'
+    ];
+    let s = text;
+    for (const w of words.sort((a, b) => b.length - a.length)) {
+      const joined = [...w].join(WJ);
+      if (!s.includes(w)) continue;
+      s = s.split(w).join(joined);
+    }
+    return s;
   }
 
   function hasSpeakableText(s) {
