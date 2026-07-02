@@ -4419,7 +4419,7 @@
         display: block;
       }
 
-      /* 其他說明區下方：預覽大綱（常駐顯示，與補充說明分開） */
+      /* 自訂規則區下方：預覽大綱（常駐顯示，與自訂規則分開） */
       .outline-attach-panel {
         padding: 14px 16px;
         background: var(--section-bg);

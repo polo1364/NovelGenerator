@@ -113,6 +113,13 @@
   margin-bottom: var(--lp-gap-xs);
 }
 
+.input-group-desc {
+  margin: 0 0 10px;
+  font-size: 0.84rem;
+  line-height: 1.5;
+  color: var(--ws-stone-deep, var(--text-light));
+}
+
 .label-row {
   gap: var(--lp-gap-sm);
   margin-bottom: var(--lp-gap-xs);
