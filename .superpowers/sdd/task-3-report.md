@@ -53,3 +53,21 @@ Implemented and verified within the assigned UI scope.
 - At 1280px and 375px, measured close control size was 48x44px, a `.btn-small` control was 111.84x44px, and the footer button was 78.41x44px. The 375px viewport had no horizontal page overflow.
 - `public/sw.js` now routes `/js/app.js` through `networkFirst(request)` before the generic JS/CSS stale-while-revalidate branch. `networkFirst()` retains its `caches.match(request)` offline fallback.
 - Browser console check for this review-blocker pass returned no errors.
+
+## Second re-review — runtime character controls
+
+### RED / GREEN evidence
+
+- RED: `node --test test/ui-contract.test.js` exited 1 after the contract required `.editorial-modal .char-ai-btn`, `.char-tab`, and `.combo-toggle`; it failed on the missing `.char-ai-btn` selector.
+- GREEN: after adding one scoped 44px minimum-size rule for those exact runtime classes, `node --test test/ui-contract.test.js` passed 4/4.
+- Final: `npm test` passed 21/21 and `git diff --check` completed without whitespace errors.
+
+### Browser evidence
+
+- Verified on a fresh `localhost:3001` origin so the previous service worker's stale CSS cache could not mask the new rule.
+- At both 1280px and 375px, `.char-ai-btn` measured 45.14x44px, `.char-tab` measured 70.13x44px, and `.combo-toggle` measured 44x44px.
+- The 375px viewport had no horizontal page overflow, and the browser console had no errors.
+
+### Note
+
+- The existing service worker intentionally serves CSS with stale-while-revalidate. A previously controlled `localhost:3000` tab therefore continued to show cached CSS until its cache refresh; this task preserves that approved CSS caching strategy and verifies the shipped source on a fresh origin.

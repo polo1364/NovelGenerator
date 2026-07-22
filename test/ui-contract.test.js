@@ -98,11 +98,15 @@ test('workspace modals retain dialog semantics', () => {
     '.editorial-modal .special-element-item.selected {',
     '.editorial-modal .modal-close,',
     '.editorial-modal .btn-small,',
-    '.editorial-modal .workspace-modal-footer .btn-primary {'
+    '.editorial-modal .workspace-modal-footer .btn-primary {',
+    '.editorial-modal .char-ai-btn,',
+    '.editorial-modal .char-tab,',
+    '.editorial-modal .combo-toggle {'
   ]) {
     assert.ok(css.includes(selector), `missing modal control selector: ${selector}`);
   }
   assert.match(css, /\.editorial-modal \.modal-close,[\s\S]*?min-width:\s*44px;[\s\S]*?min-height:\s*44px;/);
+  assert.match(css, /\.editorial-modal \.char-ai-btn,[\s\S]*?\.editorial-modal \.char-tab,[\s\S]*?\.editorial-modal \.combo-toggle\s*\{[\s\S]*?min-width:\s*44px;[\s\S]*?min-height:\s*44px;/);
   assert.match(css, /\.editorial-modal \*\s*\{\s*scroll-behavior:\s*auto !important;/);
 });
 

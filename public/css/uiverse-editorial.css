@@ -270,6 +270,13 @@
   min-height: 44px;
 }
 
+.editorial-modal .char-ai-btn,
+.editorial-modal .char-tab,
+.editorial-modal .combo-toggle {
+  min-width: 44px;
+  min-height: 44px;
+}
+
 .editorial-modal .special-element-item.selected {
   transform: translateY(-1px);
   border-color: var(--ec-teal, var(--accent));
