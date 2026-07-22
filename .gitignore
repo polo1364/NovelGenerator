@@ -1,6 +1,7 @@
 # 相依套件
 node_modules/
 .superpowers/
+.worktrees/
 
 # 環境變數（含金鑰，切勿提交）
 .env
