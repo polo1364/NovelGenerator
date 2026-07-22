@@ -1,12 +1,13 @@
 /* ============================================================
    AI 小說工坊 — Service Worker
    - 導覽（HTML）：Network First
-   - JS / CSS：Stale-While-Revalidate（先回快取、背景更新）
+   - app.js：Network First（offline fallback 為快取）
+   - 其他 JS / CSS：Stale-While-Revalidate（先回快取、背景更新）
    - 圖示 / 字型：Cache First，離線仍可用
    - /api/* 與 /reader/* 不走 SW
    ============================================================ */
 
-const CACHE_VERSION = 'v79';
+const CACHE_VERSION = 'v81';
 const CACHE_NAME = `novel-workshop-${CACHE_VERSION}`;
 
 const APP_SHELL = [
@@ -14,6 +15,7 @@ const APP_SHELL = [
   './index.html',
   './css/styles.css',
   './css/layout-polish.css',
+  './css/uiverse-editorial.css',
   './js/app.js',
   './js/edge-tts-speech.js',
   './js/tts-polyphone-hints.js',
@@ -47,6 +49,11 @@ function isCodeAsset(pathname) {
   if (pathname.includes('/js/') && pathname.endsWith('.js')) return true;
   if (pathname.includes('/css/') && pathname.endsWith('.css')) return true;
   return false;
+}
+
+/** HTML 與其主行為程式必須同次載入，避免版本不同步 */
+function isBehaviorAsset(pathname) {
+  return pathname.endsWith('/js/app.js');
 }
 
 /**
@@ -133,6 +140,11 @@ self.addEventListener('fetch', (event) => {
   if (/\/reader(\/|$)/i.test(url.pathname)) return;
 
   if (request.mode === 'navigate') {
+    event.respondWith(networkFirst(request));
+    return;
+  }
+
+  if (isBehaviorAsset(url.pathname)) {
     event.respondWith(networkFirst(request));
     return;
   }

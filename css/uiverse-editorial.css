@@ -1,0 +1,544 @@
+/* Uiverse sources adapted under .editorial-console:
+   0xnihilism/quiet-dog-6, 0xnihilism/moody-moth-91,
+   Creatlydev/friendly-fish-0, adamgiebl/proud-donkey-24,
+   Bodyhc/loud-badger-7. MIT licensed via uiverse-io/galaxy. */
+.editorial-console {
+  --ec-ink: #171816;
+  --ec-paper: #f5f0df;
+  --ec-red: #b93833;
+  --ec-teal: #1e7774;
+  --ec-yellow: #efc84a;
+  --ec-blue: #2e5fae;
+  --ec-muted: #57534e;
+  position: relative;
+  color: var(--ec-ink);
+  background: var(--ec-paper);
+  border: 3px solid var(--ec-ink);
+  border-radius: 4px;
+  box-shadow: 10px 10px 0 var(--ec-ink);
+}
+
+/* Reset the original desk-paper treatment with greater specificity. */
+.desk-scene .card.editorial-console {
+  background: var(--ec-paper);
+  border: 3px solid var(--ec-ink);
+  border-radius: 4px;
+  box-shadow: 10px 10px 0 var(--ec-ink);
+}
+
+.desk-scene .card.editorial-console:hover {
+  box-shadow: 10px 10px 0 var(--ec-ink);
+}
+
+[data-theme="dark"] .editorial-console {
+  --ec-ink: #f2eee2;
+  --ec-paper: #171a1d;
+  --ec-red: #ff7169;
+  --ec-teal: #48b8ae;
+  --ec-yellow: #f1cc58;
+  --ec-blue: #89aef4;
+  --ec-muted: #d6d3d1;
+  box-shadow: 10px 10px 0 #050606;
+}
+
+[data-theme="dark"] .desk-scene .card.editorial-console,
+[data-theme="dark"] .desk-scene .card.editorial-console:hover {
+  background: var(--ec-paper);
+  border-color: var(--ec-ink);
+  box-shadow: 10px 10px 0 #050606;
+}
+
+.editorial-console .editorial-console__workflow {
+  padding: 18px;
+  margin: -8px -4px 24px;
+  border: 2px solid var(--ec-ink);
+  background: color-mix(in srgb, var(--ec-paper) 88%, var(--ec-yellow));
+}
+
+.desk-scene .card.editorial-console .pipeline {
+  margin: 0;
+  padding: 0;
+  background: transparent;
+  border: 0;
+  border-radius: 0;
+  box-shadow: none;
+}
+
+.desk-scene .card.editorial-console .pipeline-header::before {
+  color: var(--ec-ink);
+  text-shadow: none;
+}
+
+.desk-scene .card.editorial-console .step-title {
+  color: var(--ec-ink);
+}
+
+.desk-scene .card.editorial-console .step-metric,
+.desk-scene .card.editorial-console .step-code {
+  color: var(--ec-teal);
+}
+
+.desk-scene .card.editorial-console .step-badge {
+  color: var(--ec-ink);
+  border-color: var(--ec-ink);
+  background: var(--ec-paper);
+}
+
+.desk-scene .card.editorial-console .step-chip.active .step-title {
+  color: var(--ec-ink);
+}
+
+.editorial-console .pipeline-caption,
+.editorial-console .step-code {
+  color: var(--ec-teal);
+}
+
+.editorial-console .step-chip {
+  color: var(--ec-ink);
+  border-color: var(--ec-ink);
+  background: var(--ec-paper);
+}
+
+.editorial-console .step-chip.active,
+.editorial-console .step-chip.is-active,
+.editorial-console .step-chip[aria-current="step"] {
+  background: var(--ec-yellow);
+}
+
+.editorial-console .step-badge {
+  border-color: var(--ec-ink);
+  background: var(--ec-paper);
+}
+
+.editorial-console .step-link {
+  background: var(--ec-ink);
+}
+
+.editorial-console .editorial-console__modules {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 14px;
+}
+
+.editorial-console .editorial-module {
+  position: relative;
+  min-height: 116px;
+  color: var(--ec-ink);
+  border: 2px solid var(--ec-ink);
+  border-radius: 3px;
+  background: var(--ec-paper);
+  box-shadow: 5px 5px 0 var(--ec-ink);
+  transform-style: preserve-3d;
+  transition: transform 180ms ease, box-shadow 180ms ease;
+}
+
+.editorial-console .editorial-module-tag {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  padding: 3px 6px;
+  border: 1px solid currentColor;
+  border-radius: 999px;
+  color: var(--ec-teal);
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 0.67rem;
+  font-weight: 800;
+  letter-spacing: 0.12em;
+  line-height: 1;
+}
+
+.editorial-console .editorial-module:not(:disabled):hover {
+  transform: translate(-2px, -2px);
+  box-shadow: 7px 7px 0 var(--ec-ink);
+}
+
+.editorial-console .editorial-module:focus-visible {
+  outline: 3px solid var(--ec-blue);
+  outline-offset: 4px;
+}
+
+.editorial-console .editorial-module .wsl-icon {
+  color: var(--ec-red);
+}
+
+.editorial-console .editorial-module .wsl-sub {
+  color: var(--ec-teal);
+}
+
+.editorial-console .workspace-config-summary {
+  border: 2px solid var(--ec-ink);
+  border-radius: 3px;
+  background: var(--ec-paper);
+  box-shadow: 5px 5px 0 var(--ec-ink);
+}
+
+.editorial-console .config-summary-block {
+  border-color: var(--ec-ink);
+}
+
+.editorial-console .config-summary-head,
+.editorial-console .config-summary-chip {
+  color: var(--ec-ink);
+  background: color-mix(in srgb, var(--ec-paper) 88%, var(--ec-blue));
+}
+
+.editorial-console .editorial-workspace {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 18px;
+  margin-bottom: 26px;
+}
+
+.editorial-console .editorial-workspace > .section {
+  min-width: 0;
+  margin-bottom: 0;
+}
+
+.editorial-console .editorial-note {
+  position: relative;
+  border: 2px solid var(--ec-ink);
+  border-radius: 2px;
+  background: var(--ec-paper);
+  box-shadow: 5px 5px 0 var(--ec-ink);
+}
+
+.editorial-console .editorial-note::before,
+.editorial-console .editorial-note::after {
+  position: absolute;
+  top: -11px;
+  width: 88px;
+  height: 20px;
+  content: "";
+  background: color-mix(in srgb, var(--ec-yellow) 70%, transparent);
+  opacity: 0.85;
+  transform: rotate(-3deg);
+}
+
+.editorial-console .editorial-note::before {
+  left: 24px;
+}
+
+.editorial-console .editorial-note::after {
+  right: 24px;
+  transform: rotate(3deg);
+}
+
+.editorial-console .editorial-note .section-title,
+.editorial-console .editorial-outline .section-title {
+  color: var(--ec-ink);
+  border-color: var(--ec-ink);
+}
+
+.editorial-console .editorial-note textarea {
+  color: var(--ec-ink);
+  border: 2px solid var(--ec-ink);
+  background: color-mix(in srgb, var(--ec-paper) 92%, white);
+}
+
+.editorial-console .editorial-note textarea:focus {
+  border-color: var(--ec-teal);
+  box-shadow: 3px 3px 0 var(--ec-teal);
+}
+
+.editorial-console .editorial-outline {
+  border: 2px dashed var(--ec-ink);
+  border-radius: 3px;
+  background: color-mix(in srgb, var(--ec-paper) 94%, var(--ec-blue));
+}
+
+.editorial-console .outline-attach-panel {
+  border-color: var(--ec-ink);
+  background: var(--ec-paper);
+}
+
+.editorial-console .outline-attach-preview {
+  border-color: var(--ec-ink);
+}
+
+.editorial-console .primary-actions {
+  border-top-color: var(--ec-ink);
+}
+
+.editorial-console .primary-action-btn:not(:disabled) {
+  color: var(--ec-ink);
+  border: 3px solid var(--ec-ink);
+  border-radius: 3px;
+  box-shadow: 5px 5px 0 var(--ec-ink);
+}
+
+.editorial-console :is(button, .btn-outline):disabled {
+  color: var(--ec-muted);
+  opacity: 0.76;
+}
+
+.editorial-console .primary-action-btn:not(:disabled):hover {
+  filter: none;
+  transform: translate(-1px, -1px);
+  box-shadow: 6px 6px 0 var(--ec-ink);
+}
+
+.editorial-console .primary-action-btn:not(:disabled):active {
+  transform: translate(4px, 4px);
+  box-shadow: 1px 1px 0 var(--ec-ink);
+}
+
+.editorial-console .primary-generate:not(:disabled) {
+  background: var(--ec-yellow);
+}
+
+[data-theme="dark"] .editorial-console .primary-generate:not(:disabled) {
+  color: #171816;
+}
+
+.editorial-console .primary-continue:not(:disabled) {
+  background: var(--ec-teal);
+  color: var(--ec-paper);
+}
+
+.editorial-console .primary-reset:not(:disabled) {
+  background: var(--ec-red);
+  color: var(--ec-paper);
+}
+
+.editorial-console :is(.btn-outline, .btn-small):focus-visible,
+.editorial-console .step-chip:focus-visible,
+.editorial-console .primary-action-btn:focus-visible {
+  outline: 3px solid var(--ec-blue);
+  outline-offset: 3px;
+}
+
+.editorial-modal {
+  --ec-ink: #171816;
+  --ec-paper: #f5f0df;
+  --ec-red: #b93833;
+  --ec-teal: #1e7774;
+  --ec-yellow: #efc84a;
+  --ec-blue: #2e5fae;
+  color: var(--ec-ink, var(--text));
+}
+
+[data-theme="dark"] .editorial-modal {
+  --ec-ink: #f2eee2;
+  --ec-paper: #171a1d;
+  --ec-red: #ff7169;
+  --ec-teal: #48b8ae;
+  --ec-yellow: #f1cc58;
+  --ec-blue: #89aef4;
+}
+
+.editorial-modal input:not([type="checkbox"]):not([type="radio"]),
+.editorial-modal select,
+.editorial-modal textarea {
+  min-height: 44px;
+  border: 2px solid var(--ec-ink, var(--text));
+  border-radius: 3px;
+  box-shadow: 3px 3px 0 color-mix(in srgb, var(--ec-ink, var(--text)) 28%, transparent);
+}
+
+.editorial-modal input:focus-visible,
+.editorial-modal select:focus-visible,
+.editorial-modal textarea:focus-visible {
+  outline: 3px solid var(--ec-blue, var(--accent));
+  outline-offset: 2px;
+}
+
+.editorial-modal input:disabled,
+.editorial-modal select:disabled,
+.editorial-modal textarea:disabled,
+.editorial-modal button:disabled {
+  cursor: not-allowed;
+  opacity: 0.6;
+}
+
+.editorial-modal input[type="checkbox"] {
+  accent-color: var(--ec-teal, var(--accent));
+}
+
+/* Adapted from adamgiebl/proud-donkey-24: checked elements pop without changing their data flow. */
+.editorial-modal .special-element-item .checkbox-custom {
+  display: inline-grid;
+  place-items: center;
+  width: 20px;
+  height: 20px;
+  border: 2px solid var(--ec-ink, var(--text));
+  border-radius: 3px;
+  background: var(--ec-paper, var(--card-bg));
+  box-shadow: 2px 2px 0 color-mix(in srgb, var(--ec-ink, var(--text)) 30%, transparent);
+  transition: transform 160ms ease, background-color 160ms ease, box-shadow 160ms ease;
+}
+
+.editorial-modal .special-element-item .checkbox-custom::after {
+  content: "✓";
+  color: var(--ec-paper, #fff);
+  font-size: 0.82rem;
+  font-weight: 900;
+  opacity: 0;
+  transform: scale(0.4) rotate(-20deg);
+  transition: opacity 120ms ease, transform 160ms ease;
+}
+
+.editorial-modal .special-element-item:has(input:checked) .checkbox-custom,
+.editorial-modal .special-element-item.selected .checkbox-custom {
+  border-color: var(--ec-teal, var(--accent));
+  background: var(--ec-teal, var(--accent));
+  box-shadow: 3px 3px 0 color-mix(in srgb, var(--ec-teal, var(--accent)) 65%, var(--ec-ink, var(--text)));
+  transform: translate(-1px, -1px) rotate(-2deg);
+}
+
+.editorial-modal .special-element-item:has(input:checked) .checkbox-custom::after,
+.editorial-modal .special-element-item.selected .checkbox-custom::after {
+  opacity: 1;
+  transform: scale(1) rotate(0);
+}
+
+/* Adapted from Bodyhc/loud-badger-7: a physical switch while retaining the real checkbox. */
+.editorial-modal .drama-switch input[type="checkbox"] {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  opacity: 0;
+}
+
+.editorial-modal .drama-switch-text {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  min-height: 28px;
+  padding-left: 44px;
+}
+
+.editorial-modal .drama-switch-text::before,
+.editorial-modal .drama-switch-text::after {
+  position: absolute;
+  content: "";
+}
+
+.editorial-modal .drama-switch-text::before {
+  left: 0;
+  width: 36px;
+  height: 20px;
+  border: 2px solid var(--ec-ink, var(--text));
+  border-radius: 999px;
+  background: var(--ec-paper, var(--card-bg));
+  box-shadow: 2px 2px 0 color-mix(in srgb, var(--ec-ink, var(--text)) 28%, transparent);
+  transition: background-color 160ms ease, box-shadow 160ms ease;
+}
+
+.editorial-modal .drama-switch-text::after {
+  left: 5px;
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  background: var(--ec-ink, var(--text));
+  transition: transform 160ms ease, background-color 160ms ease;
+}
+
+.editorial-modal .drama-switch input:checked + .drama-switch-text::before {
+  background: var(--ec-teal, var(--accent));
+  box-shadow: 3px 3px 0 color-mix(in srgb, var(--ec-teal, var(--accent)) 65%, var(--ec-ink, var(--text)));
+}
+
+.editorial-modal .drama-switch input:checked + .drama-switch-text::after {
+  background: var(--ec-paper, #fff);
+  transform: translateX(16px);
+}
+
+.editorial-modal #elementSearch:focus-visible,
+.editorial-modal #dramaComboCount:focus-visible {
+  outline: 3px solid #2e5fae !important;
+  outline-color: #2e5fae !important;
+  outline-offset: 3px;
+  border-color: #2e5fae;
+  box-shadow: 0 0 0 2px color-mix(in srgb, #2e5fae 28%, transparent);
+}
+
+[data-theme="dark"] .editorial-modal #elementSearch:focus-visible,
+[data-theme="dark"] .editorial-modal #dramaComboCount:focus-visible {
+  outline-color: #89aef4 !important;
+  border-color: #89aef4;
+  box-shadow: 0 0 0 2px color-mix(in srgb, #89aef4 28%, transparent);
+}
+
+.editorial-modal .drama-switch input:focus-visible + .drama-switch-text::before {
+  outline: 3px solid var(--ec-blue, var(--accent));
+  outline-offset: 3px;
+}
+
+.editorial-modal .modal-close,
+.editorial-modal .btn-small,
+.editorial-modal .workspace-modal-footer .btn-primary {
+  min-width: 44px;
+  min-height: 44px;
+}
+
+.editorial-modal .auto-continue-row,
+.editorial-modal .drama-switch {
+  min-height: 44px;
+}
+
+.editorial-modal .char-ai-btn,
+.editorial-modal .char-tab,
+.editorial-modal .combo-toggle {
+  min-width: 44px;
+  min-height: 44px;
+}
+
+.editorial-modal .special-element-item.selected {
+  transform: translateY(-1px);
+  border-color: var(--ec-teal, var(--accent));
+  box-shadow: 3px 3px 0 var(--ec-teal, var(--accent));
+}
+
+@media (max-width: 767px) {
+  .editorial-console {
+    padding: 22px 16px;
+    box-shadow: 6px 6px 0 var(--ec-ink);
+  }
+
+  .editorial-console .editorial-console__workflow {
+    margin: -4px -4px 20px;
+    padding: 14px;
+  }
+
+  .editorial-console .editorial-console__modules {
+    grid-template-columns: 1fr;
+  }
+
+  .editorial-console .editorial-module {
+    min-height: 88px;
+  }
+
+  .editorial-console .step-chip,
+  .editorial-console .btn-small {
+    min-height: 44px;
+  }
+}
+
+@media (min-width: 768px) {
+  .editorial-console .editorial-workspace {
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+    align-items: start;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .editorial-console *,
+  .editorial-console *::before,
+  .editorial-console *::after,
+  .editorial-modal * {
+    scroll-behavior: auto !important;
+    transition-duration: 0.01ms !important;
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+  }
+
+  .editorial-console .editorial-module:not(:disabled):hover,
+  .editorial-console .primary-action-btn:not(:disabled):hover,
+  .editorial-console .primary-action-btn:not(:disabled):active,
+  .editorial-modal .special-element-item.selected,
+  .editorial-modal .special-element-item:has(input:checked) .checkbox-custom,
+  .editorial-modal .special-element-item .checkbox-custom::after,
+  .editorial-modal .drama-switch-text::after {
+    transform: none;
+  }
+}

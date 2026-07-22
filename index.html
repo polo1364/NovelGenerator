@@ -36,6 +36,7 @@
     </noscript>
     <link rel="stylesheet" href="css/styles.css" />
     <link rel="stylesheet" href="css/layout-polish.css" />
+    <link rel="stylesheet" href="css/uiverse-editorial.css" />
   </head>
   <body>
     <!-- 離線狀態提示 -->
@@ -189,8 +190,8 @@
 
       <!-- ==================== 創作區：書桌場景 ==================== -->
       <div class="desk-scene">
-        <div class="card" id="stepSetup">
-        <div class="pipeline-header">
+        <div class="card editorial-console" id="stepSetup">
+        <div class="pipeline-header editorial-console__workflow">
         <button id="deskLamp" class="desk-tube-light" type="button" aria-label="燈管開關" title="點擊開關燈管（切換明暗模式）">
           <span class="tube-mount tube-mount--left" aria-hidden="true"></span>
           <span class="tube-body" aria-hidden="true">
@@ -250,23 +251,26 @@
         </nav>
         </div>
 
-        <div class="workspace-setup-launchers">
-          <button type="button" id="openStoryModalBtn" class="workspace-launcher-btn">
+        <div class="workspace-setup-launchers editorial-console__modules">
+          <button type="button" id="openStoryModalBtn" class="workspace-launcher-btn editorial-module">
             <span class="wsl-icon" aria-hidden="true">📖</span>
+            <span class="editorial-module-tag" aria-hidden="true">CORE</span>
             <span class="wsl-text">
               <span class="wsl-title">故事元素</span>
               <span class="wsl-sub" id="launcherStorySub">尚未設定</span>
             </span>
           </button>
-          <button type="button" id="openAdvancedModalBtn" class="workspace-launcher-btn">
+          <button type="button" id="openAdvancedModalBtn" class="workspace-launcher-btn editorial-module">
             <span class="wsl-icon" aria-hidden="true">🎛️</span>
+            <span class="editorial-module-tag" aria-hidden="true">TUNE</span>
             <span class="wsl-text">
               <span class="wsl-title">進階設定</span>
               <span class="wsl-sub" id="launcherAdvancedSub">尚未設定</span>
             </span>
           </button>
-          <button type="button" id="openSpecialModalBtn" class="workspace-launcher-btn">
+          <button type="button" id="openSpecialModalBtn" class="workspace-launcher-btn editorial-module">
             <span class="wsl-icon" aria-hidden="true">✨</span>
+            <span class="editorial-module-tag" aria-hidden="true">SPICE</span>
             <span class="wsl-text">
               <span class="wsl-title">特殊元素</span>
               <span class="wsl-sub" id="launcherSpecialSub">尚未設定</span>
@@ -298,8 +302,9 @@
           </section>
         </div>
 
+        <div class="editorial-workspace">
         <!-- 自訂規則 -->
-        <div class="section">
+        <div class="section editorial-note">
           <h2 class="section-title" data-icon="📌">自訂規則</h2>
           <div class="input-group input-group--flush">
             <p class="input-group-desc">補充故事元素與進階設定未涵蓋的要求；生成大綱、設計角色與撰寫正文時會強制遵守。劇情大綱請在下方「預覽大綱」管理，勿寫在此。</p>
@@ -308,7 +313,7 @@
         </div>
 
         <!-- 預覽大綱（與補充說明分開顯示） -->
-        <div class="section" id="outlineAttachSection">
+        <div class="section editorial-outline" id="outlineAttachSection">
           <h2 class="section-title" data-icon="📋">預覽大綱</h2>
           <div id="outlineAttachPanel" class="outline-attach-panel">
             <div class="outline-attach-head">
@@ -322,6 +327,7 @@
               <p class="outline-attach-empty">尚未生成大綱。請點右側工具列「預覽大綱」，或創作進度列的「大綱」步驟。「預計集數」請在「故事元素」中設定；若為 2 集以上，將依集數分別生成各集大綱，結果顯示於此（不會寫入自訂規則）。</p>
             </div>
           </div>
+        </div>
         </div>
 
         <!-- ==================== 主要動作列 ==================== -->
@@ -865,12 +871,12 @@
 
     <!-- 故事元素模態 -->
     <div id="storyElementsModal" class="modal-overlay" role="dialog" aria-modal="true" aria-labelledby="storyModalTitle">
-      <div class="modal-content workspace-modal workspace-modal--story">
+      <div class="modal-content workspace-modal workspace-modal--story editorial-modal">
         <div class="modal-header">
           <span class="modal-title" id="storyModalTitle">📖 故事元素</span>
           <button type="button" class="modal-close" data-modal-close="story" aria-label="關閉">✕</button>
         </div>
-        <div class="modal-body">
+        <div class="modal-body editorial-modal__body">
           <div class="advanced-head-row story-elements-head">
             <button id="randomStoryElementsBtn" type="button" class="btn-outline btn-small advanced-random-btn" title="隨機填充主題、背景設定、故事風格">🎲 隨機填充</button>
           </div>
@@ -938,12 +944,12 @@
 
     <!-- 進階設定模態 -->
     <div id="advancedSettingsModal" class="modal-overlay" role="dialog" aria-modal="true" aria-labelledby="advancedModalTitle">
-      <div class="modal-content workspace-modal workspace-modal--advanced">
+      <div class="modal-content workspace-modal workspace-modal--advanced editorial-modal">
         <div class="modal-header">
           <span class="modal-title" id="advancedModalTitle">🎛️ 進階設定</span>
           <button type="button" class="modal-close" data-modal-close="advanced" aria-label="關閉">✕</button>
         </div>
-        <div class="modal-body" id="advancedBody">
+        <div class="modal-body editorial-modal__body" id="advancedBody">
           <div class="advanced-head-row">
             <button id="randomAdvancedBtn" type="button" class="btn-outline btn-small advanced-random-btn" title="隨機設定敘事視角、時代、節奏、分級、世界觀、基調、結局傾向">🎲 隨機進階</button>
           </div>
@@ -1001,12 +1007,12 @@
 
     <!-- 特殊元素模態 -->
     <div id="specialElementsModal" class="modal-overlay" role="dialog" aria-modal="true" aria-labelledby="specialModalTitle">
-      <div class="modal-content workspace-modal workspace-modal--special">
+      <div class="modal-content workspace-modal workspace-modal--special editorial-modal">
         <div class="modal-header">
           <span class="modal-title" id="specialModalTitle">✨ 特殊元素</span>
           <button type="button" class="modal-close" data-modal-close="special" aria-label="關閉">✕</button>
         </div>
-        <div class="modal-body">
+        <div class="modal-body editorial-modal__body">
           <div class="special-elements-panel" id="specialElementsPanel">
             <div class="special-elements-head special-elements-head--static" id="specialElementsToggle">
               <span class="se-head-title">特殊元素（可多選）</span>
