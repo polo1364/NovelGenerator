@@ -76,3 +76,41 @@ git diff --check
 
 - `npm run verify:editorial` requires local Google Chrome at the default Windows path or a `CHROME_BIN` override. It intentionally uses the already-installed `ws` dependency and adds no packages.
 - The verifier reports Chrome's `color-mix()` focus halo in the browser's serialized color space; the asserted solid 3px outline and border use the exact accessible focus-blue RGB value.
+
+---
+
+## Final Re-review Follow-up: Pipeline Shadow Reset
+
+### Commit
+
+- `6e9bdce fix: reset editorial pipeline shadow`
+
+### Root Cause and Fix
+
+- The scoped pipeline reset cleared its background, border, and radius, but did not clear the pre-existing `layout-polish.css` box shadow.
+- Added `box-shadow: none` to `.desk-scene .card.editorial-console .pipeline`; no behavior, IDs, or Service Worker code changed.
+
+### RED / GREEN Evidence
+
+```text
+RED: node --test test/ui-contract.test.js
+  6 pass, 1 fail: pipeline reset did not include box-shadow: none
+
+RED: npm run verify:editorial
+  375px light pipeline shadow was still:
+  rgba(255, 255, 255, 0.08) 0px 1px 0px 0px inset,
+  rgba(0, 0, 0, 0.28) 0px 12px 32px 0px
+
+GREEN: npm test
+  24 pass, 0 fail
+
+GREEN: npm run verify:editorial
+  375/428/768/1280/1536 light and 1280 dark pipeline:
+  background rgba(0, 0, 0, 0)
+  border width 0px
+  border radius 0px
+  box shadow none
+
+git diff --check
+  exit 0 (only Git CRLF normalization warnings)
+```
