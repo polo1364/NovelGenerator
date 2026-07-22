@@ -73,3 +73,32 @@ test('behavior-bearing workshop controls remain present exactly once', () => {
     assert.equal(matches.length, 1, `${id} must occur exactly once`);
   }
 });
+
+test('workspace modals retain dialog semantics', () => {
+  const editorialStylesheet = path.join(root, 'public', 'css', 'uiverse-editorial.css');
+  const css = fs.readFileSync(editorialStylesheet, 'utf8');
+
+  for (const id of ['storyElementsModal', 'advancedSettingsModal', 'specialElementsModal']) {
+    const tag = html.match(new RegExp(`<[^>]+id=["']${id}["'][^>]*>`, 'i'))?.[0] || '';
+    assert.match(tag, /role=["']dialog["']/);
+    assert.match(tag, /aria-modal=["']true["']/);
+
+    const modalMarkup = html.match(new RegExp(
+      `<div\\b[^>]*\\bid=["']${id}["'][^>]*>[\\s\\S]*?` +
+      `<div\\b(?=[^>]*\\bclass=["'][^"']*\\bmodal-content\\b)(?=[^>]*\\bclass=["'][^"']*\\beditorial-modal\\b)[^>]*>[\\s\\S]*?` +
+      `<div\\b(?=[^>]*\\bclass=["'][^"']*\\bmodal-body\\b)(?=[^>]*\\bclass=["'][^"']*\\beditorial-modal__body\\b)[^>]*>`,
+      'i'
+    ))?.[0] || '';
+    assert.ok(modalMarkup, `${id} must retain editorial presentation hooks`);
+  }
+
+  for (const selector of [
+    '.editorial-modal input:not([type="checkbox"]):not([type="radio"]),',
+    '.editorial-modal input:focus-visible,',
+    '.editorial-modal .special-element-item.selected {',
+    '.editorial-modal .editorial-control:disabled {'
+  ]) {
+    assert.ok(css.includes(selector), `missing modal control selector: ${selector}`);
+  }
+  assert.match(css, /\.editorial-modal \*\s*\{\s*scroll-behavior:\s*auto !important;/);
+});
