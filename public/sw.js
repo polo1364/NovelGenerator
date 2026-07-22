@@ -1,7 +1,8 @@
 /* ============================================================
    AI 小說工坊 — Service Worker
    - 導覽（HTML）：Network First
-   - JS / CSS：Stale-While-Revalidate（先回快取、背景更新）
+   - app.js：Network First（offline fallback 為快取）
+   - 其他 JS / CSS：Stale-While-Revalidate（先回快取、背景更新）
    - 圖示 / 字型：Cache First，離線仍可用
    - /api/* 與 /reader/* 不走 SW
    ============================================================ */

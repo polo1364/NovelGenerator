@@ -214,6 +214,8 @@ test('service worker installs the parsed v80 application shell in stylesheet loa
 });
 
 test('service worker serves app.js network-first and falls back to its cached response offline', async () => {
+  assert.match(sw, /app\.js.*Network First.*offline fallback/i,
+    'the service-worker header must document the approved app.js network-first route');
   const appRequest = new Request('https://editorial.test/js/app.js');
   const onlineHarness = createServiceWorkerHarness({
     fetchImpl: async () => new Response('network app.js', { status: 200 })
@@ -240,4 +242,33 @@ test('service worker serves app.js network-first and falls back to its cached re
 test('reduced motion disables editorial hover and press movement', () => {
   const css = fs.readFileSync(path.join(root, 'public', 'css', 'uiverse-editorial.css'), 'utf8');
   assert.match(css, /@media \(prefers-reduced-motion: reduce\)[\s\S]*?\.editorial-console \.editorial-module:not\(:disabled\):hover,[\s\S]*?\.editorial-console \.primary-action-btn:not\(:disabled\):hover,[\s\S]*?\.editorial-console \.primary-action-btn:not\(:disabled\):active[\s\S]*?transform:\s*none;/);
+});
+
+test('final editorial fixes retain scoped shell, workspace, feedback, and verification contracts', () => {
+  const css = fs.readFileSync(path.join(root, 'public', 'css', 'uiverse-editorial.css'), 'utf8');
+  assert.match(html, /class=["'][^"']*\beditorial-workspace\b[^"']*["']/);
+  for (const tag of ['CORE', 'TUNE', 'SPICE']) {
+    assert.match(html, new RegExp(`<span class=["']editorial-module-tag["'][^>]*>${tag}</span>`));
+  }
+
+  for (const selector of [
+    '.desk-scene .card.editorial-console {',
+    '.desk-scene .card.editorial-console .pipeline {',
+    '.editorial-console .editorial-workspace {',
+    '.editorial-console .editorial-module-tag {',
+    '.editorial-modal .special-element-item:has(input:checked) .checkbox-custom,',
+    '.editorial-modal .drama-switch input:checked + .drama-switch-text::before {',
+    '.editorial-modal #elementSearch:focus-visible,',
+    '.editorial-modal #dramaComboCount:focus-visible {'
+  ]) {
+    assert.ok(css.includes(selector), `missing final-fix selector: ${selector}`);
+  }
+
+  assert.match(css, /--ec-red:\s*#b93833;/);
+  assert.match(css, /--ec-blue:\s*#2e5fae;/);
+  assert.match(css, /@media \(min-width:\s*768px\)[\s\S]*?\.editorial-console \.editorial-workspace\s*\{[\s\S]*?grid-template-columns:\s*minmax\(0,\s*1fr\) minmax\(0,\s*1fr\);/);
+  assert.match(css, /\.desk-scene \.card\.editorial-console\s*\{[\s\S]*?background:\s*var\(--ec-paper\);[\s\S]*?border:\s*3px solid var\(--ec-ink\);[\s\S]*?border-radius:\s*4px;[\s\S]*?box-shadow:\s*10px 10px 0 var\(--ec-ink\);/);
+  assert.match(css, /\.desk-scene \.card\.editorial-console \.pipeline\s*\{[\s\S]*?background:\s*transparent;[\s\S]*?border-radius:\s*0;/);
+  assert.ok(fs.existsSync(path.join(root, 'scripts', 'verify-editorial-console.js')),
+    'computed-style browser verification script must be committed');
 });

@@ -5,15 +5,27 @@
 .editorial-console {
   --ec-ink: #171816;
   --ec-paper: #f5f0df;
-  --ec-red: #d94f49;
+  --ec-red: #b93833;
   --ec-teal: #1e7774;
   --ec-yellow: #efc84a;
-  --ec-blue: #749ee8;
+  --ec-blue: #2e5fae;
   position: relative;
   color: var(--ec-ink);
-  background-color: var(--ec-paper);
+  background: var(--ec-paper);
   border: 3px solid var(--ec-ink);
   border-radius: 4px;
+  box-shadow: 10px 10px 0 var(--ec-ink);
+}
+
+/* Reset the original desk-paper treatment with greater specificity. */
+.desk-scene .card.editorial-console {
+  background: var(--ec-paper);
+  border: 3px solid var(--ec-ink);
+  border-radius: 4px;
+  box-shadow: 10px 10px 0 var(--ec-ink);
+}
+
+.desk-scene .card.editorial-console:hover {
   box-shadow: 10px 10px 0 var(--ec-ink);
 }
 
@@ -27,6 +39,13 @@
   box-shadow: 10px 10px 0 #050606;
 }
 
+[data-theme="dark"] .desk-scene .card.editorial-console,
+[data-theme="dark"] .desk-scene .card.editorial-console:hover {
+  background: var(--ec-paper);
+  border-color: var(--ec-ink);
+  box-shadow: 10px 10px 0 #050606;
+}
+
 .editorial-console .editorial-console__workflow {
   padding: 18px;
   margin: -8px -4px 24px;
@@ -34,10 +53,12 @@
   background: color-mix(in srgb, var(--ec-paper) 88%, var(--ec-yellow));
 }
 
-.editorial-console .pipeline {
+.desk-scene .card.editorial-console .pipeline {
   margin: 0;
   padding: 0;
+  background: transparent;
   border: 0;
+  border-radius: 0;
 }
 
 .editorial-console .pipeline-caption,
@@ -73,6 +94,7 @@
 }
 
 .editorial-console .editorial-module {
+  position: relative;
   min-height: 116px;
   color: var(--ec-ink);
   border: 2px solid var(--ec-ink);
@@ -81,6 +103,21 @@
   box-shadow: 5px 5px 0 var(--ec-ink);
   transform-style: preserve-3d;
   transition: transform 180ms ease, box-shadow 180ms ease;
+}
+
+.editorial-console .editorial-module-tag {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  padding: 3px 6px;
+  border: 1px solid currentColor;
+  border-radius: 999px;
+  color: var(--ec-teal);
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 0.67rem;
+  font-weight: 800;
+  letter-spacing: 0.12em;
+  line-height: 1;
 }
 
 .editorial-console .editorial-module:not(:disabled):hover {
@@ -116,6 +153,18 @@
 .editorial-console .config-summary-chip {
   color: var(--ec-ink);
   background: color-mix(in srgb, var(--ec-paper) 88%, var(--ec-blue));
+}
+
+.editorial-console .editorial-workspace {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 18px;
+  margin-bottom: 26px;
+}
+
+.editorial-console .editorial-workspace > .section {
+  min-width: 0;
+  margin-bottom: 0;
 }
 
 .editorial-console .editorial-note {
@@ -227,7 +276,22 @@
 }
 
 .editorial-modal {
+  --ec-ink: #171816;
+  --ec-paper: #f5f0df;
+  --ec-red: #b93833;
+  --ec-teal: #1e7774;
+  --ec-yellow: #efc84a;
+  --ec-blue: #2e5fae;
   color: var(--ec-ink, var(--text));
+}
+
+[data-theme="dark"] .editorial-modal {
+  --ec-ink: #f2eee2;
+  --ec-paper: #171a1d;
+  --ec-red: #ff7169;
+  --ec-teal: #48b8ae;
+  --ec-yellow: #f1cc58;
+  --ec-blue: #89aef4;
 }
 
 .editorial-modal input:not([type="checkbox"]):not([type="radio"]),
@@ -256,6 +320,116 @@
 
 .editorial-modal input[type="checkbox"] {
   accent-color: var(--ec-teal, var(--accent));
+}
+
+/* Adapted from adamgiebl/proud-donkey-24: checked elements pop without changing their data flow. */
+.editorial-modal .special-element-item .checkbox-custom {
+  display: inline-grid;
+  place-items: center;
+  width: 20px;
+  height: 20px;
+  border: 2px solid var(--ec-ink, var(--text));
+  border-radius: 3px;
+  background: var(--ec-paper, var(--card-bg));
+  box-shadow: 2px 2px 0 color-mix(in srgb, var(--ec-ink, var(--text)) 30%, transparent);
+  transition: transform 160ms ease, background-color 160ms ease, box-shadow 160ms ease;
+}
+
+.editorial-modal .special-element-item .checkbox-custom::after {
+  content: "✓";
+  color: var(--ec-paper, #fff);
+  font-size: 0.82rem;
+  font-weight: 900;
+  opacity: 0;
+  transform: scale(0.4) rotate(-20deg);
+  transition: opacity 120ms ease, transform 160ms ease;
+}
+
+.editorial-modal .special-element-item:has(input:checked) .checkbox-custom,
+.editorial-modal .special-element-item.selected .checkbox-custom {
+  border-color: var(--ec-teal, var(--accent));
+  background: var(--ec-teal, var(--accent));
+  box-shadow: 3px 3px 0 color-mix(in srgb, var(--ec-teal, var(--accent)) 65%, var(--ec-ink, var(--text)));
+  transform: translate(-1px, -1px) rotate(-2deg);
+}
+
+.editorial-modal .special-element-item:has(input:checked) .checkbox-custom::after,
+.editorial-modal .special-element-item.selected .checkbox-custom::after {
+  opacity: 1;
+  transform: scale(1) rotate(0);
+}
+
+/* Adapted from Bodyhc/loud-badger-7: a physical switch while retaining the real checkbox. */
+.editorial-modal .drama-switch input[type="checkbox"] {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  opacity: 0;
+}
+
+.editorial-modal .drama-switch-text {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  min-height: 28px;
+  padding-left: 44px;
+}
+
+.editorial-modal .drama-switch-text::before,
+.editorial-modal .drama-switch-text::after {
+  position: absolute;
+  content: "";
+}
+
+.editorial-modal .drama-switch-text::before {
+  left: 0;
+  width: 36px;
+  height: 20px;
+  border: 2px solid var(--ec-ink, var(--text));
+  border-radius: 999px;
+  background: var(--ec-paper, var(--card-bg));
+  box-shadow: 2px 2px 0 color-mix(in srgb, var(--ec-ink, var(--text)) 28%, transparent);
+  transition: background-color 160ms ease, box-shadow 160ms ease;
+}
+
+.editorial-modal .drama-switch-text::after {
+  left: 5px;
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  background: var(--ec-ink, var(--text));
+  transition: transform 160ms ease, background-color 160ms ease;
+}
+
+.editorial-modal .drama-switch input:checked + .drama-switch-text::before {
+  background: var(--ec-teal, var(--accent));
+  box-shadow: 3px 3px 0 color-mix(in srgb, var(--ec-teal, var(--accent)) 65%, var(--ec-ink, var(--text)));
+}
+
+.editorial-modal .drama-switch input:checked + .drama-switch-text::after {
+  background: var(--ec-paper, #fff);
+  transform: translateX(16px);
+}
+
+.editorial-modal #elementSearch:focus-visible,
+.editorial-modal #dramaComboCount:focus-visible {
+  outline: 3px solid #2e5fae !important;
+  outline-color: #2e5fae !important;
+  outline-offset: 3px;
+  border-color: #2e5fae;
+  box-shadow: 0 0 0 2px color-mix(in srgb, #2e5fae 28%, transparent);
+}
+
+[data-theme="dark"] .editorial-modal #elementSearch:focus-visible,
+[data-theme="dark"] .editorial-modal #dramaComboCount:focus-visible {
+  outline-color: #89aef4 !important;
+  border-color: #89aef4;
+  box-shadow: 0 0 0 2px color-mix(in srgb, #89aef4 28%, transparent);
+}
+
+.editorial-modal .drama-switch input:focus-visible + .drama-switch-text::before {
+  outline: 3px solid var(--ec-blue, var(--accent));
+  outline-offset: 3px;
 }
 
 .editorial-modal .modal-close,
@@ -308,6 +482,13 @@
   }
 }
 
+@media (min-width: 768px) {
+  .editorial-console .editorial-workspace {
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+    align-items: start;
+  }
+}
+
 @media (prefers-reduced-motion: reduce) {
   .editorial-console *,
   .editorial-console *::before,
@@ -322,7 +503,10 @@
   .editorial-console .editorial-module:not(:disabled):hover,
   .editorial-console .primary-action-btn:not(:disabled):hover,
   .editorial-console .primary-action-btn:not(:disabled):active,
-  .editorial-modal .special-element-item.selected {
+  .editorial-modal .special-element-item.selected,
+  .editorial-modal .special-element-item:has(input:checked) .checkbox-custom,
+  .editorial-modal .special-element-item .checkbox-custom::after,
+  .editorial-modal .drama-switch-text::after {
     transform: none;
   }
 }

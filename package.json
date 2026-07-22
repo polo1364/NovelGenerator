@@ -11,6 +11,7 @@
     "start": "node server.js",
     "dev": "node --watch server.js",
     "test": "node --test",
+    "verify:editorial": "node scripts/verify-editorial-console.js",
     "sync": "node scripts/sync-workshop.js"
   },
   "dependencies": {
