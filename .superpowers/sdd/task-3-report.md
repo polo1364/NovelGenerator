@@ -38,3 +38,18 @@ Implemented and verified within the assigned UI scope.
 ## Concerns
 
 - Browser startup logged `TypeError: Cannot set properties of null (setting 'innerHTML')` from `public/js/app.js` in `renderCategoryTabs` / `initSettings`. `public/js/app.js` is unchanged by this task and outside the assigned ownership, so it was not modified. The special-elements modal still populated and its interactions worked during verification.
+
+## Review blocker resolution — 2026-07-22
+
+### RED / GREEN evidence
+
+- RED: `node --test test/ui-contract.test.js` exited 1. The modal contract reported `missing modal control selector: .editorial-modal .modal-close,`; the new service-worker contract also failed because `isBehaviorAsset()` did not exist.
+- GREEN: after replacing the unused `.editorial-control` rule with actual modal control selectors and adding the `app.js` behavior-asset route, `node --test test/ui-contract.test.js` passed 4/4.
+- Final: `npm test` passed 21/21 and `git diff --check` completed without whitespace errors.
+
+### Changes and browser evidence
+
+- `.editorial-modal .modal-close`, `.btn-small`, and footer `.btn-primary` now have `min-width` and `min-height` of 44px. The auto-continue and drama-switch labels have a 44px minimum height.
+- At 1280px and 375px, measured close control size was 48x44px, a `.btn-small` control was 111.84x44px, and the footer button was 78.41x44px. The 375px viewport had no horizontal page overflow.
+- `public/sw.js` now routes `/js/app.js` through `networkFirst(request)` before the generic JS/CSS stale-while-revalidate branch. `networkFirst()` retains its `caches.match(request)` offline fallback.
+- Browser console check for this review-blocker pass returned no errors.

@@ -96,9 +96,24 @@ test('workspace modals retain dialog semantics', () => {
     '.editorial-modal input:not([type="checkbox"]):not([type="radio"]),',
     '.editorial-modal input:focus-visible,',
     '.editorial-modal .special-element-item.selected {',
-    '.editorial-modal .editorial-control:disabled {'
+    '.editorial-modal .modal-close,',
+    '.editorial-modal .btn-small,',
+    '.editorial-modal .workspace-modal-footer .btn-primary {'
   ]) {
     assert.ok(css.includes(selector), `missing modal control selector: ${selector}`);
   }
+  assert.match(css, /\.editorial-modal \.modal-close,[\s\S]*?min-width:\s*44px;[\s\S]*?min-height:\s*44px;/);
   assert.match(css, /\.editorial-modal \*\s*\{\s*scroll-behavior:\s*auto !important;/);
+});
+
+test('service worker fetches app.js network first with an offline cache fallback', () => {
+  const sw = fs.readFileSync(path.join(root, 'public', 'sw.js'), 'utf8');
+  assert.match(sw, /function isBehaviorAsset\(pathname\)\s*\{[\s\S]*?pathname\.endsWith\('\/js\/app\.js'\)/);
+  assert.match(sw, /function networkFirst\(request\)\s*\{[\s\S]*?\.catch\(\(\) => caches\.match\(request\)\)/);
+
+  const behaviorRoute = sw.indexOf('if (isBehaviorAsset(url.pathname))');
+  const codeRoute = sw.indexOf('if (isCodeAsset(url.pathname))');
+  assert.ok(behaviorRoute >= 0, 'app.js must have a dedicated fetch route');
+  assert.ok(behaviorRoute < codeRoute, 'app.js network-first route must precede the code asset route');
+  assert.match(sw.slice(behaviorRoute, codeRoute), /event\.respondWith\(networkFirst\(request\)\);/);
 });

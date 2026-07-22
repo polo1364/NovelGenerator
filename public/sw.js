@@ -49,6 +49,11 @@ function isCodeAsset(pathname) {
   return false;
 }
 
+/** HTML 與其主行為程式必須同次載入，避免版本不同步 */
+function isBehaviorAsset(pathname) {
+  return pathname.endsWith('/js/app.js');
+}
+
 /**
  * Stale-While-Revalidate：有快取就「立即」回傳（重複載入秒開），
  * 同時在背景抓最新版寫回快取，下次載入即為新版。
@@ -133,6 +138,11 @@ self.addEventListener('fetch', (event) => {
   if (/\/reader(\/|$)/i.test(url.pathname)) return;
 
   if (request.mode === 'navigate') {
+    event.respondWith(networkFirst(request));
+    return;
+  }
+
+  if (isBehaviorAsset(url.pathname)) {
     event.respondWith(networkFirst(request));
     return;
   }

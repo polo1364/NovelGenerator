@@ -249,7 +249,7 @@
 .editorial-modal input:disabled,
 .editorial-modal select:disabled,
 .editorial-modal textarea:disabled,
-.editorial-modal .editorial-control:disabled {
+.editorial-modal button:disabled {
   cursor: not-allowed;
   opacity: 0.6;
 }
@@ -258,7 +258,15 @@
   accent-color: var(--ec-teal, var(--accent));
 }
 
-.editorial-modal .editorial-control {
+.editorial-modal .modal-close,
+.editorial-modal .btn-small,
+.editorial-modal .workspace-modal-footer .btn-primary {
+  min-width: 44px;
+  min-height: 44px;
+}
+
+.editorial-modal .auto-continue-row,
+.editorial-modal .drama-switch {
   min-height: 44px;
 }
 
