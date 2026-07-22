@@ -192,12 +192,12 @@ test('workspace modals retain dialog semantics', () => {
   assert.match(css, /\.editorial-modal \*\s*\{\s*scroll-behavior:\s*auto !important;/);
 });
 
-test('service worker installs the parsed v80 application shell in stylesheet load order', async () => {
+test('service worker installs the parsed v81 application shell in stylesheet load order', async () => {
   const appShell = parseAppShell();
   const polishIndex = appShell.indexOf('./css/layout-polish.css');
   assert.ok(polishIndex >= 0, 'APP_SHELL must include layout-polish.css');
   assert.equal(appShell[polishIndex + 1], './css/uiverse-editorial.css');
-  assert.match(sw, /const CACHE_VERSION\s*=\s*'v80';/);
+  assert.match(sw, /const CACHE_VERSION\s*=\s*'v81';/);
   assert.match(sw, /cache\.addAll\(APP_SHELL\)/);
 
   const harness = createServiceWorkerHarness({ fetchImpl: async () => new Response('unused') });

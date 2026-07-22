@@ -9,6 +9,7 @@
   --ec-teal: #1e7774;
   --ec-yellow: #efc84a;
   --ec-blue: #2e5fae;
+  --ec-muted: #57534e;
   position: relative;
   color: var(--ec-ink);
   background: var(--ec-paper);
@@ -36,6 +37,7 @@
   --ec-teal: #48b8ae;
   --ec-yellow: #f1cc58;
   --ec-blue: #89aef4;
+  --ec-muted: #d6d3d1;
   box-shadow: 10px 10px 0 #050606;
 }
 
@@ -60,6 +62,30 @@
   border: 0;
   border-radius: 0;
   box-shadow: none;
+}
+
+.desk-scene .card.editorial-console .pipeline-header::before {
+  color: var(--ec-ink);
+  text-shadow: none;
+}
+
+.desk-scene .card.editorial-console .step-title {
+  color: var(--ec-ink);
+}
+
+.desk-scene .card.editorial-console .step-metric,
+.desk-scene .card.editorial-console .step-code {
+  color: var(--ec-teal);
+}
+
+.desk-scene .card.editorial-console .step-badge {
+  color: var(--ec-ink);
+  border-color: var(--ec-ink);
+  background: var(--ec-paper);
+}
+
+.desk-scene .card.editorial-console .step-chip.active .step-title {
+  color: var(--ec-ink);
 }
 
 .editorial-console .pipeline-caption,
@@ -238,6 +264,11 @@
   border: 3px solid var(--ec-ink);
   border-radius: 3px;
   box-shadow: 5px 5px 0 var(--ec-ink);
+}
+
+.editorial-console :is(button, .btn-outline):disabled {
+  color: var(--ec-muted);
+  opacity: 0.76;
 }
 
 .editorial-console .primary-action-btn:not(:disabled):hover {

@@ -158,11 +158,16 @@ async function navigate(client) {
 
 async function collectLayout(client) {
   return client.evaluate(`(() => {
-    const style = element => getComputedStyle(element);
+    const style = (element, pseudo) => getComputedStyle(element, pseudo);
     const shell = document.querySelector('#stepSetup');
     const workspace = document.querySelector('.editorial-workspace');
     const modules = document.querySelector('.editorial-console__modules');
     const pipeline = document.querySelector('#pipeline');
+    const studioLabel = document.querySelector('.pipeline-header');
+    const stepTitle = document.querySelector('.step-chip:not(.active) .step-title');
+    const stepMetric = document.querySelector('.step-chip:not(.active) .step-metric');
+    const launcherSub = document.querySelector('.editorial-module .wsl-sub');
+    const disabledOutline = document.querySelector('#outlineAttachOpenBtn');
     const shellStyle = style(shell);
     const pipelineStyle = style(pipeline);
     return {
@@ -177,6 +182,14 @@ async function collectLayout(client) {
         borderWidth: pipelineStyle.borderTopWidth,
         radius: pipelineStyle.borderTopLeftRadius,
         shadow: pipelineStyle.boxShadow
+      },
+      text: {
+        studioLabel: style(studioLabel, '::before').color,
+        stepTitle: style(stepTitle).color,
+        stepMetric: style(stepMetric).color,
+        launcherSub: style(launcherSub).color,
+        disabledColor: style(disabledOutline).color,
+        disabledOpacity: style(disabledOutline).opacity
       },
       workspaceColumns: style(workspace).gridTemplateColumns,
       moduleColumns: style(modules).gridTemplateColumns,
@@ -299,6 +312,12 @@ async function run() {
       assert.equal(layouts[width].shell.radius, '4px');
       assert.match(layouts[width].shell.shadow, /rgb\(23, 24, 22\) 10px 10px 0px 0px/);
       assertPipelineReset(layouts[width], `${width}px light`);
+      assert.equal(layouts[width].text.studioLabel, 'rgb(23, 24, 22)', `${width}px studio label must use editorial ink`);
+      assert.equal(layouts[width].text.stepTitle, 'rgb(23, 24, 22)', `${width}px workflow title must use editorial ink`);
+      assert.equal(layouts[width].text.stepMetric, 'rgb(30, 119, 116)', `${width}px workflow metadata must use editorial teal`);
+      assert.equal(layouts[width].text.launcherSub, 'rgb(30, 119, 116)', `${width}px launcher summary must use editorial teal`);
+      assert.equal(layouts[width].text.disabledColor, 'rgb(87, 83, 78)', `${width}px disabled action must remain readable`);
+      assert.ok(Number(layouts[width].text.disabledOpacity) >= 0.72, `${width}px disabled action opacity must remain at least 0.72`);
       assert.equal(layouts[width].moduleColumns.split(' ').length, width < 768 ? 1 : 3);
       assert.equal(layouts[width].workspaceColumns.split(' ').length, width < 768 ? 1 : 2);
     }
