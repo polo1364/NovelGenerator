@@ -49,11 +49,14 @@ test('editorial stylesheet and console structure fulfil the Task 2 contract', ()
     '.editorial-console .editorial-console__modules {',
     '.editorial-console .editorial-module {',
     '.editorial-console .editorial-module:focus-visible {',
+    '.editorial-console .step-chip.active,',
     '.editorial-console .primary-action-btn:not(:disabled):active {'
   ]) {
     assert.ok(css.includes(selector), `missing scoped selector: ${selector}`);
   }
   assert.match(css, /--ec-yellow:\s*#efc84a;/);
+  assert.match(css, /\[data-theme="dark"\] \.editorial-console \.primary-generate:not\(:disabled\) \{\s*color:\s*#171816;/);
+  assert.match(css, /\.editorial-console \.step-chip,\s*\.editorial-console \.btn-small \{\s*min-height:\s*44px;/);
   assert.match(css, /prefers-reduced-motion:\s*reduce/);
 });
 

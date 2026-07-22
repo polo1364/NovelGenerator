@@ -51,6 +51,7 @@
   background: var(--ec-paper);
 }
 
+.editorial-console .step-chip.active,
 .editorial-console .step-chip.is-active,
 .editorial-console .step-chip[aria-current="step"] {
   background: var(--ec-yellow);
@@ -204,6 +205,10 @@
   background: var(--ec-yellow);
 }
 
+[data-theme="dark"] .editorial-console .primary-generate:not(:disabled) {
+  color: #171816;
+}
+
 .editorial-console .primary-continue:not(:disabled) {
   background: var(--ec-teal);
   color: var(--ec-paper);
@@ -238,6 +243,11 @@
 
   .editorial-console .editorial-module {
     min-height: 88px;
+  }
+
+  .editorial-console .step-chip,
+  .editorial-console .btn-small {
+    min-height: 44px;
   }
 }
 
