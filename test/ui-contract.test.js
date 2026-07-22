@@ -7,9 +7,19 @@ const root = path.join(__dirname, '..');
 const html = fs.readFileSync(path.join(root, 'public', 'index.html'), 'utf8');
 
 test('editorial stylesheet loads after existing styles', () => {
-  const base = html.indexOf('css/styles.css');
-  const polish = html.indexOf('css/layout-polish.css');
-  const editorial = html.indexOf('css/uiverse-editorial.css');
+  const markup = html
+    .replace(/<!--[\s\S]*?-->/g, '')
+    .replace(/<script\b[^>]*>[\s\S]*?<\/script>/gi, '');
+  const stylesheets = [...markup.matchAll(/<link\b[^>]*>/gi)]
+    .map(([tag]) => ({
+      rel: tag.match(/\brel\s*=\s*["']([^"']+)["']/i)?.[1],
+      href: tag.match(/\bhref\s*=\s*["']([^"']+)["']/i)?.[1]
+    }))
+    .filter(({ rel }) => rel?.split(/\s+/).includes('stylesheet'))
+    .map(({ href }) => href);
+  const base = stylesheets.indexOf('css/styles.css');
+  const polish = stylesheets.indexOf('css/layout-polish.css');
+  const editorial = stylesheets.indexOf('css/uiverse-editorial.css');
   assert.ok(base >= 0 && polish > base && editorial > polish);
 });
 
