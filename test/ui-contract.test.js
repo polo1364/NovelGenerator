@@ -2,9 +2,91 @@ const test = require('node:test');
 const assert = require('node:assert/strict');
 const fs = require('node:fs');
 const path = require('node:path');
+const vm = require('node:vm');
 
 const root = path.join(__dirname, '..');
 const html = fs.readFileSync(path.join(root, 'public', 'index.html'), 'utf8');
+const sw = fs.readFileSync(path.join(root, 'public', 'sw.js'), 'utf8');
+
+function parseAppShell(source = sw) {
+  const expression = source.match(/const APP_SHELL\s*=\s*(\[[\s\S]*?\n\]);/m)?.[1];
+  assert.ok(expression, 'APP_SHELL must be declared as an array literal');
+  const shell = vm.runInNewContext(`(${expression})`, {}, { filename: 'APP_SHELL' });
+  assert.ok(Array.isArray(shell), 'APP_SHELL must evaluate to an array');
+  return Array.from(shell);
+}
+
+function createServiceWorkerHarness({ fetchImpl, cachedResponse } = {}) {
+  const handlers = new Map();
+  const calls = { addAll: [], cacheMatch: [], fetch: [], open: [], put: [] };
+  const cache = {
+    async addAll(entries) {
+      calls.addAll.push(Array.from(entries));
+    },
+    async match() {
+      return cachedResponse;
+    },
+    async put(request, response) {
+      calls.put.push({ request, response });
+    }
+  };
+  const caches = {
+    async open(name) {
+      calls.open.push(name);
+      return cache;
+    },
+    async match(request) {
+      calls.cacheMatch.push(request);
+      return cachedResponse;
+    },
+    async keys() {
+      return [];
+    },
+    async delete() {
+      return true;
+    }
+  };
+  const self = {
+    location: { origin: 'https://editorial.test' },
+    clients: { async claim() {} },
+    skipWaiting() {},
+    addEventListener(type, handler) {
+      handlers.set(type, handler);
+    }
+  };
+
+  vm.runInNewContext(sw, {
+    URL,
+    Promise,
+    caches,
+    fetch(request) {
+      calls.fetch.push(request);
+      return fetchImpl(request);
+    },
+    self
+  }, { filename: path.join(root, 'public', 'sw.js') });
+
+  return {
+    calls,
+    dispatch(type, event) {
+      const handler = handlers.get(type);
+      assert.ok(handler, `service worker must register a ${type} handler`);
+      handler(event);
+    }
+  };
+}
+
+async function dispatchFetch(harness, request) {
+  let responsePromise;
+  harness.dispatch('fetch', {
+    request,
+    respondWith(response) {
+      responsePromise = Promise.resolve(response);
+    }
+  });
+  assert.ok(responsePromise, `${request.url} must receive a response`);
+  return responsePromise;
+}
 
 test('editorial stylesheet and console structure fulfil the Task 2 contract', () => {
   const editorialStylesheet = path.join(root, 'public', 'css', 'uiverse-editorial.css');
@@ -110,21 +192,49 @@ test('workspace modals retain dialog semantics', () => {
   assert.match(css, /\.editorial-modal \*\s*\{\s*scroll-behavior:\s*auto !important;/);
 });
 
-test('service worker fetches app.js network first with an offline cache fallback', () => {
-  const sw = fs.readFileSync(path.join(root, 'public', 'sw.js'), 'utf8');
-  assert.match(sw, /function isBehaviorAsset\(pathname\)\s*\{[\s\S]*?pathname\.endsWith\('\/js\/app\.js'\)/);
-  assert.match(sw, /function networkFirst\(request\)\s*\{[\s\S]*?\.catch\(\(\) => caches\.match\(request\)\)/);
+test('service worker installs the parsed v80 application shell in stylesheet load order', async () => {
+  const appShell = parseAppShell();
+  const polishIndex = appShell.indexOf('./css/layout-polish.css');
+  assert.ok(polishIndex >= 0, 'APP_SHELL must include layout-polish.css');
+  assert.equal(appShell[polishIndex + 1], './css/uiverse-editorial.css');
+  assert.match(sw, /const CACHE_VERSION\s*=\s*'v80';/);
+  assert.match(sw, /cache\.addAll\(APP_SHELL\)/);
 
-  const behaviorRoute = sw.indexOf('if (isBehaviorAsset(url.pathname))');
-  const codeRoute = sw.indexOf('if (isCodeAsset(url.pathname))');
-  assert.ok(behaviorRoute >= 0, 'app.js must have a dedicated fetch route');
-  assert.ok(behaviorRoute < codeRoute, 'app.js network-first route must precede the code asset route');
-  assert.match(sw.slice(behaviorRoute, codeRoute), /event\.respondWith\(networkFirst\(request\)\);/);
+  const harness = createServiceWorkerHarness({ fetchImpl: async () => new Response('unused') });
+  let installPromise;
+  harness.dispatch('install', {
+    waitUntil(promise) {
+      installPromise = Promise.resolve(promise);
+    }
+  });
+  assert.ok(installPromise, 'install must wait for APP_SHELL caching');
+  await installPromise;
+
+  assert.deepEqual(harness.calls.addAll, [appShell]);
 });
 
-test('service worker caches the editorial stylesheet', () => {
-  const sw = fs.readFileSync(path.join(root, 'public', 'sw.js'), 'utf8');
-  assert.match(sw, /\.\/css\/uiverse-editorial\.css/);
+test('service worker serves app.js network-first and falls back to its cached response offline', async () => {
+  const appRequest = new Request('https://editorial.test/js/app.js');
+  const onlineHarness = createServiceWorkerHarness({
+    fetchImpl: async () => new Response('network app.js', { status: 200 })
+  });
+
+  const onlineResponse = await dispatchFetch(onlineHarness, appRequest);
+  assert.equal(await onlineResponse.text(), 'network app.js');
+  assert.equal(onlineHarness.calls.fetch.length, 1);
+  assert.equal(onlineHarness.calls.fetch[0].url, appRequest.url);
+  assert.equal(onlineHarness.calls.cacheMatch.length, 0);
+
+  const cachedResponse = new Response('cached app.js', { status: 200 });
+  const offlineHarness = createServiceWorkerHarness({
+    cachedResponse,
+    fetchImpl: async () => Promise.reject(new Error('offline'))
+  });
+  const offlineResponse = await dispatchFetch(offlineHarness, appRequest);
+  assert.equal(await offlineResponse.text(), 'cached app.js');
+  assert.equal(offlineHarness.calls.fetch.length, 1);
+  assert.equal(offlineHarness.calls.cacheMatch.length, 1);
+  assert.equal(offlineHarness.calls.cacheMatch[0].url, appRequest.url);
 });
 
 test('reduced motion disables editorial hover and press movement', () => {

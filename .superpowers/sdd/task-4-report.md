@@ -66,3 +66,87 @@ The available in-app browser viewport capability supports the required widths bu
 ## Concerns
 
 - Active `prefers-reduced-motion: reduce` emulation remains an environment limitation; the behavior is protected by the CSS contract and loaded-stylesheet check, but not by an active-media browser assertion.
+
+---
+
+## Review-remediation verification (2026-07-22)
+
+### Changes made
+
+- Replaced the source-text-only Service Worker assertions with a parsed `APP_SHELL` contract and a `node:vm` Service Worker harness in `test/ui-contract.test.js`.
+- The parsed contract asserts `v80`, `./css/uiverse-editorial.css` immediately follows `./css/layout-polish.css`, and the install handler actually passes that parsed array to `cache.addAll(APP_SHELL)`.
+- The harness evaluates the real `public/sw.js` with mocked `self`, `caches`, and `fetch`, dispatches `/js/app.js`, and proves both a network-first response and cache fallback after a rejected network request.
+- `public/sw.js`, `public/js/app.js`, and CSS were not changed during this remediation. Task 3's existing route is preserved by the executed behavior test.
+
+### TDD / test evidence
+
+1. Added the parsed-shell and executed-worker tests before changing production code. The worker already implemented the required behavior, so no production fix was warranted.
+2. First targeted run: `node --test test/ui-contract.test.js` produced 5 passing / 1 failing. The failure was test infrastructure: an array evaluated in a separate VM realm cannot be `deepStrictEqual` to a local-realm array despite identical values.
+3. Fixed that test-harness boundary with `Array.from(shell)`; no production source changed.
+4. Green: `node --test test/ui-contract.test.js` → 6 passed, 0 failed.
+5. The exact command below ran the targeted suite 10 consecutive times → 10 passed, 0 failed.
+
+```powershell
+$failure = $null
+for ($run = 1; $run -le 10; $run++) {
+  $result = & node --test test/ui-contract.test.js 2>&1
+  if ($LASTEXITCODE -ne 0) { $failure = "run=$run`n$result"; break }
+}
+if ($failure) { throw $failure }
+```
+
+Result: `ui_contract_repeat_runs=10 passed=10 failed=0`.
+
+### Final commands and results
+
+```text
+node --test test/ui-contract.test.js  →  6 passed, 0 failed
+npm test                              →  23 passed, 0 failed
+git diff --check                       →  exit 0
+```
+
+### Active reduced-motion browser evidence
+
+Browser: installed Google Chrome in headless mode, driven through Chrome DevTools Protocol using the repository's existing `ws` dependency at `D:\Download\github\NovelGenerator-main\node_modules\ws`. No dependency or lockfile was added.
+
+```powershell
+Start-Process -FilePath npm.cmd -ArgumentList start -WorkingDirectory 'D:\Download\github\NovelGenerator-main\.worktrees\uiverse-editorial-console' -WindowStyle Hidden
+Start-Process -FilePath 'C:\Program Files\Google\Chrome\Application\chrome.exe' -ArgumentList '--headless=new', '--remote-debugging-port=9223', '--user-data-dir=<unique-temp-profile>', '--no-first-run', '--no-default-browser-check', 'about:blank' -WindowStyle Hidden
+@'<Node CDP harness: Page.navigate http://127.0.0.1:3000/, Emulation.setEmulatedMedia prefers-reduced-motion=reduce, CSS.forcePseudoState hover/active/focus-visible, Runtime.evaluate computed styles, Log/Runtime/Network capture>'@ | node -
+```
+
+The CDP harness waited on `document.readyState === 'complete'` plus the required controls (no fixed browser wait), set the media feature before navigation, and used Chrome's `CSS.forcePseudoState` to exercise the actual `:hover`, `:active`, and `:focus-visible` cascade. Native pointer injection did not set pseudo state in this headless target, so it was not used as evidence.
+
+Final 1280 × 900 browser output:
+
+```json
+{
+  "viewport": "1280x900",
+  "reduced": true,
+  "hoverTransform": "none",
+  "pressTransform": "none",
+  "focus": {
+    "outlineStyle": "solid",
+    "outlineWidth": "3px",
+    "outlineColor": "rgb(116, 158, 232)"
+  },
+  "requestCount": 94,
+  "generationRequests": [],
+  "consoleErrors": [],
+  "exceptions": []
+}
+```
+
+No generation or continue control was clicked. The temporary primary-button enabled state was used only to evaluate the normally disabled primary action's `:active` rule. Chrome and the local server were stopped after the run. Network capture found no non-GET request and no `/api/chat`, `/api/generate`, or `/api/continue` request.
+
+### Remediation self-review
+
+- `APP_SHELL` is parsed and compared by value; the CSS order cannot pass through a mere substring match.
+- Install behavior is dispatched and awaited, so `cache.addAll(APP_SHELL)` is verified as a runtime call with the parsed contents.
+- The fetch test executes the checked-in worker source and asserts the returned response body for online and offline cases, rather than inspecting branch order.
+- The active browser check verifies the media feature and computed cascade in Chrome, including a visible focus indicator, with console and network guards.
+
+### Remaining concern
+
+- The Service Worker behavior test uses faithful in-memory `self`/`caches`/`fetch` mocks; it directly executes `sw.js`, but it is not a full Chrome Service Worker lifecycle test against persistent CacheStorage. The install and fetch contracts are covered at unit level, while the browser run covers active CSS/media behavior.
+- The browser's unique temporary Chrome profile remains at `C:\Users\User\AppData\Local\Temp\task4-cdp-7ea03b8c-3761-4a2d-919b-dca600392c6f`; the execution policy rejected its removal after its exact temp-only path was validated. It contains only the disposable headless browser profile.
