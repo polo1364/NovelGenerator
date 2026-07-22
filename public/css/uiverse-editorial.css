@@ -1,0 +1,253 @@
+/* Uiverse sources adapted under .editorial-console:
+   0xnihilism/quiet-dog-6, 0xnihilism/moody-moth-91,
+   Creatlydev/friendly-fish-0, adamgiebl/proud-donkey-24,
+   Bodyhc/loud-badger-7. MIT licensed via uiverse-io/galaxy. */
+.editorial-console {
+  --ec-ink: #171816;
+  --ec-paper: #f5f0df;
+  --ec-red: #d94f49;
+  --ec-teal: #1e7774;
+  --ec-yellow: #efc84a;
+  --ec-blue: #749ee8;
+  position: relative;
+  color: var(--ec-ink);
+  background-color: var(--ec-paper);
+  border: 3px solid var(--ec-ink);
+  border-radius: 4px;
+  box-shadow: 10px 10px 0 var(--ec-ink);
+}
+
+[data-theme="dark"] .editorial-console {
+  --ec-ink: #f2eee2;
+  --ec-paper: #171a1d;
+  --ec-red: #ff7169;
+  --ec-teal: #48b8ae;
+  --ec-yellow: #f1cc58;
+  --ec-blue: #89aef4;
+  box-shadow: 10px 10px 0 #050606;
+}
+
+.editorial-console .editorial-console__workflow {
+  padding: 18px;
+  margin: -8px -4px 24px;
+  border: 2px solid var(--ec-ink);
+  background: color-mix(in srgb, var(--ec-paper) 88%, var(--ec-yellow));
+}
+
+.editorial-console .pipeline {
+  margin: 0;
+  padding: 0;
+  border: 0;
+}
+
+.editorial-console .pipeline-caption,
+.editorial-console .step-code {
+  color: var(--ec-teal);
+}
+
+.editorial-console .step-chip {
+  color: var(--ec-ink);
+  border-color: var(--ec-ink);
+  background: var(--ec-paper);
+}
+
+.editorial-console .step-chip.is-active,
+.editorial-console .step-chip[aria-current="step"] {
+  background: var(--ec-yellow);
+}
+
+.editorial-console .step-badge {
+  border-color: var(--ec-ink);
+  background: var(--ec-paper);
+}
+
+.editorial-console .step-link {
+  background: var(--ec-ink);
+}
+
+.editorial-console .editorial-console__modules {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 14px;
+}
+
+.editorial-console .editorial-module {
+  min-height: 116px;
+  color: var(--ec-ink);
+  border: 2px solid var(--ec-ink);
+  border-radius: 3px;
+  background: var(--ec-paper);
+  box-shadow: 5px 5px 0 var(--ec-ink);
+  transform-style: preserve-3d;
+  transition: transform 180ms ease, box-shadow 180ms ease;
+}
+
+.editorial-console .editorial-module:not(:disabled):hover {
+  transform: translate(-2px, -2px);
+  box-shadow: 7px 7px 0 var(--ec-ink);
+}
+
+.editorial-console .editorial-module:focus-visible {
+  outline: 3px solid var(--ec-blue);
+  outline-offset: 4px;
+}
+
+.editorial-console .editorial-module .wsl-icon {
+  color: var(--ec-red);
+}
+
+.editorial-console .editorial-module .wsl-sub {
+  color: var(--ec-teal);
+}
+
+.editorial-console .workspace-config-summary {
+  border: 2px solid var(--ec-ink);
+  border-radius: 3px;
+  background: var(--ec-paper);
+  box-shadow: 5px 5px 0 var(--ec-ink);
+}
+
+.editorial-console .config-summary-block {
+  border-color: var(--ec-ink);
+}
+
+.editorial-console .config-summary-head,
+.editorial-console .config-summary-chip {
+  color: var(--ec-ink);
+  background: color-mix(in srgb, var(--ec-paper) 88%, var(--ec-blue));
+}
+
+.editorial-console .editorial-note {
+  position: relative;
+  border: 2px solid var(--ec-ink);
+  border-radius: 2px;
+  background: var(--ec-paper);
+  box-shadow: 5px 5px 0 var(--ec-ink);
+}
+
+.editorial-console .editorial-note::before,
+.editorial-console .editorial-note::after {
+  position: absolute;
+  top: -11px;
+  width: 88px;
+  height: 20px;
+  content: "";
+  background: color-mix(in srgb, var(--ec-yellow) 70%, transparent);
+  opacity: 0.85;
+  transform: rotate(-3deg);
+}
+
+.editorial-console .editorial-note::before {
+  left: 24px;
+}
+
+.editorial-console .editorial-note::after {
+  right: 24px;
+  transform: rotate(3deg);
+}
+
+.editorial-console .editorial-note .section-title,
+.editorial-console .editorial-outline .section-title {
+  color: var(--ec-ink);
+  border-color: var(--ec-ink);
+}
+
+.editorial-console .editorial-note textarea {
+  color: var(--ec-ink);
+  border: 2px solid var(--ec-ink);
+  background: color-mix(in srgb, var(--ec-paper) 92%, white);
+}
+
+.editorial-console .editorial-note textarea:focus {
+  border-color: var(--ec-teal);
+  box-shadow: 3px 3px 0 var(--ec-teal);
+}
+
+.editorial-console .editorial-outline {
+  border: 2px dashed var(--ec-ink);
+  border-radius: 3px;
+  background: color-mix(in srgb, var(--ec-paper) 94%, var(--ec-blue));
+}
+
+.editorial-console .outline-attach-panel {
+  border-color: var(--ec-ink);
+  background: var(--ec-paper);
+}
+
+.editorial-console .outline-attach-preview {
+  border-color: var(--ec-ink);
+}
+
+.editorial-console .primary-actions {
+  border-top-color: var(--ec-ink);
+}
+
+.editorial-console .primary-action-btn:not(:disabled) {
+  color: var(--ec-ink);
+  border: 3px solid var(--ec-ink);
+  border-radius: 3px;
+  box-shadow: 5px 5px 0 var(--ec-ink);
+}
+
+.editorial-console .primary-action-btn:not(:disabled):hover {
+  filter: none;
+  transform: translate(-1px, -1px);
+  box-shadow: 6px 6px 0 var(--ec-ink);
+}
+
+.editorial-console .primary-action-btn:not(:disabled):active {
+  transform: translate(4px, 4px);
+  box-shadow: 1px 1px 0 var(--ec-ink);
+}
+
+.editorial-console .primary-generate:not(:disabled) {
+  background: var(--ec-yellow);
+}
+
+.editorial-console .primary-continue:not(:disabled) {
+  background: var(--ec-teal);
+  color: var(--ec-paper);
+}
+
+.editorial-console .primary-reset:not(:disabled) {
+  background: var(--ec-red);
+  color: var(--ec-paper);
+}
+
+.editorial-console :is(.btn-outline, .btn-small):focus-visible,
+.editorial-console .step-chip:focus-visible,
+.editorial-console .primary-action-btn:focus-visible {
+  outline: 3px solid var(--ec-blue);
+  outline-offset: 3px;
+}
+
+@media (max-width: 767px) {
+  .editorial-console {
+    padding: 22px 16px;
+    box-shadow: 6px 6px 0 var(--ec-ink);
+  }
+
+  .editorial-console .editorial-console__workflow {
+    margin: -4px -4px 20px;
+    padding: 14px;
+  }
+
+  .editorial-console .editorial-console__modules {
+    grid-template-columns: 1fr;
+  }
+
+  .editorial-console .editorial-module {
+    min-height: 88px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .editorial-console *,
+  .editorial-console *::before,
+  .editorial-console *::after {
+    scroll-behavior: auto;
+    transition-duration: 0.01ms;
+    animation-duration: 0.01ms;
+    animation-iteration-count: 1;
+  }
+}
