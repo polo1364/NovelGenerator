@@ -318,4 +318,11 @@
     animation-duration: 0.01ms !important;
     animation-iteration-count: 1 !important;
   }
+
+  .editorial-console .editorial-module:not(:disabled):hover,
+  .editorial-console .primary-action-btn:not(:disabled):hover,
+  .editorial-console .primary-action-btn:not(:disabled):active,
+  .editorial-modal .special-element-item.selected {
+    transform: none;
+  }
 }

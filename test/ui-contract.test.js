@@ -121,3 +121,13 @@ test('service worker fetches app.js network first with an offline cache fallback
   assert.ok(behaviorRoute < codeRoute, 'app.js network-first route must precede the code asset route');
   assert.match(sw.slice(behaviorRoute, codeRoute), /event\.respondWith\(networkFirst\(request\)\);/);
 });
+
+test('service worker caches the editorial stylesheet', () => {
+  const sw = fs.readFileSync(path.join(root, 'public', 'sw.js'), 'utf8');
+  assert.match(sw, /\.\/css\/uiverse-editorial\.css/);
+});
+
+test('reduced motion disables editorial hover and press movement', () => {
+  const css = fs.readFileSync(path.join(root, 'public', 'css', 'uiverse-editorial.css'), 'utf8');
+  assert.match(css, /@media \(prefers-reduced-motion: reduce\)[\s\S]*?\.editorial-console \.editorial-module:not\(:disabled\):hover,[\s\S]*?\.editorial-console \.primary-action-btn:not\(:disabled\):hover,[\s\S]*?\.editorial-console \.primary-action-btn:not\(:disabled\):active[\s\S]*?transform:\s*none;/);
+});
