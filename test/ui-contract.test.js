@@ -268,7 +268,7 @@ test('final editorial fixes retain scoped shell, workspace, feedback, and verifi
   assert.match(css, /--ec-blue:\s*#2e5fae;/);
   assert.match(css, /@media \(min-width:\s*768px\)[\s\S]*?\.editorial-console \.editorial-workspace\s*\{[\s\S]*?grid-template-columns:\s*minmax\(0,\s*1fr\) minmax\(0,\s*1fr\);/);
   assert.match(css, /\.desk-scene \.card\.editorial-console\s*\{[\s\S]*?background:\s*var\(--ec-paper\);[\s\S]*?border:\s*3px solid var\(--ec-ink\);[\s\S]*?border-radius:\s*4px;[\s\S]*?box-shadow:\s*10px 10px 0 var\(--ec-ink\);/);
-  assert.match(css, /\.desk-scene \.card\.editorial-console \.pipeline\s*\{[\s\S]*?background:\s*transparent;[\s\S]*?border-radius:\s*0;/);
+  assert.match(css, /\.desk-scene \.card\.editorial-console \.pipeline\s*\{[\s\S]*?background:\s*transparent;[\s\S]*?border-radius:\s*0;[\s\S]*?box-shadow:\s*none;/);
   assert.ok(fs.existsSync(path.join(root, 'scripts', 'verify-editorial-console.js')),
     'computed-style browser verification script must be committed');
 });

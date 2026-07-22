@@ -162,13 +162,21 @@ async function collectLayout(client) {
     const shell = document.querySelector('#stepSetup');
     const workspace = document.querySelector('.editorial-workspace');
     const modules = document.querySelector('.editorial-console__modules');
+    const pipeline = document.querySelector('#pipeline');
     const shellStyle = style(shell);
+    const pipelineStyle = style(pipeline);
     return {
       shell: {
         background: shellStyle.backgroundColor,
         border: shellStyle.borderTop,
         radius: shellStyle.borderTopLeftRadius,
         shadow: shellStyle.boxShadow
+      },
+      pipeline: {
+        background: pipelineStyle.backgroundColor,
+        borderWidth: pipelineStyle.borderTopWidth,
+        radius: pipelineStyle.borderTopLeftRadius,
+        shadow: pipelineStyle.boxShadow
       },
       workspaceColumns: style(workspace).gridTemplateColumns,
       moduleColumns: style(modules).gridTemplateColumns,
@@ -274,6 +282,12 @@ async function run() {
     ]);
 
     await client.send('Emulation.setEmulatedMedia', { features: [{ name: 'prefers-reduced-motion', value: 'no-preference' }] });
+    const assertPipelineReset = (layout, label) => {
+      assert.equal(layout.pipeline.background, 'rgba(0, 0, 0, 0)', `${label} pipeline background must be transparent`);
+      assert.equal(layout.pipeline.borderWidth, '0px', `${label} pipeline border must be reset`);
+      assert.equal(layout.pipeline.radius, '0px', `${label} pipeline radius must be reset`);
+      assert.equal(layout.pipeline.shadow, 'none', `${label} pipeline shadow must be reset`);
+    };
     const layouts = {};
     for (const width of viewports) {
       await setViewport(client, width);
@@ -284,9 +298,19 @@ async function run() {
       assert.match(layouts[width].shell.border, /^3px solid rgb\(23, 24, 22\)$/);
       assert.equal(layouts[width].shell.radius, '4px');
       assert.match(layouts[width].shell.shadow, /rgb\(23, 24, 22\) 10px 10px 0px 0px/);
+      assertPipelineReset(layouts[width], `${width}px light`);
       assert.equal(layouts[width].moduleColumns.split(' ').length, width < 768 ? 1 : 3);
       assert.equal(layouts[width].workspaceColumns.split(' ').length, width < 768 ? 1 : 2);
     }
+
+    await setViewport(client, 1280);
+    await navigate(client);
+    await client.evaluate("document.querySelector('#darkThemeBtn').click()");
+    await poll('dark theme activation', async () => client.evaluate("document.documentElement.dataset.theme === 'dark'"));
+    const darkLayout = await collectLayout(client);
+    assertPipelineReset(darkLayout, '1280px dark');
+    await client.evaluate("document.querySelector('#lightThemeBtn').click()");
+    await poll('light theme restoration', async () => client.evaluate("document.documentElement.dataset.theme === 'light'"));
 
     await setViewport(client, 1280);
     await navigate(client);
@@ -333,8 +357,10 @@ async function run() {
       viewports: Object.fromEntries(viewports.map(width => [width, {
         overflow: layouts[width].overflow,
         workspaceColumns: layouts[width].workspaceColumns,
-        moduleColumns: layouts[width].moduleColumns
+        moduleColumns: layouts[width].moduleColumns,
+        pipeline: layouts[width].pipeline
       }])),
+      darkPipeline: darkLayout.pipeline,
       contrast: { redOnPaper: Number(redContrast.toFixed(2)), blueOnPaper: Number(blueContrast.toFixed(2)) },
       modal,
       reducedMotion
