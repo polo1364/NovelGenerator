@@ -604,6 +604,9 @@
       const worldComplexitySelect = document.getElementById('worldComplexity');
       const emotionalToneSelect = document.getElementById('emotionalTone');
       const endingSelect = document.getElementById('ending');
+      const diversityModeSelect = document.getElementById('diversityMode');
+      const randomSeedInput = document.getElementById('randomSeed');
+      const newSeedBtn = document.getElementById('newSeedBtn');
       const specialElementsContainer = document.getElementById('specialElementsContainer');
       // 選續集類結局時，自動把「預計集數」帶到 2（若使用者仍為 1）
       if (endingSelect) {
@@ -712,12 +715,8 @@
       // ==================== DeepSeek API 與用量統計 ====================
       // 金鑰已移至後端（環境變數），前端僅呼叫自家代理端點，不再接觸金鑰。
       const DEEPSEEK_ENDPOINT = '/api/chat';
-
-      // DeepSeek 標準定價（USD / 百萬 tokens），僅供估算參考
-      const DEEPSEEK_PRICING = {
-        'deepseek-v4-flash': { input: 0.14, output: 0.28 },
-        'deepseek-v4-pro':   { input: 0.435, output: 0.87 }
-      };
+      const deepSeekPricing = window.DeepSeekPricing;
+      if (!deepSeekPricing) throw new Error('DeepSeek 計價模組載入失敗');
 
       // 載入用量統計
       function loadUsageStats() {
@@ -728,11 +727,14 @@
               requests: saved.requests || 0,
               promptTokens: saved.promptTokens || 0,
               completionTokens: saved.completionTokens || 0,
-              totalTokens: saved.totalTokens || 0
+              totalTokens: saved.totalTokens || 0,
+              estimatedCost: Number.isFinite(Number(saved.estimatedCost))
+                ? Math.max(0, Number(saved.estimatedCost))
+                : null
             };
           }
         } catch (e) {}
-        return { requests: 0, promptTokens: 0, completionTokens: 0, totalTokens: 0 };
+        return { requests: 0, promptTokens: 0, completionTokens: 0, totalTokens: 0, estimatedCost: 0 };
       }
 
       let usageStats = loadUsageStats();
@@ -754,11 +756,42 @@
 
       // 估算累計費用（USD）
       function estimateUsageCost() {
-        // 以目前選擇的模型定價估算（混用模型時為近似值）
-        const pricing = DEEPSEEK_PRICING[modelSelect.value] || DEEPSEEK_PRICING['deepseek-v4-flash'];
-        const inputCost = usageStats.promptTokens / 1000000 * pricing.input;
-        const outputCost = usageStats.completionTokens / 1000000 * pricing.output;
-        return inputCost + outputCost;
+        if (Number.isFinite(usageStats.estimatedCost)) return usageStats.estimatedCost;
+        // 舊版資料沒有逐次費用，只能把既有輸入視為 cache miss，以當下時段補算一次。
+        return deepSeekPricing.calculateUsageCost({
+          prompt_tokens: usageStats.promptTokens,
+          completion_tokens: usageStats.completionTokens
+        }, modelSelect.value, new Date());
+      }
+
+      function peakPriceMessage(date = new Date()) {
+        const next = deepSeekPricing.getNextOffPeakTime(date);
+        const localTime = next.toLocaleString(undefined, {
+          weekday: 'short',
+          hour: '2-digit',
+          minute: '2-digit'
+        });
+        return `目前為 DeepSeek 尖峰時段，費率較高。下一個離峰於 ${localTime} 開始（裝置本地時間）。`;
+      }
+
+      function confirmPeakPricing() {
+        const now = new Date();
+        if (!deepSeekPricing.isPeakTime(now)) return true;
+        updateOffPeakReminder();
+        return window.confirm(`${peakPriceMessage(now)}\n\n仍要以尖峰費率繼續生成嗎？`);
+      }
+
+      function updateOffPeakReminder() {
+        const reminder = document.getElementById('offPeakReminder');
+        if (!reminder) return;
+        const now = new Date();
+        if (deepSeekPricing.isPeakTime(now)) {
+          reminder.textContent = `⚠️ ${peakPriceMessage(now)}`;
+          reminder.dataset.period = 'peak';
+        } else {
+          reminder.textContent = '✅ 目前為 DeepSeek 離峰時段，可以開始生成。';
+          reminder.dataset.period = 'off-peak';
+        }
       }
 
       // 更新用量統計的畫面顯示
@@ -796,17 +829,29 @@
       }
 
       // 記錄一次 API 呼叫的用量
-      function recordUsage(usage) {
+      function recordUsage(usage, model) {
+        const previousCost = estimateUsageCost();
         usageStats.requests += 1;
         if (usage) {
           const prompt = usage.prompt_tokens || 0;
           const completion = usage.completion_tokens || 0;
           const total = usage.total_tokens || (prompt + completion);
+          const billedAt = new Date();
+          const breakdown = deepSeekPricing.getUsageBreakdown(usage);
+          const requestCost = deepSeekPricing.calculateUsageCost(usage, model, billedAt);
           usageStats.promptTokens += prompt;
           usageStats.completionTokens += completion;
           usageStats.totalTokens += total;
-          lastUsage = { prompt, completion, total };
+          usageStats.estimatedCost = previousCost + requestCost;
+          lastUsage = {
+            prompt,
+            completion,
+            total,
+            cacheHit: breakdown.cacheHit,
+            period: deepSeekPricing.isPeakTime(billedAt) ? '尖峰' : '離峰'
+          };
         } else {
+          usageStats.estimatedCost = previousCost;
           lastUsage = null;
         }
         saveUsageStats();
@@ -826,7 +871,7 @@
       if (resetUsageBtn) {
         resetUsageBtn.addEventListener('click', () => {
           if (confirm('確定要重設用量統計嗎？此操作無法復原。')) {
-            usageStats = { requests: 0, promptTokens: 0, completionTokens: 0, totalTokens: 0 };
+            usageStats = { requests: 0, promptTokens: 0, completionTokens: 0, totalTokens: 0, estimatedCost: 0 };
             lastUsage = null;
             saveUsageStats();
             updateUsageUI();
@@ -868,6 +913,8 @@
       // 初始顯示
       updateUsageUI();
       updateModelHint();
+      updateOffPeakReminder();
+      setInterval(updateOffPeakReminder, 60 * 1000);
 
       const sleep = (ms) => new Promise(r => setTimeout(r, ms));
 
@@ -911,20 +958,20 @@
           stream: useStream
         };
         if (useStream) requestBody.stream_options = { include_usage: true };
-        // deepseek-v4-flash：關閉 thinking 模式以加快寫作、降低費用；提高輸出上限避免長章節被截斷。
-        // temperature 0.9 + top_p 0.9 收斂取樣空間：中文長篇若 temperature 過高
-        //（如 1.3~1.5）或上下文累積過長，容易取樣崩壞成「字都對、語意全亂」的亂碼，
-        // 故採偏保守設定，並用 frequency_penalty 抑制重複退化。
-        // deepseek-v4-pro：同樣關閉 thinking，保留寫作參數。
+        // V4 寫作關閉 thinking；依正文、續寫、大綱、書名使用不同取樣溫度。
+        // DeepSeek 建議 temperature / top_p 擇一調整，因此這裡只設定 temperature。
         if (usedModel === 'deepseek-v4-flash' || usedModel === 'deepseek-v4-pro') {
           requestBody.thinking = { type: 'disabled' };
           const requestedMax = options.maxTokens;
+          const minOutputTokens = options.taskType === 'state' ? 512 : 4096;
           requestBody.max_tokens = requestedMax
-            ? Math.min(16384, Math.max(4096, requestedMax))
+            ? Math.min(16384, Math.max(minOutputTokens, requestedMax))
             : 8192;
-          requestBody.temperature = 0.9;
-          requestBody.top_p = 0.9;
-          requestBody.frequency_penalty = 0.3;
+          const samplingProfile = (globalThis.NovelGenerationPlanning
+            && typeof globalThis.NovelGenerationPlanning.getSamplingProfile === 'function')
+            ? globalThis.NovelGenerationPlanning.getSamplingProfile(options.taskType, options.diversityMode)
+            : { temperature: 0.75, frequency_penalty: 0.3 };
+          Object.assign(requestBody, samplingProfile);
         }
 
         const response = await fetch(DEEPSEEK_ENDPOINT, {
@@ -951,7 +998,7 @@
           if (!data.choices || data.choices.length === 0) {
             throw new Error('沒有獲得內容');
           }
-          recordUsage(data.usage);
+          recordUsage(data.usage, usedModel);
           const nonStreamText = (data.choices[0].message && data.choices[0].message.content ? data.choices[0].message.content : '').replace(/\uFFFD/g, '');
           const nsFinish = data.choices[0].finish_reason || null;
           if (typeof options.onComplete === 'function') options.onComplete({ finishReason: nsFinish });
@@ -1009,7 +1056,7 @@
         buffer += decoder.decode();
         if (buffer) processLine(buffer);
 
-        recordUsage(usage);
+        recordUsage(usage, usedModel);
         const requestedMax = requestBody.max_tokens;
         if (!finishReason && usage && requestedMax && usage.completion_tokens >= Math.floor(requestedMax * 0.92)) {
           finishReason = 'length';
@@ -1046,6 +1093,66 @@
           }
         }
         throw lastErr;
+      }
+
+      const STORY_STATE_STORAGE_KEY = 'novelStoryStateLedger';
+
+      function readStoryStateLedger() {
+        try {
+          const value = JSON.parse(localStorage.getItem(STORY_STATE_STORAGE_KEY) || 'null');
+          return value && typeof value === 'object' ? value : null;
+        } catch (_) {
+          return null;
+        }
+      }
+
+      function clearStoryStateLedger() {
+        try { localStorage.removeItem(STORY_STATE_STORAGE_KEY); } catch (_) {}
+      }
+
+      function getStoryStateGuidance(storyText) {
+        const planner = globalThis.NovelGenerationPlanning;
+        if (!planner || typeof planner.createStoryFingerprint !== 'function') return '';
+        const stored = readStoryStateLedger();
+        if (!stored || stored.sourceFingerprint !== planner.createStoryFingerprint(storyText)) return '';
+        return planner.formatStoryStateGuidance(stored.state);
+      }
+
+      async function refreshStoryStateLedger(storyText) {
+        const planner = globalThis.NovelGenerationPlanning;
+        const story = String(storyText || '').trim();
+        if (!planner || story.length < 200) return null;
+
+        const sourceFingerprint = planner.createStoryFingerprint(story);
+        const previous = readStoryStateLedger();
+        if (previous && previous.sourceFingerprint === sourceFingerprint) return previous.state || null;
+
+        const prompt = planner.buildStoryStatePrompt({
+          previousState: previous && previous.state,
+          storyText: story,
+          chapterCount: countChapters(story)
+        });
+
+        try {
+          const raw = await callDeepSeek(prompt, null, 'deepseek-v4-flash', {
+            taskType: 'state',
+            maxTokens: 1200,
+            retries: 0
+          });
+          const state = planner.parseStoryState(raw);
+          if (!state) throw new Error('回應不是有效的故事狀態 JSON');
+          localStorage.setItem(STORY_STATE_STORAGE_KEY, JSON.stringify({
+            version: 1,
+            sourceFingerprint,
+            chapterCount: countChapters(story),
+            updatedAt: new Date().toISOString(),
+            state
+          }));
+          return state;
+        } catch (err) {
+          console.warn('故事狀態表更新略過：', err && err.message ? err.message : err);
+          return previous && previous.state ? previous.state : null;
+        }
       }
 
       // 全域中斷控制器：用於「停止生成」
@@ -5126,16 +5233,69 @@
         return arr[Math.floor(Math.random() * arr.length)];
       }
 
+      function createLocalRandomSeed() {
+        if (globalThis.crypto && typeof globalThis.crypto.getRandomValues === 'function') {
+          const values = new Uint32Array(2);
+          globalThis.crypto.getRandomValues(values);
+          return Array.from(values, value => value.toString(36)).join('-');
+        }
+        return `${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 10)}`;
+      }
+
+      function getDiversityMode() {
+        return diversityModeSelect && diversityModeSelect.value ? diversityModeSelect.value : 'rich';
+      }
+
+      function getRandomSeed() {
+        let seed = randomSeedInput ? randomSeedInput.value.trim() : '';
+        if (!seed) {
+          seed = createLocalRandomSeed();
+          if (randomSeedInput) randomSeedInput.value = seed;
+        }
+        return seed;
+      }
+
+      function getDiversityGuidance() {
+        const planner = globalThis.NovelGenerationPlanning;
+        return planner && typeof planner.buildDiversityGuidance === 'function'
+          ? planner.buildDiversityGuidance(getDiversityMode(), getRandomSeed())
+          : '';
+      }
+
       /** 隨機設定 7 項進階選項 */
       function randomizeAdvancedSettings() {
         if (!narrativeSelect) return;
-        narrativeSelect.value = pickRandom(narrativeOptions).value;
-        eraSelect.value = pickRandom(eraOptions).value;
-        pacingSelect.value = pickRandom(pacingOptions).value;
-        ratingSelect.value = pickRandom(ratingOptions).value;
-        worldComplexitySelect.value = pickRandom(worldComplexityOptions).value;
-        emotionalToneSelect.value = pickRandom(emotionalToneOptions).value;
-        endingSelect.value = pickRandom(endingOptions).value;
+        const planner = globalThis.NovelGenerationPlanning;
+        const selection = planner && typeof planner.buildAdvancedRandomSelection === 'function'
+          ? planner.buildAdvancedRandomSelection({
+              seed: getRandomSeed(),
+              mode: getDiversityMode(),
+              options: {
+                narrative: narrativeOptions,
+                era: eraOptions,
+                pacing: pacingOptions,
+                rating: ratingOptions,
+                worldComplexity: worldComplexityOptions,
+                emotionalTone: emotionalToneOptions,
+                ending: endingOptions
+              }
+            })
+          : {
+              narrative: pickRandom(narrativeOptions).value,
+              era: pickRandom(eraOptions).value,
+              pacing: pickRandom(pacingOptions).value,
+              rating: pickRandom(ratingOptions).value,
+              worldComplexity: pickRandom(worldComplexityOptions).value,
+              emotionalTone: pickRandom(emotionalToneOptions).value,
+              ending: pickRandom(endingOptions).value
+            };
+        narrativeSelect.value = selection.narrative;
+        eraSelect.value = selection.era;
+        pacingSelect.value = selection.pacing;
+        ratingSelect.value = selection.rating;
+        worldComplexitySelect.value = selection.worldComplexity;
+        emotionalToneSelect.value = selection.emotionalTone;
+        endingSelect.value = selection.ending;
         endingSelect.dispatchEvent(new Event('change', { bubbles: true }));
         saveSettingsToLocal();
       }
@@ -5730,6 +5890,8 @@ ${n}
             storyBookTitle: currentBookTitle || '',
             storyOutlineVolumeCount: getOutlineVolumeTotal(),
             // 進階設定
+            diversityMode: diversityModeSelect.value,
+            randomSeed: randomSeedInput.value,
             narrative: narrativeSelect.value,
             era: eraSelect.value,
             pacing: pacingSelect.value,
@@ -5818,6 +5980,8 @@ ${n}
           }
 
           // 載入進階設定
+          if (settings.diversityMode) { setSelectValue(diversityModeSelect, settings.diversityMode); hasData = true; }
+          if (settings.randomSeed) { randomSeedInput.value = String(settings.randomSeed); hasData = true; }
           if (settings.narrative) { setSelectValue(narrativeSelect, settings.narrative); hasData = true; }
           if (settings.era) { setSelectValue(eraSelect, settings.era); hasData = true; }
           if (settings.pacing) { setSelectValue(pacingSelect, settings.pacing); hasData = true; }
@@ -5891,7 +6055,8 @@ ${n}
       
       // 監聽基本設定的變更
       [themeSelect, settingSelect, styleSelect, chaptersInput, lengthInput, notesInput,
-       narrativeSelect, eraSelect, pacingSelect, ratingSelect, worldComplexitySelect, emotionalToneSelect, endingSelect].forEach(el => {
+       diversityModeSelect, randomSeedInput, narrativeSelect, eraSelect, pacingSelect, ratingSelect,
+       worldComplexitySelect, emotionalToneSelect, endingSelect].forEach(el => {
         el.addEventListener('change', saveSettingsToLocal);
         el.addEventListener('input', debounce(saveSettingsToLocal, 500));
       });
@@ -6257,6 +6422,10 @@ ${n}
         // renderBookmarks 會在 initBookmarks 完成後自動呼叫
         if (!hasSettings) loadNamePoolFromLocal();
         updateNamePoolBtnBadge();
+        if (randomSeedInput && !randomSeedInput.value.trim()) {
+          randomSeedInput.value = createLocalRandomSeed();
+          setTimeout(() => saveSettingsToLocal(), 0);
+        }
       })();
 
       document.addEventListener('visibilitychange', () => {
@@ -6277,9 +6446,15 @@ ${n}
       /** 隨機填充主題、背景、風格 */
       function randomizeStoryElements() {
         if (!themeSelect) return;
-        themeSelect.value = pickRandom(themes);
-        settingSelect.value = pickRandom(settingsData);
-        styleSelect.value = pickRandom(stylesArr);
+        const planner = globalThis.NovelGenerationPlanning;
+        const seed = getRandomSeed();
+        const random = planner && typeof planner.createSeededRandom === 'function'
+          ? planner.createSeededRandom(seed, 'story-elements')
+          : Math.random;
+        const choose = values => values[Math.floor(random() * values.length)];
+        themeSelect.value = choose(themes);
+        settingSelect.value = choose(settingsData);
+        styleSelect.value = choose(stylesArr);
         saveSettingsToLocal();
       }
 
@@ -6564,12 +6739,18 @@ ${n}
           settleGenerate();
           return;
         }
+        if (!confirmPeakPricing()) {
+          showStatus('warning', '已取消尖峰時段生成；可於離峰時段再試。');
+          settleGenerate();
+          return;
+        }
         
         hideStatus();
         resultDiv.textContent = '';
         chapterNavContainer.classList.remove('show');
         chapterMatches = [];
         localStorage.removeItem('savedStory');
+        if (!generatingNextVolume) clearStoryStateLedger();
         latestStory = '';
         // 全新故事（非系列接續下一集）才清空 series 狀態
         if (!generatingNextVolume) {
@@ -6603,6 +6784,7 @@ ${n}
         const worldComplexity = worldComplexitySelect.value.trim();
         const emotionalTone = emotionalToneSelect.value.trim();
         const ending = endingSelect.value.trim();
+        const diversityGuidance = getDiversityGuidance();
 
         // ===== 結局軌道與系列分集 =====
         const endingKind = getEndingKind(ending);
@@ -6744,6 +6926,7 @@ ${n}
         if (outlineGenBlock) {
           prompt += outlineGenBlock;
         }
+        prompt += diversityGuidance;
         
         // ===== 生成設定清單（用於最後的強調） =====
         let settingsList = [];
@@ -6921,6 +7104,8 @@ ${shouldGenerateChapterByChapter ? '\n⚠️ 本次僅需創作第1章，後續�
           
           const story = await callDeepSeek(prompt, null, model, {
             signal,
+            taskType: 'story',
+            diversityMode: getDiversityMode(),
             maxTokens: tokensForChapterWords(lengthPlan.wordsPerChapter),
             onChunk: (full) => { setResultStreaming(full); },
             onComplete: ({ finishReason }) => { finishReasonMeta = finishReason; }
@@ -6973,6 +7158,8 @@ ${shouldGenerateChapterByChapter ? '\n⚠️ 本次僅需創作第1章，後續�
               const ch = countChapters(latestStory);
               if (ch > 0) updateGenerationProgress(ch, totalChaptersForProgress, wc);
             }
+
+            await refreshStoryStateLedger(latestStory);
 
             const finalChapters = countChapters(latestStory);
             if (shouldGenerateChapterByChapter && finalChapters >= 1) {
@@ -7067,7 +7254,13 @@ ${shouldGenerateChapterByChapter ? '\n⚠️ 本次僅需創作第1章，後續�
       });
 
       // ==================== 繼續生成 ====================
-      continueBtn.addEventListener('click', () => doContinueGenerationWithAutoResume());
+      continueBtn.addEventListener('click', () => {
+        if (!confirmPeakPricing()) {
+          showStatus('warning', '已取消尖峰時段生成；可於離峰時段再試。');
+          return;
+        }
+        doContinueGenerationWithAutoResume();
+      });
 
       const AUTO_TRUNCATE_RESUME_MAX = 15;
 
@@ -7097,6 +7290,8 @@ ${shouldGenerateChapterByChapter ? '\n⚠️ 本次僅需創作第1章，後續�
         }
         if (result.truncated || isCurrentChapterUnderTarget(plan, latestStory)) {
           showStatus('warning', '⚠️ 已自動接續多次仍不足，可再點「繼續生成」完成本章');
+        } else if (result.ok) {
+          await refreshStoryStateLedger(latestStory);
         }
         return result;
       }
@@ -7151,6 +7346,7 @@ ${shouldGenerateChapterByChapter ? '\n⚠️ 本次僅需創作第1章，後續�
         let isNearEnding = false;
         let isFinalChapter = false;
         let isAlreadyComplete = false;
+        let continuationChapterNumber = 0;
         const wordProgressHint = lengthPlan.targetTotal > 0
           ? `\n• 全書字數目標 ${lengthPlan.targetTotal.toLocaleString()} 字，目前已約 ${currentWordCount.toLocaleString()} 字`
           : '';
@@ -7208,9 +7404,11 @@ ${shouldGenerateChapterByChapter ? '\n⚠️ 本次僅需創作第1章，後續�
           // 自動／逐章模式：明確指定下一章編號，降低跳章或重複標題
           if (!isAlreadyComplete && remaining > 0 && !chState.inProgress) {
             const nextCh = currentChapters + 1;
+            continuationChapterNumber = nextCh;
             remainingChaptersHint += `
 • ⚠️【本章任務】請接續上一章，撰寫【第 ${nextCh} 章】；章節標題必須為 ### 第${nextCh}章：標題（不可跳號、不可重複上一章標題）`;
           } else if (!isAlreadyComplete && chState.inProgress) {
+            continuationChapterNumber = chState.inProgressChapter;
             remainingChaptersHint += `
 • ⚠️【本章任務】上文因輸出上限被截斷，請從最末句直接接續完成【第 ${chState.inProgressChapter} 章】
 • 禁止在中途插入章節標題、禁止重述已寫段落、禁止從頭重寫情節`;
@@ -7307,6 +7505,17 @@ ${shouldGenerateChapterByChapter ? '\n⚠️ 本次僅需創作第1章，後續�
           }
         }
 
+        const activeOutline = currentOutline
+          ? (getOutlineForVolumeIndex(seriesActiveIdx, isSeriesVol ? storySeries.totalVolumes : 1) || currentOutline)
+          : '';
+        const chapterOutlineGuidance = continuationChapterNumber > 0
+          && globalThis.NovelGenerationPlanning
+          && typeof globalThis.NovelGenerationPlanning.buildChapterOutlineGuidance === 'function'
+          ? globalThis.NovelGenerationPlanning.buildChapterOutlineGuidance(activeOutline, continuationChapterNumber)
+          : '';
+        const storyStateGuidance = getStoryStateGuidance(latestStory);
+        const diversityGuidance = getDiversityGuidance();
+
         let truncatedResumeHint = '';
         if (truncatedResume) {
           const chState = getContinuationChapterState(latestStory, targetChapters);
@@ -7340,6 +7549,7 @@ ${truncatedNotice}${storyContext}${settingsReminder}
 ═══════════════════════════════════════
 【續寫指令】
 ═══════════════════════════════════════
+${chapterOutlineGuidance}${storyStateGuidance}${diversityGuidance}
 
 創作要求：
 • 如一位資深作家般延續故事，文筆老練、情節流暢
@@ -7398,6 +7608,8 @@ ${continueWordReq}
         try {
           const continuation = (await callDeepSeek(continuePrompt, null, model, {
             signal,
+            taskType: 'continuation',
+            diversityMode: getDiversityMode(),
             maxTokens: tokensForChapterWords(lengthPlan.wordsPerChapter),
             onChunk: (full) => { setResultStreaming(baseStory + '\n\n' + full); },
             onComplete: ({ finishReason }) => { contFinishReason = finishReason; }
@@ -9012,6 +9224,7 @@ ${continueWordReq}
       
       // 載入書籤內容
       function loadBookmarkContent(bm) {
+        clearStoryStateLedger();
         // 系列書：還原 storySeries 與作用中集（番外含在所屬集 content 內）
         if (bm && bm.kind === 'series' && Array.isArray(bm.volumes) && bm.volumes.length) {
           seriesAborted = false;
@@ -11205,6 +11418,7 @@ ${anchor}
         const structureSection = buildOutlineStructureSection(chapterCount);
         const chapterListTemplate = buildOutlineChapterListTemplate(chapterCount);
         const notesBlock = getSupplementaryNotesBlock(getUserNotesText());
+        const diversityGuidance = getDiversityGuidance();
         let seriesBlock = '';
         if (totalVolumes >= 2) {
           seriesBlock = `\n系列規模：共 ${totalVolumes} 集；本次只規劃【${volumeLabel}】（每集 ${chapters} 章，各集章節獨立從第1章編號）`;
@@ -11243,7 +11457,7 @@ ${totalVolumes >= 2 ? `本集章節數：${chapters} 章` : `章節數：${chapt
 ★★★ 嚴格限制：「各章節大綱」必須剛好 ${chapters} 章，不可多也不可少！ ★★★
 ${charactersInfo ? `\n【主要人物】\n${charactersInfo}` : ''}
 ${selectedElements.length > 0 ? `\n【特殊元素】\n${selectedElements.join('、')}` : ''}
-${notesBlock}${seriesBlock}
+${notesBlock}${seriesBlock}${diversityGuidance}
 
 ═══════════════════════════════════════
 【輸出格式要求】
@@ -12794,7 +13008,12 @@ ${currentOutline.slice(0, 1600)}
 
 請直接輸出書名：`;
 
-        const raw = await callDeepSeek(titlePrompt, null, model, { signal, retries: 1 });
+        const raw = await callDeepSeek(titlePrompt, null, model, {
+          signal,
+          retries: 1,
+          taskType: 'title',
+          diversityMode: getDiversityMode()
+        });
         return cleanBookTitle(raw);
       }
 
@@ -12843,6 +13062,10 @@ ${currentOutline.slice(0, 1600)}
       if (retitleBtn) {
         retitleBtn.addEventListener('click', async () => {
           if (!currentOutline) { showStatus('error', '請先生成大綱'); return; }
+          if (!confirmPeakPricing()) {
+            showStatus('warning', '已取消尖峰時段生成；可於離峰時段再試。');
+            return;
+          }
           retitleBtn.disabled = true;
           const signal = beginGeneration();
           try {
@@ -12897,6 +13120,10 @@ ${currentOutline.slice(0, 1600)}
       regenerateOutlineBtn.addEventListener('click', generateOutline);
 
       async function generateOutline() {
+        if (!confirmPeakPricing()) {
+          showStatus('warning', '已取消尖峰時段生成；可於離峰時段再試。');
+          return;
+        }
         const model = modelSelect.value;
 
         const theme = themeSelect.value.trim();
@@ -12955,6 +13182,8 @@ ${currentOutline.slice(0, 1600)}
           const runOneOutline = async (prompt, labelForStream) => {
             return (await callDeepSeek(prompt, null, model, {
               signal,
+              taskType: 'outline',
+              diversityMode: getDiversityMode(),
               onChunk: (full) => {
                 const prefix = outlineParts.length
                   ? outlineParts.join('\n\n') + '\n\n' + OUTLINE_VOL_MARKER(labelForStream) + '\n\n'
@@ -13690,6 +13919,7 @@ ${currentOutline.slice(0, 1600)}
         chapterMatches = [];
         if (chapterNavContainer) chapterNavContainer.classList.remove('show');
         try { localStorage.removeItem('savedStory'); } catch (e) {}
+        clearStoryStateLedger();
         // 一併清除系列分集狀態
         storySeries = null;
         seriesAborted = false;
@@ -14219,6 +14449,14 @@ ${currentOutline.slice(0, 1600)}
         });
       }
 
+      if (newSeedBtn) {
+        newSeedBtn.addEventListener('click', () => {
+          randomSeedInput.value = createLocalRandomSeed();
+          saveSettingsToLocal();
+          showStatus('success', '已更換隨機種子');
+        });
+      }
+
       const randomStoryElementsBtn = document.getElementById('randomStoryElementsBtn');
       if (randomStoryElementsBtn) {
         randomStoryElementsBtn.addEventListener('click', () => {
@@ -14528,6 +14766,10 @@ ${currentOutline.slice(0, 1600)}
       if (aiGenerateCharactersBtn) {
         aiGenerateCharactersBtn.addEventListener('click', async () => {
           if (aiGenerateCharactersBtn.classList.contains('ai-loading')) return;
+          if (!confirmPeakPricing()) {
+            showStatus('warning', '已取消尖峰時段生成；可於離峰時段再試。');
+            return;
+          }
           // AI 設計依賴故事設定；若主題與背景都未填，先提醒會生成「通用」角色
           const hasTheme = !!(themeSelect.value && themeSelect.value.trim());
           const hasSetting = !!(settingSelect.value && settingSelect.value.trim());

@@ -167,8 +167,9 @@
         </div>
         <div class="usage-cost">
           估算累計費用：<span id="usageCost">$0.0000</span>
-          <small>（依 DeepSeek 標準定價估算，僅供參考）</small>
+          <small>（依 DeepSeek 尖峰／離峰及快取命中價格估算，僅供參考）</small>
         </div>
+        <div id="offPeakReminder" class="usage-last" role="status" aria-live="polite">正在確認 DeepSeek 計價時段…</div>
         <div class="usage-last" id="usageLast">最近一次：尚無資料</div>
         <div class="usage-limit-row">
           <label for="costLimitInput">費用上限提醒（USD）</label>
@@ -955,6 +956,22 @@
           </div>
           <div class="workspace-advanced-fields">
             <div class="input-group input-group--flush">
+              <label for="diversityMode">創意幅度</label>
+              <select id="diversityMode">
+                <option value="stable">穩定 — 清晰一致</option>
+                <option value="rich" selected>豐富 — 平衡變化</option>
+                <option value="experimental">實驗 — 大膽結構</option>
+              </select>
+            </div>
+            <div class="input-group input-group--flush">
+              <label for="randomSeed">隨機種子</label>
+              <div class="seed-control-row">
+                <input id="randomSeed" type="text" maxlength="64" autocomplete="off" placeholder="自動產生">
+                <button id="newSeedBtn" type="button" class="btn-outline btn-small">換種子</button>
+              </div>
+              <small class="char-hint hint-below">同一種子可重現隨機設定組合；不保證 AI 正文逐字相同。</small>
+            </div>
+            <div class="input-group input-group--flush">
               <label for="narrative">敘事視角</label>
               <select id="narrative">
                 <option value="">請選擇視角</option>
@@ -1194,6 +1211,8 @@
 
     <script defer src="js/tts-polyphone-hints.js"></script>
     <script defer src="js/edge-tts-speech.js"></script>
+    <script defer src="js/deepseek-pricing.js"></script>
+    <script defer src="js/generation-planning.js"></script>
     <script defer src="js/app.js"></script>
   </body>
 </html>

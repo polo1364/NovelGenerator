@@ -7,7 +7,7 @@
    - /api/* 與 /reader/* 不走 SW
    ============================================================ */
 
-const CACHE_VERSION = 'v81';
+const CACHE_VERSION = 'v85';
 const CACHE_NAME = `novel-workshop-${CACHE_VERSION}`;
 
 const APP_SHELL = [
@@ -16,6 +16,8 @@ const APP_SHELL = [
   './css/styles.css',
   './css/layout-polish.css',
   './css/uiverse-editorial.css',
+  './js/deepseek-pricing.js',
+  './js/generation-planning.js',
   './js/app.js',
   './js/edge-tts-speech.js',
   './js/tts-polyphone-hints.js',

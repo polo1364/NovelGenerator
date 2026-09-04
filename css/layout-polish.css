@@ -3178,6 +3178,18 @@ body.modal-open {
   padding-right: 2rem;
 }
 
+.seed-control-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 8px;
+  align-items: center;
+}
+
+.seed-control-row input {
+  width: 100%;
+  min-width: 0;
+}
+
 .workspace-modal .story-elements-head {
   justify-content: flex-end;
   margin-bottom: 12px;

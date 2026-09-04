@@ -7,6 +7,7 @@ const vm = require('node:vm');
 const root = path.join(__dirname, '..');
 const html = fs.readFileSync(path.join(root, 'public', 'index.html'), 'utf8');
 const sw = fs.readFileSync(path.join(root, 'public', 'sw.js'), 'utf8');
+const appSource = fs.readFileSync(path.join(root, 'public', 'js', 'app.js'), 'utf8');
 
 function parseAppShell(source = sw) {
   const expression = source.match(/const APP_SHELL\s*=\s*(\[[\s\S]*?\n\]);/m)?.[1];
@@ -192,12 +193,18 @@ test('workspace modals retain dialog semantics', () => {
   assert.match(css, /\.editorial-modal \*\s*\{\s*scroll-behavior:\s*auto !important;/);
 });
 
-test('service worker installs the parsed v81 application shell in stylesheet load order', async () => {
+test('service worker installs the parsed v85 application shell with pricing and generation planning before app.js', async () => {
   const appShell = parseAppShell();
   const polishIndex = appShell.indexOf('./css/layout-polish.css');
+  const pricingIndex = appShell.indexOf('./js/deepseek-pricing.js');
+  const planningIndex = appShell.indexOf('./js/generation-planning.js');
   assert.ok(polishIndex >= 0, 'APP_SHELL must include layout-polish.css');
   assert.equal(appShell[polishIndex + 1], './css/uiverse-editorial.css');
-  assert.match(sw, /const CACHE_VERSION\s*=\s*'v81';/);
+  assert.ok(pricingIndex >= 0, 'APP_SHELL must include deepseek-pricing.js');
+  assert.equal(appShell[pricingIndex + 1], './js/generation-planning.js');
+  assert.equal(appShell[planningIndex + 1], './js/app.js');
+  assert.match(html, /<script defer src="js\/deepseek-pricing\.js"><\/script>[\s\S]*?<script defer src="js\/generation-planning\.js"><\/script>[\s\S]*?<script defer src="js\/app\.js"><\/script>/);
+  assert.match(sw, /const CACHE_VERSION\s*=\s*'v85';/);
   assert.match(sw, /cache\.addAll\(APP_SHELL\)/);
 
   const harness = createServiceWorkerHarness({ fetchImpl: async () => new Response('unused') });
@@ -211,6 +218,15 @@ test('service worker installs the parsed v81 application shell in stylesheet loa
   await installPromise;
 
   assert.deepEqual(harness.calls.addAll, [appShell]);
+});
+
+test('workshop requires confirmation for peak pricing without hard-blocking requests', () => {
+  assert.match(html, /id="offPeakReminder"[^>]*role="status"/);
+  assert.match(appSource, /deepSeekPricing\.isPeakTime\(now\)/);
+  assert.match(appSource, /目前為 DeepSeek 尖峰時段，費率較高/);
+  assert.match(appSource, /window\.confirm\(/);
+  assert.match(appSource, /仍要以尖峰費率繼續生成嗎/);
+  assert.doesNotMatch(appSource, /已暫停生成|throw new Error\(peak/);
 });
 
 test('service worker serves app.js network-first and falls back to its cached response offline', async () => {
