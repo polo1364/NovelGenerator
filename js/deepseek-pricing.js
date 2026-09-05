@@ -23,8 +23,6 @@
   }
 
   function isPeakTime(date = new Date()) {
-    const day = date.getUTCDay();
-    if (day === 0 || day === 6) return false;
     const hour = date.getUTCHours();
     return (hour >= 1 && hour < 4) || (hour >= 6 && hour < 10);
   }

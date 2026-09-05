@@ -320,6 +320,16 @@ async function run() {
       assert.ok(Number(layouts[width].text.disabledOpacity) >= 0.72, `${width}px disabled action opacity must remain at least 0.72`);
       assert.equal(layouts[width].moduleColumns.split(' ').length, width < 768 ? 1 : 3);
       assert.equal(layouts[width].workspaceColumns.split(' ').length, width < 768 ? 1 : 2);
+      const continuity = await client.evaluate(`(() => {
+        const panel = document.getElementById('continuityReport');
+        const initiallyHidden = getComputedStyle(panel).display === 'none';
+        panel.hidden = false;
+        panel.textContent = '連貫性待確認（正文未自動修改）：鑰匙持有人改變但缺少本次轉變依據，保留原狀態。'.repeat(4);
+        const box = panel.getBoundingClientRect();
+        return { initiallyHidden, visible: box.height > 0,
+          fits: box.left >= 0 && box.right <= innerWidth && panel.scrollWidth <= panel.clientWidth + 1 };
+      })()`);
+      assert.deepEqual(continuity, { initiallyHidden: false, visible: true, fits: true }, `${width}px continuity warning must fit`);
     }
 
     await setViewport(client, 1280);

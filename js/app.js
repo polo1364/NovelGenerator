@@ -774,11 +774,16 @@
         return `目前為 DeepSeek 尖峰時段，費率較高。下一個離峰於 ${localTime} 開始（裝置本地時間）。`;
       }
 
-      function confirmPeakPricing() {
+      let confirmedPeakPeriod = '';
+      function confirmPeakPricing(reuseConfirmation = false) {
         const now = new Date();
         if (!deepSeekPricing.isPeakTime(now)) return true;
+        const period = `${now.toISOString().slice(0, 10)}:${now.getUTCHours() < 4 ? 1 : 6}`;
+        if (reuseConfirmation && confirmedPeakPeriod === period) return true;
         updateOffPeakReminder();
-        return window.confirm(`${peakPriceMessage(now)}\n\n仍要以尖峰費率繼續生成嗎？`);
+        const accepted = window.confirm(`${peakPriceMessage(now)}\n\n仍要以尖峰費率繼續生成嗎？`);
+        if (accepted) confirmedPeakPeriod = period;
+        return accepted;
       }
 
       function updateOffPeakReminder() {
@@ -792,6 +797,8 @@
           reminder.textContent = '✅ 目前為 DeepSeek 離峰時段，可以開始生成。';
           reminder.dataset.period = 'off-peak';
         }
+        const actionReminder = document.getElementById('actionPricingPeriod');
+        if (actionReminder) actionReminder.textContent = reminder.textContent;
       }
 
       // 更新用量統計的畫面顯示
@@ -948,6 +955,11 @@
 
       // 單次 DeepSeek 請求（依 options.onChunk 決定是否串流）
       async function doDeepSeekRequest(prompt, apiKey, model, options) {
+        if (!confirmPeakPricing(true)) {
+          userAborted = true;
+          seriesAborted = true;
+          throw new DOMException('已取消尖峰時段生成', 'AbortError');
+        }
         const { onChunk = null, signal = null } = options || {};
         const usedModel = model || 'deepseek-v4-flash';
         const useStream = typeof onChunk === 'function';
@@ -963,7 +975,7 @@
         if (usedModel === 'deepseek-v4-flash' || usedModel === 'deepseek-v4-pro') {
           requestBody.thinking = { type: 'disabled' };
           const requestedMax = options.maxTokens;
-          const minOutputTokens = options.taskType === 'state' ? 512 : 4096;
+          const minOutputTokens = ['state', 'plan'].includes(options.taskType) ? 512 : 4096;
           requestBody.max_tokens = requestedMax
             ? Math.min(16384, Math.max(minOutputTokens, requestedMax))
             : 8192;
@@ -1065,8 +1077,31 @@
         return { text: fullText.trim(), gotContent, finishReason };
       }
 
+      function setGenerationStage(stage) {
+        const panel = typeof document !== 'undefined' ? document.getElementById('generationStage') : null;
+        if (!panel) return;
+        const labels = { plan: '1/3 規劃本章', story: '2/3 撰寫正文', state: '3/3 整理狀態與檢查依據',
+          done: '本次生成流程完成，請查看連貫性結果', failed: '正文已保留，狀態整理未完成' };
+        panel.textContent = labels[stage] || '準備生成';
+      }
+
       // 呼叫 DeepSeek，含失敗自動重試（僅在尚未輸出內容時重試）；回傳生成文字
       async function callDeepSeek(prompt, apiKey, model, options = {}) {
+        if (['story', 'continuation'].includes(options.taskType)) {
+          const planner = globalThis.NovelGenerationPlanning;
+          const revision = storyStateRevision;
+          if (options.signal && options.signal.aborted) throw new DOMException('已停止生成', 'AbortError');
+          setGenerationStage('plan');
+          renderContinuityReport();
+          const rawPlan = await callDeepSeek(planner.buildChapterPlanPrompt(prompt), apiKey, 'deepseek-v4-flash', {
+            taskType: 'plan', signal: options.signal, maxTokens: 1600, retries: 0
+          });
+          if ((options.signal && options.signal.aborted) || revision !== storyStateRevision) throw new DOMException('已停止生成', 'AbortError');
+          const plan = planner.parseChapterPlan(rawPlan);
+          if (!plan) throw new Error('章節計畫格式不完整，尚未生成正文；請重試。');
+          setGenerationStage('story');
+          prompt += planner.buildContinuityRules() + '\n\n【本次章節計畫（不得凌駕設定與正文）】\n' + JSON.stringify(plan);
+        }
         const maxRetries = typeof options.retries === 'number' ? options.retries : 2;
         let lastErr;
         // 包裝 onChunk 以偵測是否已開始輸出：一旦串流出內容，重試會從頭重來、
@@ -1096,6 +1131,19 @@
       }
 
       const STORY_STATE_STORAGE_KEY = 'novelStoryStateLedger';
+      let storyStateRevision = 0;
+      let storyStateController = null;
+
+      function renderContinuityReport(warnings = [], status = 'unchecked') {
+        const panel = typeof document !== 'undefined' ? document.getElementById('continuityReport') : null;
+        if (!panel) return;
+        panel.hidden = false;
+        if (status === 'failed') panel.textContent = '整理失敗：本章連貫性尚未檢查，可稍後重試續寫。';
+        else if (warnings.length) panel.textContent = '連貫性待確認（正文未自動修改）：' + warnings.join('；');
+        else if (status === 'checked') panel.textContent = '未發現規則衝突：僅檢查已擷取狀態與原文依據，不代表全文保證無矛盾。';
+        else if (status === 'checking') panel.textContent = '檢查中：正在整理本章狀態與原文依據。';
+        else panel.textContent = '尚未檢查：完成章節後會整理故事狀態。';
+      }
 
       function readStoryStateLedger() {
         try {
@@ -1107,7 +1155,10 @@
       }
 
       function clearStoryStateLedger() {
+        storyStateRevision++;
+        if (storyStateController) storyStateController.abort();
         try { localStorage.removeItem(STORY_STATE_STORAGE_KEY); } catch (_) {}
+        renderContinuityReport();
       }
 
       function getStoryStateGuidance(storyText) {
@@ -1115,17 +1166,36 @@
         if (!planner || typeof planner.createStoryFingerprint !== 'function') return '';
         const stored = readStoryStateLedger();
         if (!stored || stored.sourceFingerprint !== planner.createStoryFingerprint(storyText)) return '';
-        return planner.formatStoryStateGuidance(stored.state);
+        const warnings = Array.isArray(stored.warnings) ? stored.warnings : [];
+        return planner.formatStoryStateGuidance(stored.state) + (warnings.length
+          ? '\n【待確認項目，不得作為既成事實，也不可新增情節替前文矛盾找藉口】\n' + warnings.join('\n') : '');
       }
 
-      async function refreshStoryStateLedger(storyText) {
+      async function refreshStoryStateLedger(storyText, signal) {
+        if (signal && signal.aborted) throw new DOMException('已停止狀態整理', 'AbortError');
         const planner = globalThis.NovelGenerationPlanning;
         const story = String(storyText || '').trim();
         if (!planner || story.length < 200) return null;
 
         const sourceFingerprint = planner.createStoryFingerprint(story);
-        const previous = readStoryStateLedger();
-        if (previous && previous.sourceFingerprint === sourceFingerprint) return previous.state || null;
+        const stored = readStoryStateLedger();
+        const storedLength = stored && (stored.sourceLength || Number(String(stored.sourceFingerprint || '').split(':')[0]));
+        const previous = stored && (stored.sourceFingerprint === sourceFingerprint ||
+          (Number.isInteger(storedLength) && storedLength > 0 &&
+           planner.createStoryFingerprint(story.slice(0, storedLength)) === stored.sourceFingerprint)) ? stored : null;
+        if (previous && previous.sourceFingerprint === sourceFingerprint) {
+          renderContinuityReport(previous.warnings || [], previous.checkStatus || (previous.version >= 2 ? 'checked' : 'unchecked'));
+          return previous.state || null;
+        }
+        const revision = storyStateRevision;
+        const controller = new AbortController();
+        if (storyStateController) storyStateController.abort();
+        storyStateController = controller;
+        const abort = () => controller.abort();
+        if (signal) {
+          signal.addEventListener('abort', abort, { once: true });
+          if (signal.aborted) abort();
+        }
 
         const prompt = planner.buildStoryStatePrompt({
           previousState: previous && previous.state,
@@ -1134,24 +1204,48 @@
         });
 
         try {
+          setGenerationStage('state');
+          renderContinuityReport([], 'checking');
+          startSimulatedProgress();
           const raw = await callDeepSeek(prompt, null, 'deepseek-v4-flash', {
             taskType: 'state',
-            maxTokens: 1200,
+            signal: controller.signal,
+            maxTokens: 3000,
             retries: 0
           });
-          const state = planner.parseStoryState(raw);
-          if (!state) throw new Error('回應不是有效的故事狀態 JSON');
+          if (controller.signal.aborted) throw new DOMException('已停止狀態整理', 'AbortError');
+          if (revision !== storyStateRevision || planner.createStoryFingerprint(latestStory.trim()) !== sourceFingerprint) return null;
+          const proposed = planner.parseStoryState(raw);
+          if (!proposed) throw new Error('回應不是有效的故事狀態 JSON');
+          const { state, warnings } = planner.checkStoryContinuity(previous && previous.state, proposed, story,
+            previous && storedLength ? story.slice(storedLength) : story.slice(-12000));
           localStorage.setItem(STORY_STATE_STORAGE_KEY, JSON.stringify({
-            version: 1,
+            version: 2,
+            sourceLength: story.length,
             sourceFingerprint,
             chapterCount: countChapters(story),
             updatedAt: new Date().toISOString(),
-            state
+            state,
+            warnings,
+            checkStatus: 'checked'
           }));
+          renderContinuityReport(warnings, 'checked');
+          setGenerationStage('done');
           return state;
         } catch (err) {
+          if (err.name === 'AbortError') {
+            if (revision === storyStateRevision && storyStateController === controller) renderContinuityReport();
+            throw err;
+          }
           console.warn('故事狀態表更新略過：', err && err.message ? err.message : err);
+          if (revision === storyStateRevision && planner.createStoryFingerprint(latestStory.trim()) === sourceFingerprint) {
+            renderContinuityReport([], 'failed');
+            setGenerationStage('failed');
+          }
           return previous && previous.state ? previous.state : null;
+        } finally {
+          if (signal) signal.removeEventListener('abort', abort);
+          if (storyStateController === controller) storyStateController = null;
         }
       }
 
@@ -1160,6 +1254,7 @@
       let userAborted = false;
 
       function beginGeneration() {
+        if (storyStateController) storyStateController.abort();
         currentAbortController = new AbortController();
         userAborted = false;
         return currentAbortController.signal;
@@ -1187,6 +1282,11 @@
       if (savedStory) {
         latestStory = savedStory;
         resultDiv.textContent = savedStory;
+        const savedLedger = readStoryStateLedger();
+        if (savedLedger && savedLedger.sourceFingerprint === globalThis.NovelGenerationPlanning.createStoryFingerprint(savedStory.trim())) {
+          renderContinuityReport(Array.isArray(savedLedger.warnings) ? savedLedger.warnings : [],
+            savedLedger.checkStatus || (savedLedger.version >= 2 ? 'checked' : 'unchecked'));
+        }
         // 直接用 getElementById 確保獲取正確的元素
         document.getElementById('downloadBtn').disabled = false;
         document.getElementById('continueBtn').disabled = false;
@@ -7087,6 +7187,7 @@ ${shouldGenerateChapterByChapter ? '\n⚠️ 本次僅需創作第1章，後續�
 
         const signal = beginGeneration();
         let wasTruncated = false;
+        const generationRevision = storyStateRevision;
         let finishReasonMeta = null;
         // 直排：比照橫式，生成時跟著最新內容捲動
         streamAnchorStart = false;
@@ -7138,14 +7239,12 @@ ${shouldGenerateChapterByChapter ? '\n⚠️ 本次僅需創作第1章，後續�
               document.getElementById('progressWords').textContent = `已生成 ${wordCount.toLocaleString()} 字`;
               document.getElementById('progressBarFill').style.width = '100%';
               document.getElementById('progressPercent').textContent = '100%';
-              document.getElementById('progressTime').textContent = '已完成';
+              document.getElementById('progressTime').textContent = '正文已接收';
             }
             
             // 短暫延遲後隱藏進度條，讓用戶看到完成狀態（可被續章取消）
-            scheduleHideProgress(1000);
-
             downloadBtn.disabled = false;
-            continueBtn.disabled = false;
+            continueBtn.disabled = true;
             speakBtn.disabled = false; bookReaderBtn.disabled = false;
             parseAndShowChapters(latestStory);
 
@@ -7159,7 +7258,10 @@ ${shouldGenerateChapterByChapter ? '\n⚠️ 本次僅需創作第1章，後續�
               if (ch > 0) updateGenerationProgress(ch, totalChaptersForProgress, wc);
             }
 
-            await refreshStoryStateLedger(latestStory);
+            if (userAborted || seriesAborted) throw new DOMException('已停止生成', 'AbortError');
+            await refreshStoryStateLedger(latestStory, signal);
+            continueBtn.disabled = false;
+            scheduleHideProgress(1000);
 
             const finalChapters = countChapters(latestStory);
             if (shouldGenerateChapterByChapter && finalChapters >= 1) {
@@ -7195,6 +7297,7 @@ ${shouldGenerateChapterByChapter ? '\n⚠️ 本次僅需創作第1章，後續�
             hideGenerationProgress();
           }
         } catch (err) {
+          if (generationRevision !== storyStateRevision) return;
           if (err.name === 'AbortError' || userAborted) {
             const partial = resultDiv.textContent.trim();
             if (partial) {
@@ -7227,16 +7330,21 @@ ${shouldGenerateChapterByChapter ? '\n⚠️ 本次僅需創作第1章，後續�
           }
           hideGenerationProgress();
         } finally {
-          endGeneration();
-          generateBtn.disabled = false;
-          streamAnchorStart = false;
-          settleGenerate();
-          // 直排：生成結束後停在最新處
-          if (isVerticalWriting()) {
-            requestAnimationFrame(() => {
-              syncVerticalLayout(false);
-              scrollVerticalStream();
-            });
+          if (generationRevision === storyStateRevision) {
+            endGeneration();
+            generateBtn.disabled = false;
+            streamAnchorStart = false;
+            settleGenerate();
+            // 直排：生成結束後停在最新處
+            if (isVerticalWriting()) {
+              requestAnimationFrame(() => {
+                syncVerticalLayout(false);
+                scrollVerticalStream();
+              });
+            }
+          } else if (currentAbortController && currentAbortController.signal === signal) {
+            endGeneration();
+            generateBtn.disabled = false;
           }
         }
         } catch (outerErr) {
@@ -7290,8 +7398,6 @@ ${shouldGenerateChapterByChapter ? '\n⚠️ 本次僅需創作第1章，後續�
         }
         if (result.truncated || isCurrentChapterUnderTarget(plan, latestStory)) {
           showStatus('warning', '⚠️ 已自動接續多次仍不足，可再點「繼續生成」完成本章');
-        } else if (result.ok) {
-          await refreshStoryStateLedger(latestStory);
         }
         return result;
       }
@@ -7603,6 +7709,7 @@ ${continueWordReq}
 
         const signal = beginGeneration();
         const baseStory = latestStory;
+        const generationRevision = storyStateRevision;
         let contTruncated = false;
         let contFinishReason = null;
         try {
@@ -7698,8 +7805,6 @@ ${continueWordReq}
               updateWordCount(latestStory);
               
               // 短暫延遲後隱藏進度條（可被續章取消）
-              scheduleHideProgress(1000);
-              
               downloadBtn.disabled = false;
               speakBtn.disabled = false; bookReaderBtn.disabled = false;
               parseAndShowChapters(latestStory);
@@ -7707,7 +7812,12 @@ ${continueWordReq}
             showStatus('error', '沒有獲得續篇內容，可能已完結');
             genResult = { ok: false, reason: 'empty' };
           }
+          if (genResult.ok && !contTruncated && !isCurrentChapterUnderTarget(lengthPlan, latestStory)) {
+            await refreshStoryStateLedger(latestStory, signal);
+          }
+          if (genResult.ok) scheduleHideProgress(1000);
         } catch (err) {
+          if (generationRevision !== storyStateRevision) return { ok: false, aborted: true };
           if (err.name === 'AbortError' || userAborted) {
             // 已停止：保留已串流的續寫內容
             const partial = resultDiv.textContent.trim();
@@ -7755,13 +7865,18 @@ ${continueWordReq}
             };
           }
         } finally {
-          endGeneration();
-          // 如果故事未完結（或為系列非最終集）才重新啟用按鈕
-          const finalDone = isActiveStoryComplete(targetChapters) && isFinalVol;
-          if (!finalDone) {
-            continueBtn.disabled = false;
+          if (generationRevision === storyStateRevision) {
+            endGeneration();
+            // 如果故事未完結（或為系列非最終集）才重新啟用按鈕
+            const finalDone = isActiveStoryComplete(targetChapters) && isFinalVol;
+            if (!finalDone) {
+              continueBtn.disabled = false;
+            }
+            generateBtn.disabled = false;
+          } else if (currentAbortController && currentAbortController.signal === signal) {
+            endGeneration();
+            generateBtn.disabled = false;
           }
-          generateBtn.disabled = false;
         }
         return genResult;
       }
@@ -12767,7 +12882,7 @@ ${chapterListTemplate}
         document.getElementById('progressBarFill').style.width = '0%';
         document.getElementById('progressPercent').textContent = '0%';
         document.getElementById('progressWords').textContent = '已生成 0 字';
-        document.getElementById('progressTime').textContent = '預估剩餘 --:--';
+        document.getElementById('progressTime').textContent = '已耗時 0:00';
       }
 
       function hideGenerationProgress() {
@@ -12813,43 +12928,9 @@ ${chapterListTemplate}
           const elapsed = Date.now() - generationStartTime;
           const elapsedSeconds = elapsed / 1000;
           
-          // 基於時間的進度估算
-          // 前30秒：快速增長到30%（連接和準備階段）
-          // 30-120秒：緩慢增長到85%（實際生成階段）
-          // 120秒後：緩慢增長到95%（等待完成）
-          
-          if (elapsedSeconds < 30) {
-            // 前30秒：快速增長
-            simulatedProgress = Math.min(30, (elapsedSeconds / 30) * 30);
-          } else if (elapsedSeconds < 120) {
-            // 30-120秒：緩慢增長
-            simulatedProgress = 30 + ((elapsedSeconds - 30) / 90) * 55;
-          } else {
-            // 120秒後：非常緩慢增長，最高到95%
-            simulatedProgress = Math.min(95, 85 + ((elapsedSeconds - 120) / 60) * 10);
-          }
-          
-          // 更新進度條顯示
-          const progressBarFill = document.getElementById('progressBarFill');
-          const progressPercent = document.getElementById('progressPercent');
-          const progressTime = document.getElementById('progressTime');
-          
-          progressBarFill.style.width = `${simulatedProgress}%`;
-          progressPercent.textContent = `${Math.round(simulatedProgress)}%`;
-          
-          // 估算剩餘時間（基於平均生成速度）
-          // 假設每章需要約30-60秒
-          const avgTimePerChapter = 45; // 秒
-          const estimatedTotalTime = avgTimePerChapter * totalChapters;
-          const remainingSeconds = Math.max(0, estimatedTotalTime - elapsedSeconds);
-          
-          if (remainingSeconds > 0) {
-            const remainingMins = Math.floor(remainingSeconds / 60);
-            const remainingSecs = Math.floor(remainingSeconds % 60);
-            progressTime.textContent = `預估剩餘 ${remainingMins}:${remainingSecs.toString().padStart(2, '0')}`;
-          } else {
-            progressTime.textContent = '即將完成...';
-          }
+          const minutes = Math.floor(elapsedSeconds / 60);
+          const seconds = Math.floor(elapsedSeconds % 60);
+          document.getElementById('progressTime').textContent = `已耗時 ${minutes}:${String(seconds).padStart(2, '0')}`;
         }, 500); // 每0.5秒更新一次
       }
 
@@ -12866,17 +12947,13 @@ ${chapterListTemplate}
         document.getElementById('progressBarFill').style.width = `${progressPercent}%`;
         document.getElementById('progressWords').textContent = `已生成 ${currentWords.toLocaleString()} 字`;
         
-        // 預估剩餘時間
+        // 顯示實際耗時，不從章節標題推估完成時間。
         if (generationStartTime && currentChapter > 0) {
           const elapsed = Date.now() - generationStartTime;
-          const avgTimePerChapter = elapsed / currentChapter;
-          const remainingChapters = totalChapters - currentChapter;
-          const remainingMs = avgTimePerChapter * remainingChapters;
-          
-          const remainingMins = Math.floor(remainingMs / 60000);
-          const remainingSecs = Math.floor((remainingMs % 60000) / 1000);
+          const elapsedMins = Math.floor(elapsed / 60000);
+          const elapsedSecs = Math.floor((elapsed % 60000) / 1000);
           document.getElementById('progressTime').textContent = 
-            `預估剩餘 ${remainingMins}:${remainingSecs.toString().padStart(2, '0')}`;
+            `已耗時 ${elapsedMins}:${elapsedSecs.toString().padStart(2, '0')}`;
         }
       }
 
@@ -13342,6 +13419,7 @@ ${currentOutline.slice(0, 1600)}
 
         // 先依大綱請 AI 取書名（若尚未有書名）；命名失敗不阻擋後續生成
         if (!currentBookTitle) {
+          if (!confirmPeakPricing()) return;
           generateFromOutlineBtn.disabled = true;
           const signal = beginGeneration();
           try {
@@ -14880,6 +14958,7 @@ ${nameRules}${namePoolBlock}${ctx}${hintBlock}
       async function aiCompleteCharacterRow(row, btn) {
         if (!row) return;
         if (btn && btn.disabled) return;
+        if (!confirmPeakPricing()) return;
         if (btn) { btn.disabled = true; btn.classList.add('ai-loading'); }
         showStatusInView('loading', '✨ AI 正在補完此人物…');
         try {

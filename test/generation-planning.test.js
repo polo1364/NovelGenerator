@@ -207,7 +207,7 @@ test('工作坊依序載入規劃模組並快取到新版離線殼層', () => {
   const sw = fs.readFileSync(path.join(__dirname, '..', 'public', 'sw.js'), 'utf8');
 
   assert.match(html, /generation-planning\.js[\s\S]*app\.js/);
-  assert.match(sw, /const CACHE_VERSION\s*=\s*'v85'/);
+  assert.match(sw, /const CACHE_VERSION\s*=\s*'v89'/);
   assert.match(sw, /\.\/js\/generation-planning\.js/);
 });
 
@@ -234,10 +234,10 @@ test('完成章節後以 Flash 更新狀態表並在下一次續寫注入', () =
 
   assert.match(app, /const STORY_STATE_STORAGE_KEY\s*=\s*'novelStoryStateLedger'/);
   assert.match(app, /taskType:\s*'state'/);
-  assert.match(app, /maxTokens:\s*1200/);
+  assert.match(app, /maxTokens:\s*3000/);
   assert.match(app, /getStoryStateGuidance\(latestStory\)/);
   assert.match(app, /\$\{storyStateGuidance\}/);
-  assert.match(app, /await refreshStoryStateLedger\(latestStory\)/);
+  assert.match(app, /await refreshStoryStateLedger\(latestStory, signal\)/);
 });
 
 test('狀態整理失敗不阻斷正文且新故事會清除舊狀態', () => {
@@ -251,7 +251,7 @@ test('狀態整理失敗不阻斷正文且新故事會清除舊狀態', () => {
 test('狀態整理允許小於正文生成的輸出上限', () => {
   const app = fs.readFileSync(path.join(__dirname, '..', 'public', 'js', 'app.js'), 'utf8');
 
-  assert.match(app, /const minOutputTokens = options\.taskType === 'state' \? 512 : 4096/);
+  assert.match(app, /const minOutputTokens = \['state', 'plan'\]\.includes\(options\.taskType\) \? 512 : 4096/);
 });
 
 test('工作坊保存創意幅度與隨機種子，並使用受控隨機組合', () => {

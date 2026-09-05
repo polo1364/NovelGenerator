@@ -346,6 +346,10 @@
             <span class="pa-label">清除結果</span>
           </button>
           <p id="primaryActionHint" class="primary-action-hint" aria-live="polite"></p>
+          <div id="generationCostNotice" role="note">
+            <span id="actionPricingPeriod">正在確認計價時段…</span><br>
+            每次正文請求包含一次 Flash 章前規劃；完成章節後另做狀態整理，皆依實際 tokens 計費。
+          </div>
         </div>
 
         </div>
@@ -368,16 +372,17 @@
 
         <!-- 生成進度 -->
         <div id="generationProgress" class="generation-progress">
+          <p id="generationStage" role="status" aria-live="polite">準備生成</p>
           <div class="progress-stats">
             <span id="progressChapter">準備中...</span>
-            <span id="progressPercent">0%</span>
+            <span id="progressPercent" hidden></span>
           </div>
-          <div class="progress-bar-container">
+          <div class="progress-bar-container" hidden>
             <div id="progressBarFill" class="progress-bar-fill" style="width: 0%"></div>
           </div>
           <div class="progress-details">
             <span id="progressWords">已生成 0 字</span>
-            <span id="progressTime">預估剩餘 --:--</span>
+            <span id="progressTime">已耗時 0:00</span>
           </div>
           <button id="stopGenerationBtn" class="stop-generation-btn">⏹ 停止生成</button>
         </div>
@@ -414,6 +419,7 @@
         <div id="seriesBar" class="series-bar" style="display:none;"></div>
         <div class="output-wrap" id="outputWrap">
           <div class="vertical-viewport" id="verticalViewport">
+            <div id="continuityReport" class="usage-last" role="status" aria-live="polite">尚未檢查：完成章節後會整理故事狀態。</div>
             <div id="result" class="output"></div>
           </div>
         </div>
