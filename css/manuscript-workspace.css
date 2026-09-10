@@ -1,0 +1,144 @@
+/* Art-journal manuscript surface. Reading modes and the generation form stay independent. */
+#readingScene {
+  --ms-ink: #292825;
+  --ms-paper: #f4f0e6;
+  --ms-dark: #242725;
+  --ms-copper: #c18e6e;
+  display: block;
+  padding: 0;
+  margin: 32px auto 56px;
+  width: 100%;
+  max-width: 1440px;
+  border: 1px solid #494c46;
+  border-radius: 3px;
+  overflow: visible;
+  background: var(--ms-dark);
+  box-shadow: 0 28px 64px #15181030;
+  color: #eee9dd;
+  isolation: isolate;
+}
+#readingScene::before { display: none; }
+#readingScene .reading-scene-bg { opacity: .12; border-radius: 3px; }
+#readingScene .output-header {
+  display: block;
+  position: relative;
+  width: 100%;
+  max-width: none;
+  padding: 18px 26px;
+  margin: 0;
+  border-bottom: 1px solid #ffffff20;
+  background: #242725f2;
+  box-sizing: border-box;
+}
+#readingScene .output-header-row { display: flex; flex-wrap: wrap; gap: 12px 24px; align-items: center; }
+#readingScene .output-title { font: 600 16px 'Noto Serif TC',serif; letter-spacing: .15em; color: #f3eddf; text-shadow: none; margin-right: auto; }
+#readingScene .output-title small { display: block; font: 10px/1.8 Arial,sans-serif; letter-spacing: .24em; color: #c9b59c; }
+#readingScene button, #readingScene summary, #readingScene select { touch-action: manipulation; }
+#readingScene button { font-family: inherit; cursor: pointer; }
+#readingScene button:disabled { opacity: .38; cursor: not-allowed; }
+#readingScene :is(button,summary,input,select,[tabindex]):focus-visible { outline: 2px solid #bc875d; outline-offset: 3px; }
+.manuscript-tools { display: flex; align-items: center; gap: 8px; }
+.manuscript-tools button, .manuscript-download summary { min-height: 44px; padding: 10px 14px; color: #eee9dd; background: transparent; border: 1px solid #ffffff26; border-radius: 2px; font-size: 13px; }
+.manuscript-download { position: relative; }
+.manuscript-download summary { cursor: pointer; box-sizing: border-box; }
+.manuscript-download > div { position: absolute; top: calc(100% + 6px); right: 0; z-index: 10; width: 165px; padding: 8px; background: #242725; border: 1px solid #8e7560; box-shadow: 0 10px 28px #0004; }
+.manuscript-download button { display: block; width: 100%; text-align: left; border: 0; }
+#readingScene .ambiance-toggle { background: transparent; border: 0; padding: 0; }
+#readingScene .ambiance-label { color: #c1bbae; font-size: 11px; }
+#readingScene .ambiance-select { background: #303430; color: #eee9dd; border-color: #ffffff25; min-height: 44px; max-width: 130px; }
+.manuscript-workspace { display: grid; grid-template-columns: 240px minmax(0,1fr); position: relative; }
+.manuscript-sidebar { min-width: 0; padding: 32px 20px 22px; display: flex; flex-direction: column; background: #242725e8; }
+.manuscript-imprint { font: 9px/1.8 Arial,sans-serif; letter-spacing: .17em; color: #be977b; }
+.manuscript-imprint span { display: block; letter-spacing: .1em; margin-top: 4px; }
+#manuscriptTitle { font: 600 27px/1.6 'Noto Serif TC',serif; color: #eee8da; overflow-wrap: anywhere; margin: 16px 0 32px; }
+.manuscript-index-label { font: 10px/1.6 Arial,sans-serif; letter-spacing: .18em; color: #bcab96; padding-bottom: 14px; border-bottom: 1px solid #ffffff18; }
+.manuscript-index-label span { float: right; letter-spacing: .06em; }
+#manuscriptChapters { padding: 14px 0; max-height: 460px; overflow-y: auto; scrollbar-width: thin; scrollbar-color: #897463 transparent; }
+#manuscriptChapters button { display: block; position: relative; width: 100%; min-height: 58px; padding: 14px 12px 14px 40px; text-align: left; color: #c8c9bf; background: transparent; border: 0; border-left: 1px solid #756451; font: 14px/1.65 'Noto Serif TC',serif; overflow-wrap: anywhere; transition: background 160ms, color 160ms; }
+#manuscriptChapters button::before { content: attr(data-number); position: absolute; left: 10px; top: 16px; font: 11px/1.8 Georgia,serif; color: #be977b; }
+#manuscriptChapters button[aria-current="true"] { background: #b87e5922; border-left: 2px solid #c49671; color: #fff5e3; }
+#manuscriptChapters button:hover { background: #ffffff0c; }
+#manuscriptEmptyIndex, .manuscript-sidebar-foot { font: 12px/1.9 'Noto Serif TC',serif; color: #b8b7ad; }
+.manuscript-sidebar-foot { margin-top: auto; padding-top: 30px; letter-spacing: .12em; border-top: 1px solid #ffffff12; }
+.manuscript-paper { min-width: 0; background: var(--ms-paper); color: var(--ms-ink); }
+.manuscript-paper-tools { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 6px 12px; padding: 12px 32px; border-bottom: 1px solid #34312618; }
+.manuscript-paper-tools > span { font: 9px/1.8 Arial,sans-serif; letter-spacing: .16em; color: #726959; }
+.manuscript-paper-tools > div { display: flex; gap: 4px; }
+.manuscript-paper-tools button { min-height: 44px; min-width: 44px; padding: 8px 10px; color: #635c4e; background: transparent; border: 1px solid transparent; border-radius: 2px; font-size: 12px; }
+.manuscript-paper-tools button[aria-pressed="true"] { border-color: #a58a65; background: #bda88215; color: #3d382e; }
+#readingScene .output-wrap { max-width: none; width: 100%; margin: 0; }
+#readingScene .output-wrap.horizontal-scroll .vertical-viewport { height: clamp(480px,70vh,740px); max-height: none; scrollbar-width: thin; scrollbar-color: #ad9879 #eee7d9; scroll-behavior: auto; }
+#readingScene .output-wrap .output { border: 0; border-radius: 0; box-shadow: none; margin: 0; color: var(--ms-ink); background: var(--ms-paper); }
+#readingScene .output:not(.vertical-writing) { width: 100%; padding: 38px clamp(24px,4vw,64px) 72px; font-family: 'Noto Serif TC',serif; line-height: 2.05 !important; letter-spacing: .04em; overflow-wrap: anywhere; }
+#readingScene .output:empty::before { content: '你的下一個世界，\A從這裡落筆。'; display: block; white-space: pre-line; font: 600 clamp(27px,3.5vw,48px)/1.8 'Noto Serif TC',serif; letter-spacing: .09em; color: #514b3d; padding: 70px 0 160px; }
+.manuscript-chapter { display: flex; align-items: center; position: relative; min-height: 310px; box-sizing: border-box; margin: 12px 0 34px; padding: 40px 43% 62px 0; font: 600 clamp(32px,4vw,64px)/1.5 'Noto Serif TC',serif; letter-spacing: .09em; white-space: normal; border-bottom: 1px solid #8d79573d; isolation: isolate; }
+.manuscript-chapter-label { position: absolute; top: 0; left: 0; max-width: 55%; font: 12px/1.8 'Noto Serif TC',serif; letter-spacing: .18em; color: #887254; }
+.manuscript-chapter::before { content: attr(data-number); position: absolute; bottom: 14px; left: 0; z-index: -1; font: 116px/1 Georgia,serif; color: transparent; -webkit-text-stroke: 1px #917b513d; letter-spacing: -.06em; }
+.manuscript-chapter::after { content: ''; position: absolute; right: 0; top: 0; bottom: 22px; width: 36%; color: var(--ms-art-ink); background: var(--ms-art-paper) var(--ms-art) center / cover; box-shadow: 0 8px 18px #51412820; }
+.manuscript-markdown { display: none; }
+body.manuscript-in-view #chapterNavContainer { display: none; }
+body.manuscript-in-view #readingProgress { height: 2px; top: 0; background: #b79569; }
+body.manuscript-in-view .dock-toggle { background: #3e4339; box-shadow: none; border-radius: 2px 0 0 2px; }
+body.manuscript-in-view #bookmarkNavToggle { background: #3e4339; box-shadow: none; border-radius: 3px; }
+.manuscript-continuity { padding: 14px 32px; border-top: 1px solid #8e78592e; background: #eae4d6; }
+.manuscript-continuity summary { min-height: 32px; display: list-item; align-content: center; cursor: pointer; color: #665c48; font: 12px/2 'Noto Serif TC',serif; letter-spacing: .08em; }
+#readingScene #continuityReport { margin-top: 10px; color: #4b473e; font-size: 13px; line-height: 1.8; overflow-wrap: anywhere; }
+.manuscript-footer { display: flex; position: relative; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 18px; padding: 18px 26px; background: #232623; border-top: 1px solid #ffffff20; }
+.manuscript-footer-info { flex: 1 1 220px; min-width: 0; }
+#readingScene .word-count-display { padding: 0; margin: 0 0 5px; gap: 18px; background: none; border: 0; box-shadow: none; backdrop-filter: none; flex-wrap: wrap; }
+#readingScene .word-count-item { gap: 6px; }
+#readingScene .word-count-item .label { color: #c4bba9; text-shadow: none; font-size: 11px; }
+#readingScene .word-count-item .value { color: #efe6d4; text-shadow: none; font: 16px Georgia,serif; }
+#manuscriptStatus { display: block; color: #b5b6a9; font-size: 11px; line-height: 1.8; overflow-wrap: anywhere; }
+.manuscript-footer-actions { display: flex; align-items: center; flex-wrap: wrap; gap: 12px; }
+.manuscript-follow { display: flex; align-items: center; gap: 8px; min-height: 44px; font-size: 12px; color: #d3cdbf; cursor: pointer; }
+.manuscript-follow input { width: 18px; height: 18px; accent-color: #b58e65; }
+.manuscript-footer-actions button { min-height: 44px; padding: 10px 16px; color: #e0d7c6; font-size: 12px; background: transparent; border: 1px solid #ffffff28; border-radius: 2px; }
+#manuscriptContinue { background: #c29a6c; color: #242721; border-color: #c29a6c; font-weight: 600; }
+#manuscriptContinue span { padding-left: 20px; }
+[data-theme="dark"] #readingScene { --ms-paper: #2d302b; --ms-ink: #e3ddcd; }
+[data-theme="dark"] .manuscript-paper-tools > span, [data-theme="dark"] .manuscript-paper-tools button { color: #ccc3b0; }
+[data-theme="dark"] .manuscript-paper-tools button[aria-pressed="true"] { color: #f3ddbf; }
+[data-theme="dark"] .manuscript-continuity { background: #34372f; }
+[data-theme="dark"] .manuscript-continuity summary, [data-theme="dark"] #readingScene #continuityReport, [data-theme="dark"] #readingScene .output:empty::before { color: #d4c9b5; }
+@media (max-width: 1000px) {
+  .manuscript-workspace { grid-template-columns: 190px minmax(0,1fr); }
+  .manuscript-sidebar { padding: 24px 14px; }
+  .manuscript-chapter { min-height: 255px; padding-right: 42%; font-size: 30px; }
+  #readingScene .ambiance-toggle { margin-left: auto; }
+}
+@media (max-width: 700px) {
+  body #readingScene, body.vertical-reading-mobile #readingScene { padding: 0; margin: 20px auto 36px; }
+  #readingScene .output-header { padding: 16px; }
+  #readingScene .output-header-row { flex-direction: row; gap: 10px; }
+  #readingScene .output-title { font-size: 15px; }
+  .manuscript-tools { gap: 4px; }
+  .manuscript-tools button, .manuscript-download summary { padding: 10px 8px; font-size: 12px; }
+  #readingScene .ambiance-toggle { width: 100%; justify-content: flex-end; }
+  .manuscript-workspace { display: block; }
+  .manuscript-sidebar { padding: 18px 16px 10px; }
+  .manuscript-imprint { font-size: 8px; }
+  .manuscript-imprint span, .manuscript-index-label, .manuscript-sidebar-foot { display: none; }
+  #manuscriptTitle { font-size: 22px; margin: 5px 0 8px; }
+  #manuscriptChapters { display: flex; gap: 6px; max-height: none; overflow-x: auto; padding: 4px 0 10px; }
+  #manuscriptChapters button { width: 180px; min-width: 180px; min-height: 48px; font-size: 12px; padding-left: 35px; }
+  .manuscript-paper-tools { padding: 8px 16px; }
+  .manuscript-paper-tools > span { font-size: 8px; letter-spacing: .08em; }
+  .manuscript-paper-tools button { padding: 8px; }
+  #readingScene .output:not(.vertical-writing) { padding: 22px 22px 48px; }
+  #readingScene .output-wrap.horizontal-scroll .vertical-viewport { height: min(70svh,620px); min-height: 350px; }
+  .manuscript-chapter { min-height: 230px; font-size: 27px; margin-top: 0; padding-bottom: 55px; letter-spacing: .02em; }
+  .manuscript-chapter::before { font-size: 90px; }
+  .manuscript-chapter::after { width: 36%; bottom: 30px; }
+  .manuscript-continuity { padding: 12px 20px; }
+  .manuscript-footer { padding: 16px 62px 16px 16px; gap: 8px; }
+  .manuscript-footer-info, .manuscript-footer-actions { width: 100%; }
+  .manuscript-footer-actions { gap: 8px; justify-content: space-between; }
+  .manuscript-footer-actions button { padding: 10px; }
+  .manuscript-follow { font-size: 11px; }
+  #manuscriptContinue span { padding-left: 8px; }
+  #readingScene .word-count-display { display: flex; }
+}
+@media (prefers-reduced-motion: reduce) {
+  #readingScene *, #readingScene *::before, #readingScene *::after { animation: none !important; transition: none !important; scroll-behavior: auto !important; }
+}

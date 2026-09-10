@@ -471,6 +471,10 @@
           const words = document.getElementById('progressWords');
           if (words) words.textContent = `已生成 ${countStoryWords(text).toLocaleString()} 字`;
         }
+        if (globalThis.ManuscriptWorkspace && !globalThis.ManuscriptWorkspace.shouldFollow()) {
+          if (isVerticalWriting()) syncVerticalLayout(true);
+          return;
+        }
         if (isVerticalWriting()) {
           // 生成中：只捲 viewport 橫軸，不碰 window；尊重使用者手動捲動
           if (generating) {
@@ -6749,6 +6753,7 @@ ${n}
           }
           return false;
         });
+        window.ManuscriptWorkspace?.setChapters(chapterMatches);
 
         // 只要有章節就顯示（改為 >= 1）
         if (chapterMatches.length >= 1) {
@@ -6760,13 +6765,21 @@ ${n}
           chapterNavList.innerHTML = chapterMatches.map((m, i) => 
             `<button type="button" data-chapter="${i}">
               <span class="chapter-num">${i + 1}</span>
-              ${m.title.substring(0, 20)}${m.title.length > 20 ? '...' : ''}
+              ${escapeHtml(m.title.substring(0, 20))}${m.title.length > 20 ? '...' : ''}
             </button>`
           ).join('');
           
           // 綁定點擊事件
           chapterNavList.querySelectorAll('button').forEach((btn, idx) => {
             btn.addEventListener('click', () => {
+              if (window.ManuscriptWorkspace?.jumpTo(idx)) {
+                chapterNavList.querySelectorAll('button').forEach((button, i) => button.classList.toggle('active', i === idx));
+                if (window.innerWidth <= 768) {
+                  isPanelOpen = false;
+                  chapterNavPanel.classList.remove('open');
+                }
+                return;
+              }
               const chapter = chapterMatches[idx];
               const fullText = resultDiv.textContent;
               
@@ -10327,8 +10340,7 @@ ${continueWordReq}
         return String(text || '')
           .replace(/&/g, '&amp;')
           .replace(/</g, '&lt;')
-          .replace(/>/g, '&gt;')
-          .replace(/\n/g, '<br>');
+          .replace(/>/g, '&gt;');
       }
 
       function getHighlightSearchText(item) {
@@ -11125,6 +11137,7 @@ ${continueWordReq}
 
       function setWritingMode(mode) {
         const vertical = mode === 'vertical';
+        if (vertical) window.ManuscriptWorkspace?.plainText();
         resultDiv.classList.toggle('vertical-writing', vertical);
         if (outputWrap) {
           outputWrap.classList.toggle('vertical-scroll', vertical);
@@ -14395,6 +14408,8 @@ ${currentOutline.slice(0, 1600)}
         resultDiv.textContent = '';
         latestStory = '';
         chapterMatches = [];
+        window.ManuscriptWorkspace?.setChapters([]);
+        updateWordCount('');
         if (chapterNavContainer) chapterNavContainer.classList.remove('show');
         try { localStorage.removeItem('savedStory'); } catch (e) {}
         clearStoryStateLedger();

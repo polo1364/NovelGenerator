@@ -39,6 +39,7 @@
     <link rel="stylesheet" href="css/uiverse-editorial.css" />
     <link rel="stylesheet" href="css/bookshelf-atelier.css" />
     <link rel="stylesheet" href="css/reader-modes.css" />
+    <link rel="stylesheet" href="css/manuscript-workspace.css" />
   </head>
   <body>
     <!-- 離線狀態提示 -->
@@ -413,12 +414,41 @@
         <!-- 輸出區 -->
         <div class="output-header">
           <div class="output-header-row">
-            <span class="output-title">📜 生成結果</span>
+            <span class="output-title"><small>THE MANUSCRIPT</small>創作手稿</span>
+            <div class="manuscript-tools" aria-label="手稿操作">
+              <button id="manuscriptShelf" type="button">書櫃</button>
+              <button id="manuscriptSave" type="button" disabled>收藏</button>
+              <details class="manuscript-download"><summary>下載</summary><div><button type="button" data-manuscript-format="txt" disabled>TXT 純文字</button><button type="button" data-manuscript-format="html" disabled>HTML 閱讀版</button></div></details>
+              <button id="manuscriptRead" type="button" disabled>進入閱讀 ↗</button>
+            </div>
             <div class="ambiance-toggle">
               <label class="ambiance-label" for="ambianceSelect">閱讀氛圍</label>
               <select id="ambianceSelect" class="ambiance-select" aria-label="閱讀氛圍"></select>
             </div>
           </div>
+        </div>
+        <div id="seriesBar" class="series-bar" style="display:none;"></div>
+        <div class="manuscript-workspace">
+          <aside class="manuscript-sidebar" aria-label="手稿章節">
+            <div class="manuscript-imprint">PRIVATE EDITION <span>／ 創作中的世界</span></div>
+            <h2 id="manuscriptTitle">未命名手稿</h2>
+            <div class="manuscript-index-label">CONTENTS <span>章節索引</span></div>
+            <nav id="manuscriptChapters" aria-label="手稿章節索引"></nav>
+            <p id="manuscriptEmptyIndex">故事開始後，章節會在這裡展開。</p>
+            <div class="manuscript-sidebar-foot">每一個世界，從一句話開始。</div>
+          </aside>
+          <div class="manuscript-paper">
+            <div class="manuscript-paper-tools"><span>AUTHOR’S PROOF · 正文</span><div role="group" aria-label="正文排版"><button id="manuscriptHorizontal" type="button" aria-pressed="true">橫排</button><button id="manuscriptVertical" type="button" aria-pressed="false">直排</button><button id="manuscriptSpeak" type="button" disabled>朗讀</button></div></div>
+            <div class="output-wrap" id="outputWrap">
+              <div class="vertical-viewport" id="verticalViewport" tabindex="0" role="region" aria-label="生成手稿正文">
+                <div id="result" class="output"></div>
+              </div>
+            </div>
+            <details class="manuscript-continuity"><summary>故事連貫性紀錄</summary><div id="continuityReport" class="usage-last" role="status" aria-live="polite">尚未檢查：完成章節後會整理故事狀態。</div></details>
+          </div>
+        </div>
+        <div class="manuscript-footer">
+          <div class="manuscript-footer-info">
           <div id="wordCountDisplay" class="word-count-display" style="display: none;">
             <div class="word-count-item">
               <span class="label">總字數</span>
@@ -433,12 +463,12 @@
               <span id="totalParagraphCount" class="value">0</span>
             </div>
           </div>
-        </div>
-        <div id="seriesBar" class="series-bar" style="display:none;"></div>
-        <div class="output-wrap" id="outputWrap">
-          <div class="vertical-viewport" id="verticalViewport">
-            <div id="continuityReport" class="usage-last" role="status" aria-live="polite">尚未檢查：完成章節後會整理故事狀態。</div>
-            <div id="result" class="output"></div>
+          <span id="manuscriptStatus">準備開始創作</span>
+          </div>
+          <div class="manuscript-footer-actions">
+            <label class="manuscript-follow"><input id="manuscriptFollow" type="checkbox" checked>跟隨新文字</label>
+            <button id="manuscriptLatest" type="button">回到最新 ↓</button>
+            <button id="manuscriptContinue" type="button" disabled>繼續生成 <span aria-hidden="true">↗</span></button>
           </div>
         </div>
         </div>
@@ -1275,6 +1305,7 @@
     <script defer src="js/deepseek-pricing.js"></script>
     <script defer src="js/generation-planning.js"></script>
     <script defer src="js/book-design.js"></script>
+    <script defer src="js/manuscript-workspace.js"></script>
     <script defer src="js/app.js"></script>
   </body>
 </html>

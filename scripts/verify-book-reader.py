@@ -26,13 +26,15 @@ class QuietHandler(http.server.SimpleHTTPRequestHandler):
     def log_message(self, *_):
         pass
 
-def boot(browser, width, story, url):
+def boot(browser, width, story, url, errors=None):
     context = browser.new_context(viewport={'width': width, 'height': 900}, is_mobile=width < 500, has_touch=width < 500, service_workers='block')
     context.add_init_script('if(!localStorage.getItem("bookReaderPreferences"))localStorage.setItem("bookReaderPreferences",JSON.stringify({mode:"book"}));')
     context.add_init_script('if(!localStorage.getItem("readerQaSeeded")){localStorage.setItem("savedStory",'+json.dumps(story)+');localStorage.setItem("readerQaSeeded","1");}')
     bookmarks = [{'id':1720000000000,'title':'測試藏書','content':STORY}, {'id':1720000000001,'title':'第二本書','content':STORY.replace('測試藏書','第二本書')}]
     context.add_init_script('localStorage.setItem("bookmarks",'+json.dumps(json.dumps(bookmarks))+');')
     page = context.new_page()
+    if errors is not None:
+        page.on('pageerror', lambda error: errors.append(str(error)))
     page.route('**/*', lambda route: route.continue_() if route.request.url.startswith(url) else route.abort())
     page.goto(url, wait_until='networkidle')
     page.locator('#onboardingSkip').click()
@@ -47,7 +49,10 @@ def open_reader(page):
     page.wait_for_timeout(350)
 
 def switch_book(page, title):
-    page.locator('#bookmarkNavToggle').click()
+    opener = page.locator('#bookmarkNavToggle')
+    if not opener.is_visible():
+        opener = page.locator('#manuscriptShelf')
+    opener.click()
     page.locator('#bookshelfSearch').fill(title)
     page.locator('.shelf-book').click()
     page.locator('#bookDetailRead').click()
