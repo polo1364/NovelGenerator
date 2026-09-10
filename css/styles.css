@@ -4747,20 +4747,21 @@
         box-shadow: 0 0 0 1px rgba(0,0,0,0.04);
       }
 
-      .book-page p {
+      .book-page p, .book-flip-face p, .book-measure p {
         margin: 0 0 0.55em;
         text-indent: 2em;
         text-align: justify;
         word-break: break-word;
       }
 
-      .book-page .book-chapter {
+      .book-page .book-chapter, .book-flip-face .book-chapter, .book-measure .book-chapter {
         font-size: 1.35em;
         font-weight: 700;
         text-align: center;
         margin: 0.2em 0 0.9em;
         letter-spacing: 0.05em;
         color: #5a3d1e;
+        overflow-wrap: anywhere;
       }
 
       .book-page .book-empty {
@@ -4812,6 +4813,7 @@
         backface-visibility: hidden;
         -webkit-backface-visibility: hidden;
         background: #f7f1e3;
+        color: #2c2418;
         box-sizing: border-box;
         padding: 38px 40px 46px;
         overflow: hidden;
@@ -4847,8 +4849,9 @@
         left: -99999px;
         top: 0;
         visibility: hidden;
+        overflow: hidden;
         box-sizing: border-box;
-        padding: 38px 40px 46px;
+        padding: 0;
         font-family: "Noto Serif TC", serif;
         line-height: 1.95;
         pointer-events: none;
@@ -4886,9 +4889,6 @@
           padding: 26px 22px 40px;
           font-size: 18px;
         }
-        .book-measure {
-          padding: 26px 22px 40px;
-        }
         .book-nav-btn {
           width: 44px;
           height: 44px;
@@ -4904,6 +4904,11 @@
       }
 
       /* ==================== 我的書櫃 ==================== */
+      @media (prefers-reduced-motion: reduce) {
+        .book-reader-overlay, .book-reader-overlay * { transition: none !important; animation: none !important; }
+        .book-reader-overlay .book-nav-btn:hover { transform: none; }
+      }
+
       .bookshelf-modal {
         position: fixed;
         inset: 0;

@@ -13,6 +13,7 @@
     "test": "node --test",
     "verify:editorial": "node scripts/verify-editorial-console.js",
     "verify:bookshelf": "node scripts/verify-bookshelf.js",
+    "verify:reader": "python scripts/verify-book-reader.py",
     "sync": "node scripts/sync-workshop.js"
   },
   "dependencies": {

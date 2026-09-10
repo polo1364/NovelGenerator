@@ -467,6 +467,10 @@
       function setResultStreaming(text) {
         const generating = document.body.classList.contains('is-generating');
         resultDiv.textContent = text;
+        if (generating) {
+          const words = document.getElementById('progressWords');
+          if (words) words.textContent = `已生成 ${countStoryWords(text).toLocaleString()} 字`;
+        }
         if (isVerticalWriting()) {
           // 生成中：只捲 viewport 橫軸，不碰 window；尊重使用者手動捲動
           if (generating) {
@@ -13623,13 +13627,21 @@ ${currentOutline.slice(0, 1600)}
         const measure = document.getElementById('bookMeasure');
 
         const BOOK_PROGRESS_KEY = 'bookReaderProgress';
+        const BOOK_PROGRESS_BY_STORY_KEY = 'bookReaderProgressByStory';
         let saveProgressTimer = null;
 
         let pages = [];      // 每頁的 HTML 字串
+        let pageOffsets = []; // 每頁起點在解析後文字中的字元位置
         let pos = 0;         // 桌面：左頁索引；手機：當前頁索引
         let fontSize = parseInt(localStorage.getItem('bookFontSize'), 10) || 19;
-        if (isNaN(fontSize)) fontSize = 19;
+        fontSize = Math.max(14, Math.min(28, fontSize));
         let animating = false;
+        let finishFlip = null;
+        let openRevision = 0;
+        let readerReady = false;
+        let opener = null;
+        let backgroundState = [];
+        let previousOverflow = '';
 
         const isSingle = () => window.matchMedia('(max-width: 820px)').matches;
         const step = () => (isSingle() ? 1 : 2);
@@ -13650,8 +13662,19 @@ ${currentOutline.slice(0, 1600)}
           return `${title}|${(hash >>> 0).toString(36)}`;
         }
 
+        function readBookProgressMap() {
+          try {
+            const data = JSON.parse(localStorage.getItem(BOOK_PROGRESS_BY_STORY_KEY) || '{}');
+            return data && typeof data === 'object' && !Array.isArray(data) ? data : {};
+          } catch { return {}; }
+        }
+
         function loadBookProgress() {
           try {
+            const key = getBookReaderStoryKey();
+            const current = readBookProgressMap()[key];
+            if (current && current.storyKey === key) return current;
+            // 舊版只存一本；保留原值，首次儲存時移入逐書紀錄。
             const raw = localStorage.getItem(BOOK_PROGRESS_KEY);
             if (!raw) return null;
             const data = JSON.parse(raw);
@@ -13663,16 +13686,20 @@ ${currentOutline.slice(0, 1600)}
         }
 
         function saveBookProgress() {
-          if (!pages.length || !overlay.classList.contains('open')) return;
+          if (!readerReady || !pages.length || !overlay.classList.contains('open')) return;
           try {
-            localStorage.setItem(BOOK_PROGRESS_KEY, JSON.stringify({
-              storyKey: getBookReaderStoryKey(),
+            const key = getBookReaderStoryKey();
+            const records = readBookProgressMap();
+            records[key] = {
+              storyKey: key,
               title: getStoryTitle(),
               pos,
+              offset: pageOffsets[pos] || 0,
               totalPages: pages.length,
               fontSize,
               updatedAt: Date.now()
-            }));
+            };
+            localStorage.setItem(BOOK_PROGRESS_BY_STORY_KEY, JSON.stringify(records));
           } catch { /* ignore */ }
           updateBookmarkStatus();
         }
@@ -13683,12 +13710,25 @@ ${currentOutline.slice(0, 1600)}
         }
 
         function clearBookProgress() {
-          try { localStorage.removeItem(BOOK_PROGRESS_KEY); } catch { /* ignore */ }
+          try {
+            const key = getBookReaderStoryKey(), records = readBookProgressMap();
+            delete records[key];
+            localStorage.setItem(BOOK_PROGRESS_BY_STORY_KEY, JSON.stringify(records));
+            const legacy = JSON.parse(localStorage.getItem(BOOK_PROGRESS_KEY) || 'null');
+            if (legacy && legacy.storyKey === key) localStorage.removeItem(BOOK_PROGRESS_KEY);
+          } catch { /* ignore */ }
           if (bookmarkStatusEl) bookmarkStatusEl.textContent = '';
+        }
+
+        function positionAtOffset(offset) {
+          let index = 0;
+          while (index + 1 < pageOffsets.length && pageOffsets[index + 1] <= offset) index++;
+          return index;
         }
 
         function restorePosFromProgress(saved) {
           if (!saved || !pages.length) return 0;
+          if (Number.isFinite(saved.offset) && saved.offset >= 0) return positionAtOffset(saved.offset);
           if (saved.totalPages && saved.totalPages > 0) {
             const ratio = (saved.pos || 0) / saved.totalPages;
             return Math.round(ratio * pages.length);
@@ -13735,54 +13775,55 @@ ${currentOutline.slice(0, 1600)}
 
         // 量測分頁
         function paginate() {
+          if (finishFlip) finishFlip();
           const blocks = parseBlocks(latestStory);
-          const ratio = pages.length ? pos / pages.length : 0;
+          const anchor = pageOffsets[pos] || 0;
           pages = [];
+          pageOffsets = [];
 
+          // 必須先切換單／雙頁、套用字級，再量測實際文字區。
+          bookEl.classList.toggle('single', isSingle());
+          applyFontSize();
           const rect = rightInner.getBoundingClientRect();
           measure.style.width = rect.width + 'px';
           measure.style.height = rect.height + 'px';
           measure.style.fontSize = fontSize + 'px';
 
-          const fits = (html) => { measure.innerHTML = html; return measure.scrollHeight <= measure.clientHeight + 1; };
+          const fits = (html) => { measure.innerHTML = html; return measure.scrollHeight <= measure.clientHeight && measure.scrollWidth <= measure.clientWidth; };
           let current = '';
-          const pushPage = () => { if (current.trim()) { pages.push(current); current = ''; } };
+          let offset = 0, pageStart = 0;
+          const pushPage = () => {
+            if (current) { pages.push(current); pageOffsets.push(pageStart); current = ''; pageStart = offset; }
+          };
 
           for (const b of blocks) {
-            if (b.type === 'title') {
-              const html = titleHtml(b.text);
-              if (current && !fits(current + html)) pushPage();
-              current += html;
-              continue;
-            }
-            const whole = pHtml(b.text);
-            if (fits(current + whole)) { current += whole; continue; }
-            // 段落過長：依句切分跨頁
-            const sentences = b.text.split(/(?<=[。！？…」』）])/).filter(s => s.length);
-            let buf = '';
-            for (const s of sentences) {
-              if (current && !fits(current + pHtml(buf + s))) {
-                if (buf) { current += pHtml(buf); buf = ''; }
-                pushPage();
+            const chars = Array.from(b.text);
+            const html = b.type === 'title' ? titleHtml : pHtml;
+            let start = 0;
+            if (b.type === 'title' && current && !fits(current + html(b.text))) pushPage();
+            while (start < chars.length) {
+              const rest = chars.slice(start).join('');
+              if (fits(current + html(rest))) {
+                current += html(rest); offset += chars.length - start; break;
               }
-              if (!current && !buf && !fits(pHtml(s))) {
-                // 單句長於整頁：硬放一頁
-                current += pHtml(s);
-                pushPage();
-              } else {
-                buf += s;
+              // 二分搜尋可容納的最長文字；無標點的單句與長標題也能跨頁。
+              let low = 0, high = chars.length - start;
+              while (low < high) {
+                const mid = Math.ceil((low + high) / 2);
+                if (fits(current + html(chars.slice(start, start + mid).join('')))) low = mid;
+                else high = mid - 1;
               }
-            }
-            if (buf) {
-              if (current && !fits(current + pHtml(buf))) pushPage();
-              current += pHtml(buf);
+              if (!low && current) { pushPage(); continue; }
+              const count = Math.max(1, low);
+              current += html(chars.slice(start, start + count).join(''));
+              offset += count; start += count;
+              pushPage();
             }
           }
           pushPage();
-          if (pages.length === 0) pages.push('<p class="book-empty">（沒有內容）</p>');
+          if (pages.length === 0) { pages.push('<p class="book-empty">（沒有內容）</p>'); pageOffsets.push(0); }
 
-          // 還原大致閱讀位置
-          pos = Math.round(ratio * pages.length);
+          pos = positionAtOffset(anchor);
           clampPos();
         }
 
@@ -13828,11 +13869,17 @@ ${currentOutline.slice(0, 1600)}
         }
 
         function go(dir) {
-          if (animating) return;
+          if (!readerReady || animating) return;
           const total = pages.length;
           const s = step();
           if (dir > 0 && pos + s >= total) return;
           if (dir < 0 && pos <= 0) return;
+
+          if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
+            pos += dir > 0 ? s : -s;
+            render();
+            return;
+          }
 
           const single = isSingle();
           flipEl.className = 'book-flip active ' + (dir > 0 ? 'forward' : 'backward');
@@ -13867,8 +13914,14 @@ ${currentOutline.slice(0, 1600)}
           void flipEl.offsetWidth;
           flipEl.classList.add('run');
 
-          const onEnd = () => {
+          let completed = false;
+          const onEnd = (event) => {
+            if (event && event.target !== flipEl) return;
+            if (completed) return;
+            completed = true;
+            clearTimeout(flipTimer);
             flipEl.removeEventListener('animationend', onEnd);
+            finishFlip = null;
             pos += dir > 0 ? s : -s;
             clampPos();
             flipEl.className = 'book-flip';
@@ -13877,21 +13930,34 @@ ${currentOutline.slice(0, 1600)}
             animating = false;
             render();
           };
+          finishFlip = onEnd;
+          const flipTimer = setTimeout(onEnd, 700); // 動畫被取消時也要解除翻頁鎖。
           flipEl.addEventListener('animationend', onEnd);
         }
 
         function open() {
+          if (overlay.classList.contains('open')) return;
           if (!latestStory || !latestStory.trim()) {
             showStatus('error', '目前沒有可閱讀的內容');
             return;
           }
           titleEl.textContent = '📖 ' + getStoryTitle();
+          const revision = ++openRevision;
+          readerReady = false;
+          opener = document.activeElement;
+          previousOverflow = document.body.style.overflow;
+          document.body.style.overflow = 'hidden';
+          backgroundState = Array.from(document.body.children).filter(el => el !== overlay).map(el => [el, el.inert]);
+          backgroundState.forEach(([el]) => { el.inert = true; });
           overlay.classList.add('open');
+          closeBtn.focus();
           const saved = loadBookProgress();
           // 等版面就緒再分頁
           requestAnimationFrame(() => {
             requestAnimationFrame(() => {
+              if (revision !== openRevision || !overlay.classList.contains('open')) return;
               pos = 0;
+              pages = []; pageOffsets = [];
               if (saved?.fontSize) {
                 fontSize = Math.max(14, Math.min(28, saved.fontSize));
                 localStorage.setItem('bookFontSize', fontSize);
@@ -13906,6 +13972,7 @@ ${currentOutline.slice(0, 1600)}
                   resumed = true;
                 }
               }
+              readerReady = true;
               render();
               updateBookmarkStatus(resumed);
               if (resumed) saveBookProgress();
@@ -13914,11 +13981,22 @@ ${currentOutline.slice(0, 1600)}
         }
 
         function close() {
+          if (!overlay.classList.contains('open')) return;
+          ++openRevision;
+          if (finishFlip) finishFlip();
+          clearTimeout(resizeTimer);
+          clearTimeout(saveProgressTimer);
           saveBookProgress();
+          readerReady = false;
           overlay.classList.remove('open');
+          backgroundState.forEach(([el, inert]) => { el.inert = inert; });
+          backgroundState = [];
+          document.body.style.overflow = previousOverflow;
+          if (opener && opener.isConnected) opener.focus();
         }
 
         function resetToStart() {
+          if (finishFlip) finishFlip();
           pos = 0;
           clearBookProgress();
           clampPos();
@@ -13930,7 +14008,10 @@ ${currentOutline.slice(0, 1600)}
         window.addEventListener('resize', () => {
           if (!overlay.classList.contains('open')) return;
           clearTimeout(resizeTimer);
-          resizeTimer = setTimeout(() => { paginate(); render(); }, 200);
+          resizeTimer = setTimeout(() => { if (overlay.classList.contains('open')) { paginate(); render(); } }, 200);
+        });
+        if (document.fonts) document.fonts.addEventListener('loadingdone', () => {
+          if (overlay.classList.contains('open')) { paginate(); render(); }
         });
 
         openBtn.addEventListener('click', () => { if (!openBtn.disabled) open(); });
@@ -13959,10 +14040,24 @@ ${currentOutline.slice(0, 1600)}
 
         document.addEventListener('keydown', (e) => {
           if (!overlay.classList.contains('open')) return;
+          if (e.key === 'Tab') {
+            const controls = Array.from(overlay.querySelectorAll('button:not(:disabled)'));
+            const first = controls[0], last = controls[controls.length - 1];
+            if (e.shiftKey && (document.activeElement === first || !overlay.contains(document.activeElement))) {
+              e.preventDefault(); last.focus();
+            } else if (!e.shiftKey && (document.activeElement === last || !overlay.contains(document.activeElement))) {
+              e.preventDefault(); first.focus();
+            }
+            e.stopPropagation();
+            return;
+          }
+          if (!['Escape', 'ArrowLeft', 'ArrowRight'].includes(e.key)) return;
+          e.preventDefault();
+          e.stopPropagation();
           if (e.key === 'Escape') { close(); }
           else if (e.key === 'ArrowLeft') { go(-1); }
           else if (e.key === 'ArrowRight') { go(1); }
-        });
+        }, true);
       })();
 
       /* ============================================================
