@@ -305,6 +305,10 @@ async function run() {
     for (const width of viewports) {
       await setViewport(client, width);
       await navigate(client);
+      assert.deepEqual(await client.evaluate(`(() => {
+        const model = document.getElementById('model');
+        return { value: model.value, label: model.selectedOptions[0].textContent };
+      })()`), { value: 'deepseek-flash', label: 'DeepSeek V4.1 Flash — 推薦寫作' }, `${width}px model default`);
       layouts[width] = await collectLayout(client);
       assert.equal(layouts[width].overflow, true, `${width}px must not have horizontal page overflow`);
       assert.match(layouts[width].shell.background, /^rgb\(245, 240, 223\)$/);

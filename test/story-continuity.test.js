@@ -74,7 +74,7 @@ test('prose requests first obtain one Flash plan and include priority rules', as
   const h = requestHarness();
   assert.equal(await h.ctx.callDeepSeek('任務', null, 'deepseek-v4-pro', { taskType: 'story' }), '正文');
   assert.deepEqual(h.calls.map(c => c.options.taskType), ['plan', 'story']);
-  assert.equal(h.calls[0].model, 'deepseek-v4-flash');
+  assert.equal(h.calls[0].model, 'deepseek-flash');
   assert.match(h.calls[1].prompt, /使用者明確設定 → 已確認正文 → 大綱 → 本章計畫/);
   assert.match(h.calls[1].prompt, /找到守衛/);
 });

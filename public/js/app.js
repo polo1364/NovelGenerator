@@ -902,8 +902,8 @@
 
       // 各模型的選用提示
       const MODEL_HINTS = {
-        'deepseek-v4-flash': '✍️ V4 高速版：文筆流暢、速度快、費用更低，最適合長篇小說正文。',
-        'deepseek-v4-pro': '🧠 V4 專業版：邏輯推理更強，適合設計嚴謹的大綱與複雜劇情；費用較高。'
+        'deepseek-flash': '✍️ V4.1 Flash：目前預設寫作模型，章前規劃與狀態整理也使用此模型。',
+        'deepseek-v4-pro': 'V4 Pro 舊版選項：官方將於 2026/9/14 台灣時間 12:00 起轉接 V4.1 Flash，並按 Flash 計費。'
       };
 
       function updateModelHint() {
@@ -961,7 +961,7 @@
           throw new DOMException('已取消尖峰時段生成', 'AbortError');
         }
         const { onChunk = null, signal = null } = options || {};
-        const usedModel = model || 'deepseek-v4-flash';
+        const usedModel = !model || model === 'deepseek-v4-flash' ? 'deepseek-flash' : model;
         const useStream = typeof onChunk === 'function';
 
         const requestBody = {
@@ -970,9 +970,9 @@
           stream: useStream
         };
         if (useStream) requestBody.stream_options = { include_usage: true };
-        // V4 寫作關閉 thinking；依正文、續寫、大綱、書名使用不同取樣溫度。
+        // 寫作關閉 thinking；依正文、續寫、大綱、書名使用不同取樣溫度。
         // DeepSeek 建議 temperature / top_p 擇一調整，因此這裡只設定 temperature。
-        if (usedModel === 'deepseek-v4-flash' || usedModel === 'deepseek-v4-pro') {
+        if (usedModel === 'deepseek-flash' || usedModel === 'deepseek-v4-pro') {
           requestBody.thinking = { type: 'disabled' };
           const requestedMax = options.maxTokens;
           const minOutputTokens = ['state', 'plan'].includes(options.taskType) ? 512 : 4096;
@@ -1093,7 +1093,7 @@
           if (options.signal && options.signal.aborted) throw new DOMException('已停止生成', 'AbortError');
           setGenerationStage('plan');
           renderContinuityReport();
-          const rawPlan = await callDeepSeek(planner.buildChapterPlanPrompt(prompt), apiKey, 'deepseek-v4-flash', {
+          const rawPlan = await callDeepSeek(planner.buildChapterPlanPrompt(prompt), apiKey, 'deepseek-flash', {
             taskType: 'plan', signal: options.signal, maxTokens: 1600, retries: 0
           });
           if ((options.signal && options.signal.aborted) || revision !== storyStateRevision) throw new DOMException('已停止生成', 'AbortError');
@@ -1207,7 +1207,7 @@
           setGenerationStage('state');
           renderContinuityReport([], 'checking');
           startSimulatedProgress();
-          const raw = await callDeepSeek(prompt, null, 'deepseek-v4-flash', {
+          const raw = await callDeepSeek(prompt, null, 'deepseek-flash', {
             taskType: 'state',
             signal: controller.signal,
             maxTokens: 3000,

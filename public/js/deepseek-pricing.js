@@ -5,11 +5,12 @@
 })(typeof globalThis !== 'undefined' ? globalThis : this, function () {
   'use strict';
 
-  // DeepSeek 官方價格（USD / 百萬 tokens），自 2026-08-16 16:00 UTC 起生效。
+  // DeepSeek 官方價格（USD / 百萬 tokens），2026-09-10 查核：
+  // https://api-docs.deepseek.com/quick_start/pricing/
   const PRICING = {
-    'deepseek-v4-flash': {
-      offPeak: { cacheHit: 0.007, cacheMiss: 0.22, output: 0.66 },
-      peak: { cacheHit: 0.014, cacheMiss: 0.44, output: 1.32 }
+    'deepseek-flash': {
+      offPeak: { cacheHit: 0.003, cacheMiss: 0.15, output: 0.6 },
+      peak: { cacheHit: 0.006, cacheMiss: 0.3, output: 1.2 }
     },
     'deepseek-v4-pro': {
       offPeak: { cacheHit: 0.022, cacheMiss: 0.66, output: 1.98 },
@@ -23,6 +24,8 @@
   }
 
   function isPeakTime(date = new Date()) {
+    const day = date.getUTCDay();
+    if (day === 0 || day === 6) return false;
     const hour = date.getUTCHours();
     return (hour >= 1 && hour < 4) || (hour >= 6 && hour < 10);
   }
@@ -52,7 +55,9 @@
   }
 
   function calculateUsageCost(usage, model, date = new Date()) {
-    const modelPricing = PRICING[model] || PRICING['deepseek-v4-flash'];
+    // 舊 Flash 名稱由官方轉接新版；Pro 自此時起亦按 Flash 收費。
+    const proRedirected = model === 'deepseek-v4-pro' && date.getTime() >= Date.parse('2026-09-14T04:00:00Z');
+    const modelPricing = proRedirected ? PRICING['deepseek-flash'] : (PRICING[model] || PRICING['deepseek-flash']);
     const rates = isPeakTime(date) ? modelPricing.peak : modelPricing.offPeak;
     const tokens = getUsageBreakdown(usage);
     return (

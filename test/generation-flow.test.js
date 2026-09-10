@@ -36,6 +36,28 @@ function harness(request) {
   return { ctx, storage, calls };
 }
 
+test('Flash defaults and legacy names send the official V4.1 ID with non-thinking options', async () => {
+  const requests = [];
+  const ctx = { DOMException, confirmPeakPricing: () => true,
+    DEEPSEEK_ENDPOINT: '/api/chat', NovelGenerationPlanning: planning,
+    recordUsage: () => {}, fetch: async (url, options) => {
+      requests.push(JSON.parse(options.body));
+      return { ok: true, json: async () => ({ choices: [{ message: { content: '正文' }, finish_reason: 'stop' }] }) };
+    }
+  };
+  vm.createContext(ctx);
+  vm.runInContext(between('async function doDeepSeekRequest(', 'function setGenerationStage('), ctx);
+  for (const model of [undefined, 'deepseek-v4-flash', 'deepseek-flash']) {
+    await ctx.doDeepSeekRequest('任務', null, model, { taskType: 'state', maxTokens: 1200 });
+  }
+  for (const body of requests) {
+    assert.equal(body.model, 'deepseek-flash');
+    assert.deepEqual(body.thinking, { type: 'disabled' });
+    assert.equal(body.max_tokens, 1200);
+    assert.equal(body.temperature, planning.getSamplingProfile('state').temperature);
+  }
+});
+
 test('state extraction receives cancellation and never writes an aborted response', async () => {
   let release;
   const h = harness(() => new Promise(resolve => { release = resolve; }));
@@ -207,7 +229,7 @@ for (const [replacement, newerGeneration] of [['', false], ['短篇新書', fals
 }
 
 test('automatic requests recheck each peak interval and reuse its confirmation', () => {
-  let now = '2026-09-05T00:59:00Z', confirmations = 0;
+  let now = '2026-09-11T00:59:00Z', confirmations = 0;
   class Clock extends Date { constructor() { super(now); } }
   const ctx = {
     Date: Clock, deepSeekPricing: require('../public/js/deepseek-pricing'),
@@ -218,11 +240,11 @@ test('automatic requests recheck each peak interval and reuse its confirmation',
   vm.runInContext(between("let confirmedPeakPeriod =", 'function updateOffPeakReminder('), ctx);
   assert.equal(ctx.confirmPeakPricing(true), true);
   assert.equal(confirmations, 0);
-  now = '2026-09-05T01:00:00Z';
+  now = '2026-09-11T01:00:00Z';
   ctx.confirmPeakPricing(true);
   ctx.confirmPeakPricing(true);
   assert.equal(confirmations, 1);
-  now = '2026-09-05T06:00:00Z';
+  now = '2026-09-11T06:00:00Z';
   ctx.confirmPeakPricing(true);
   assert.equal(confirmations, 2);
 });
