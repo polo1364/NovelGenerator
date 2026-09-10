@@ -406,7 +406,9 @@ async function run() {
   }
 }
 
-run().catch(error => {
+if (require.main === module) run().catch(error => {
   console.error(`editorial browser verification failed: ${error.stack || error.message}`);
   process.exitCode = 1;
 });
+
+module.exports = { CdpClient, poll, getJson, stopProcess, setViewport, contrastRatio };

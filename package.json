@@ -12,6 +12,7 @@
     "dev": "node --watch server.js",
     "test": "node --test",
     "verify:editorial": "node scripts/verify-editorial-console.js",
+    "verify:bookshelf": "node scripts/verify-bookshelf.js",
     "sync": "node scripts/sync-workshop.js"
   },
   "dependencies": {

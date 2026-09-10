@@ -9275,12 +9275,12 @@ ${continueWordReq}
         bookmarks.forEach(bm => {
           const li = document.createElement('li');
           li.innerHTML = `
-            <div class="bookmark-item-title">${bm.title || '未命名書籤'}</div>
+            <div class="bookmark-item-title"></div>
             <div class="bookmark-item-meta">
               <span>📅 ${formatDate(bm.id)}</span>
               <span>📝 ${formatWordCount(bm.content || '')}</span>
             </div>
-            <div class="bookmark-item-preview">${(bm.content || '').substring(0, 80).replace(/\n/g, ' ')}...</div>
+            <div class="bookmark-item-preview"></div>
             <div class="bookmark-item-actions">
               <button type="button" data-action="load">📖 載入</button>
               <button type="button" class="download-btn" data-action="download">⬇️ 下載</button>
@@ -9288,6 +9288,8 @@ ${continueWordReq}
               <button type="button" class="delete-btn" data-action="delete">🗑️</button>
             </div>
           `;
+          li.querySelector('.bookmark-item-title').textContent = bm.title || '未命名書籤';
+          li.querySelector('.bookmark-item-preview').textContent = (bm.content || '').substring(0, 80).replace(/\n/g, ' ') + '...';
 
           // 點擊整個項目載入（除了按鈕區域）
           li.addEventListener('click', (e) => {
@@ -9401,46 +9403,49 @@ ${continueWordReq}
       }
 
       // ==================== 我的書櫃 ====================
-      const SHELF_COLORS = [
-        ['#9e2a2b', '#7a1d1e'], ['#1f4e5f', '#143842'], ['#2f6b3f', '#1e4a2b'],
-        ['#5a3e85', '#412c63'], ['#b5651d', '#8a4a13'], ['#2c3e7a', '#1f2c59'],
-        ['#a23e5c', '#7c2b43'], ['#556b2f', '#3d4d22'], ['#8a5a2b', '#684119'],
-        ['#2f6b5e', '#1f4a40'], ['#7b4397', '#5a2f70'], ['#c0392b', '#96281b'],
-        ['#16697a', '#0f4a57'], ['#a0522d', '#7a3d20'], ['#34495e', '#243443'],
-        ['#6d214f', '#4f1638'], ['#3d5a4c', '#2a4035'], ['#925e26', '#6e451a']
-      ];
+      const shelfDesignCache = new Map();
+      const shelfBookNodes = new Map();
+      let shelfCoverInstance = 0;
+      let shelfView = 'cover';
+      try { if (localStorage.getItem('bookshelfView') === 'spine') shelfView = 'spine'; } catch (_) {}
+      let shelfColumns = 0;
+      let shelfDetailTrigger = null;
+      let shelfOpener = null;
 
-      function shelfHash(id) {
-        let h = 0;
-        const s = String(id);
-        for (let i = 0; i < s.length; i++) h = (h * 131 + s.charCodeAt(i)) >>> 0;
-        return h;
+      function getShelfAppearance(bm) {
+        const name = getBookName(bm);
+        const key = JSON.stringify([name, bm.id]);
+        if (!shelfDesignCache.has(key)) {
+          if (shelfDesignCache.size > 1000) shelfDesignCache.clear();
+          const design = BookDesign.generate(name, bm.id);
+          shelfDesignCache.set(key, { name, design, svg: BookDesign.ornament(design) });
+        }
+        return shelfDesignCache.get(key);
       }
 
-      function shelfColor(id) {
-        return SHELF_COLORS[shelfHash(id) % SHELF_COLORS.length];
-      }
-
-      // 書本造型（裝幀）與粗細，依 ID 穩定分配，讓書櫃有多種類書本
-      const SHELF_STYLE_CLASSES = ['bk-classic', 'bk-leather', 'bk-cloth', 'bk-stripe', 'bk-modern', 'bk-vintage'];
-      // 粗細權重：一般較多，偶爾薄/厚，模擬真實書架
-      const SHELF_WIDTH_CLASSES = ['bk-w-thin', 'bk-w-std', 'bk-w-std', 'bk-w-std', 'bk-w-thick'];
-
-      function shelfVariant(id) {
-        const h = shelfHash(id);
-        return {
-          style: SHELF_STYLE_CLASSES[h % SHELF_STYLE_CLASSES.length],
-          width: SHELF_WIDTH_CLASSES[Math.floor(h / 7) % SHELF_WIDTH_CLASSES.length]
-        };
-      }
-
-      function shelfColorIndex(id) { return shelfHash(id) % SHELF_COLORS.length; }
-      function shelfStyleIndex(id) { return shelfHash(id) % SHELF_STYLE_CLASSES.length; }
-
-      // 套用書本配色（CSS 變數）讓各造型可在其上疊加裝飾
-      function applyShelfColors(el, c1, c2) {
-        el.style.setProperty('--c1', c1);
-        el.style.setProperty('--c2', c2);
+      function createShelfCover(appearance) {
+        const { name, design: d, svg } = appearance;
+        const cover = document.createElement('span');
+        cover.className = `book-object binding-${d.structure} material-${d.material} layout-${d.layout} composition-${d.composition} frame-${d.frame} metal-${d.metal}`;
+        cover.dataset.design = d.seed;
+        const vars = { '--cover-color': d.color, '--cover-ink': d.ink, '--cover-accent': d.accent,
+          '--book-width': d.width + '%', '--book-height': d.height + '%', '--book-thickness': d.thickness + 'px',
+          '--title-size': d.fontSize/2 + 'cqw', '--spine-size': d.spineFontSize + 'px', '--title-x': d.titleBox[0]/2 + '%', '--title-y': d.titleBox[1]/3 + '%',
+          '--title-w': d.titleBox[2]/2 + '%', '--title-h': d.titleBox[3]/3 + '%' };
+        for (const [key, value] of Object.entries(vars)) cover.style.setProperty(key, value);
+        const art = document.createElement('span');
+        art.className = 'cover-art';
+        // Shared designs may appear more than once; each SVG needs its own clip reference.
+        art.innerHTML = svg.replaceAll('art-' + d.seed, 'art-' + d.seed + '-' + (++shelfCoverInstance));
+        const title = document.createElement('span');
+        title.className = 'cover-title'; title.textContent = name;
+        if (/[a-z]/i.test(name)) title.classList.add('has-latin');
+        const imprint = document.createElement('span');
+        imprint.className = 'cover-imprint'; imprint.textContent = d.collection;
+        const shine = document.createElement('span'); shine.className = 'cover-shine';
+        cover.append(art, title, imprint, shine);
+        cover.setAttribute('aria-hidden', 'true');
+        return cover;
       }
 
       // 從書籤抽出乾淨的「書名」
@@ -9461,9 +9466,9 @@ ${continueWordReq}
         const stored = strip(bm.title || '');
         const looksLikeOldTruncated =
           /第\s*[一二三四五六七八九十百千萬零\d]+\s*[章節回卷]/.test(stored) ||
-          stored.length > 24 ||
+          /\.{3}$/.test(stored) ||
           /^好的[，,]/.test(stored);
-        if (stored && !looksLikeOldTruncated) return stored.substring(0, 30);
+        if (stored && !looksLikeOldTruncated) return stored;
 
         // 章節標題（含可選 # 標記），並擷取「：」之後的標題描述
         const chapRe = /^#{0,4}\s*(?:第\s*[一二三四五六七八九十百千萬零壹貳參肆伍陸柒捌玖拾佰仟\d]+\s*[章節回卷部集篇]|序章|楔子|引子|前言|尾聲|終章|番外|後記)\s*[：:、.\-－—\s]*(.*)$/;
@@ -9513,8 +9518,8 @@ ${continueWordReq}
           case 'oldest': books.sort((a, b) => a.id - b.id); break;
           case 'name': books.sort(byName); break;
           case 'length': books.sort((a, b) => (b.content?.length || 0) - (a.content?.length || 0)); break;
-          case 'color': books.sort((a, b) => shelfColorIndex(a.id) - shelfColorIndex(b.id) || byName(a, b)); break;
-          case 'style': books.sort((a, b) => shelfStyleIndex(a.id) - shelfStyleIndex(b.id) || byName(a, b)); break;
+          case 'color': books.sort((a, b) => getShelfAppearance(a).design.color.localeCompare(getShelfAppearance(b).design.color) || byName(a, b)); break;
+          case 'style': books.sort((a, b) => BookDesign.structuralSignature(getShelfAppearance(a).design).localeCompare(BookDesign.structuralSignature(getShelfAppearance(b).design)) || byName(a, b)); break;
           default: books.sort((a, b) => b.id - a.id);
         }
         return books;
@@ -9525,60 +9530,94 @@ ${continueWordReq}
         const empty = document.getElementById('bookshelfEmpty');
         if (!body) return;
         const books = getShelfBooks();
+        const currentIds = new Set(loadBookmarks().map(b => b.id));
+        for (const id of shelfBookNodes.keys()) if (!currentIds.has(id)) shelfBookNodes.delete(id);
+        const focusId = document.activeElement && document.activeElement.dataset.bookId;
+        const scroller = document.querySelector('.bookshelf-scroll');
+        const available = scroller.clientWidth - parseFloat(getComputedStyle(scroller).paddingLeft) - parseFloat(getComputedStyle(scroller).paddingRight);
+        shelfColumns = shelfView === 'cover' ? (available < 600 ? 2 : Math.max(2, Math.floor(available / 200))) : Math.max(2, Math.floor(available / 82));
+        body.dataset.view = shelfView;
+        document.querySelectorAll('[data-shelf-view]').forEach(button => button.setAttribute('aria-pressed', String(button.dataset.shelfView === shelfView)));
+        document.getElementById('shelfCount').textContent = books.length === loadBookmarks().length ? `${books.length} 本典藏` : `${books.length} / ${loadBookmarks().length} 本`;
         body.innerHTML = '';
         if (!books.length) {
           if (empty) empty.style.display = 'block';
+          document.getElementById('shelfEmptyTitle').textContent = loadBookmarks().length ? '沒有符合搜尋的藏書' : '你的典藏，從第一本開始';
+          empty.querySelector('.hint').textContent = loadBookmarks().length ? '試試其他書名或標籤。' : '將目前故事收藏，讓這裡成為你的私人圖書室。';
           body.style.display = 'none';
           return;
         }
         if (empty) empty.style.display = 'none';
-        body.style.display = 'flex';
-        books.forEach(bm => {
-          const [c1, c2] = shelfColor(bm.id);
-          const { style, width } = shelfVariant(bm.id);
-          const div = document.createElement('div');
-          div.className = `book-spine ${style} ${width}`;
-          applyShelfColors(div, c1, c2);
-          const name = getBookName(bm);
+        body.style.display = 'block';
+        const fragment = document.createDocumentFragment();
+        let row;
+        books.forEach((bm, index) => {
+          if (index % shelfColumns === 0) {
+            row = document.createElement('div'); row.className = 'shelf-row';
+            row.style.setProperty('--shelf-columns', shelfColumns);
+            fragment.appendChild(row);
+          }
+          const appearance = getShelfAppearance(bm);
+          const name = appearance.name;
+          const metaKey = [bm.kind, bm.content?.length, bm.totalVolumes, bm.volumes?.length].join('|');
+          const cached = shelfBookNodes.get(bm.id);
+          if (cached && cached.book === bm && cached.name === name && cached.metaKey === metaKey) {
+            row.appendChild(cached.button);
+            return;
+          }
+          const button = document.createElement('button');
+          button.type = 'button'; button.className = 'shelf-book'; button.dataset.bookId = String(bm.id);
           const isSeries = bm.kind === 'series' && Array.isArray(bm.volumes) && bm.volumes.length;
           const vcount = isSeries ? (bm.totalVolumes || bm.volumes.length) : 0;
-          div.innerHTML = `<span class="book-spine-title">${escapeHtml(name.substring(0, 14))}</span>`
-            + (isSeries ? `<span class="book-spine-series">全${vcount}集</span>` : '');
-          div.title = isSeries ? `${name}（全 ${vcount} 集）` : name;
-          div.addEventListener('click', () => openBookDetail(bm));
-          body.appendChild(div);
+          button.setAttribute('aria-label', isSeries ? `${name}，全 ${vcount} 集` : name);
+          button.title = name;
+          const slot = document.createElement('span'); slot.className = 'shelf-slot';
+          slot.appendChild(createShelfCover(appearance));
+          const caption = document.createElement('span'); caption.className = 'shelf-caption'; caption.textContent = name;
+          const meta = document.createElement('span'); meta.className = 'shelf-book-meta';
+          meta.textContent = isSeries ? `全 ${vcount} 集 · 系列典藏` : formatWordCount(bm.content || '');
+          button.append(slot, caption, meta);
+          button.addEventListener('click', () => openBookDetail(bm));
+          shelfBookNodes.set(bm.id, { book: bm, name, metaKey, button });
+          row.appendChild(button);
         });
+        body.appendChild(fragment);
+        if (focusId) [...body.querySelectorAll('.shelf-book')].find(b => b.dataset.bookId === focusId)?.focus({ preventScroll: true });
       }
 
       function openBookshelf() {
         const modal = document.getElementById('bookshelfModal');
         if (!modal) return;
+        shelfOpener = document.activeElement;
         // 還原上次選用的排列方式
         const sortEl = document.getElementById('bookshelfSort');
         if (sortEl) {
           const saved = localStorage.getItem('bookshelfSort');
           if (saved && [...sortEl.options].some(o => o.value === saved)) sortEl.value = saved;
         }
-        renderBookshelf();
         modal.classList.add('open');
+        document.body.classList.add('library-open');
+        renderBookshelf();
+        document.getElementById('bookshelfSearch').focus({ preventScroll: true });
       }
 
       function closeBookshelf() {
         const modal = document.getElementById('bookshelfModal');
         if (modal) modal.classList.remove('open');
+        document.body.classList.remove('library-open');
         closeBookDetail();
+        if (shelfOpener && shelfOpener.isConnected) shelfOpener.focus({ preventScroll: true });
       }
 
       let shelfCurrentBm = null;
 
       function openBookDetail(bm) {
         shelfCurrentBm = bm;
-        const [c1, c2] = shelfColor(bm.id);
+        shelfDetailTrigger = document.activeElement;
         const cover = document.getElementById('bookDetailCover');
         const name = getBookName(bm);
         const isSeries = bm.kind === 'series' && Array.isArray(bm.volumes) && bm.volumes.length;
-        cover.style.background = `linear-gradient(135deg, ${c1}, ${c2})`;
-        cover.textContent = name.charAt(0) || '書';
+        cover.replaceChildren(createShelfCover(getShelfAppearance(bm)));
         document.getElementById('bookDetailTitle').textContent =
           isSeries ? `${name}（全 ${bm.totalVolumes || bm.volumes.length} 集）` : name;
         const metaEl = document.getElementById('bookDetailMeta');
@@ -9599,15 +9638,43 @@ ${continueWordReq}
             (bm.content || '').replace(/[#*]/g, '').replace(/\n+/g, ' ').substring(0, 140) + '…';
         }
         document.getElementById('bookDetail').classList.add('open');
+        document.getElementById('bookDetailClose').focus({ preventScroll: true });
       }
 
       function closeBookDetail() {
         const d = document.getElementById('bookDetail');
         if (d) d.classList.remove('open');
         shelfCurrentBm = null;
+        if (shelfDetailTrigger && shelfDetailTrigger.isConnected && document.getElementById('bookshelfModal').classList.contains('open')) shelfDetailTrigger.focus({ preventScroll: true });
       }
 
       // 書櫃事件接線
+      document.querySelectorAll('[data-shelf-view]').forEach(button => button.addEventListener('click', () => {
+        shelfView = button.dataset.shelfView;
+        try { localStorage.setItem('bookshelfView', shelfView); } catch (_) {}
+        renderBookshelf();
+      }));
+      if (typeof ResizeObserver !== 'undefined') {
+        let pendingResize = 0;
+        new ResizeObserver(() => {
+          cancelAnimationFrame(pendingResize);
+          pendingResize = requestAnimationFrame(() => {
+            if (!document.getElementById('bookshelfModal').classList.contains('open')) return;
+            const scroller = document.querySelector('.bookshelf-scroll');
+            const width = scroller.clientWidth - parseFloat(getComputedStyle(scroller).paddingLeft) - parseFloat(getComputedStyle(scroller).paddingRight);
+            const columns = shelfView === 'cover' ? (width < 600 ? 2 : Math.max(2, Math.floor(width / 200))) : Math.max(2, Math.floor(width / 82));
+            if (columns !== shelfColumns) renderBookshelf();
+          });
+        }).observe(document.querySelector('.bookshelf-scroll'));
+      }
+      document.getElementById('bookshelfModal').addEventListener('keydown', e => {
+        if (e.key !== 'Tab') return;
+        const container = document.getElementById('bookDetail').classList.contains('open') ? document.getElementById('bookDetail') : document.getElementById('bookshelfModal');
+        const focusable = [...container.querySelectorAll('button, input, select, [tabindex="0"]')].filter(el => !el.disabled && el.getClientRects().length);
+        const first = focusable[0], last = focusable[focusable.length - 1];
+        if (e.shiftKey && document.activeElement === first) { e.preventDefault(); last?.focus(); }
+        else if (!e.shiftKey && document.activeElement === last) { e.preventDefault(); first?.focus(); }
+      });
       document.getElementById('bookshelfCloseBtn').addEventListener('click', closeBookshelf);
       document.getElementById('bookshelfSearch').addEventListener('input', renderBookshelf);
       document.getElementById('bookshelfSort').addEventListener('change', (e) => {
@@ -9644,6 +9711,7 @@ ${continueWordReq}
         editBookmarkNotes.value = shelfCurrentBm.notes || '';
         editModal.classList.add('show');
         closeBookDetail();
+        editBookmarkTitle.focus();
       });
       document.getElementById('bookDetailDelete').addEventListener('click', () => {
         if (!shelfCurrentBm) return;
@@ -9660,6 +9728,10 @@ ${continueWordReq}
         if (e.key !== 'Escape') return;
         const d = document.getElementById('bookDetail');
         const m = document.getElementById('bookshelfModal');
+        if (m.classList.contains('open') && editModal.classList.contains('show')) {
+          cancelEditBtn.click();
+          return;
+        }
         if (d && d.classList.contains('open')) closeBookDetail();
         else if (m && m.classList.contains('open')) closeBookshelf();
       });
@@ -9701,6 +9773,7 @@ ${continueWordReq}
       cancelEditBtn.addEventListener('click', () => {
         editModal.classList.remove('show');
         editingBookmarkId = null;
+        if (document.getElementById('bookshelfModal').classList.contains('open')) shelfDetailTrigger?.focus({ preventScroll: true });
       });
 
       saveEditBtn.addEventListener('click', () => {
@@ -9722,6 +9795,18 @@ ${continueWordReq}
         }
         editModal.classList.remove('show');
         editingBookmarkId = null;
+        if (document.getElementById('bookshelfModal').classList.contains('open')) {
+          const trigger = [...document.querySelectorAll('.shelf-book')].find(b => b.dataset.bookId === shelfDetailTrigger?.dataset.bookId);
+          (trigger || document.getElementById('bookshelfSearch')).focus({ preventScroll: true });
+        }
+      });
+
+      editModal.addEventListener('keydown', e => {
+        if (e.key !== 'Tab' || !document.getElementById('bookshelfModal').classList.contains('open')) return;
+        const fields = [...editModal.querySelectorAll('input,textarea,button')].filter(el => !el.disabled && el.getClientRects().length);
+        const first = fields[0], last = fields[fields.length - 1];
+        if (e.shiftKey && document.activeElement === first) { e.preventDefault(); last.focus(); }
+        else if (!e.shiftKey && document.activeElement === last) { e.preventDefault(); first.focus(); }
       });
 
       editModal.addEventListener('click', (e) => {

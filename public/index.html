@@ -37,6 +37,7 @@
     <link rel="stylesheet" href="css/styles.css" />
     <link rel="stylesheet" href="css/layout-polish.css" />
     <link rel="stylesheet" href="css/uiverse-editorial.css" />
+    <link rel="stylesheet" href="css/bookshelf-atelier.css" />
   </head>
   <body>
     <!-- 離線狀態提示 -->
@@ -616,13 +617,17 @@
       </div>
 
       <!-- 我的書櫃模態 -->
-      <div id="bookshelfModal" class="bookshelf-modal">
+      <div id="bookshelfModal" class="bookshelf-modal" role="dialog" aria-modal="true" aria-labelledby="bookshelfTitle">
         <div class="bookshelf-content">
           <div class="bookshelf-header">
-            <span class="bookshelf-title">📚 我的書櫃</span>
+            <div class="shelf-heading"><span class="shelf-eyebrow">THE PRIVATE LIBRARY</span><h2 id="bookshelfTitle" class="bookshelf-title">我的藏書</h2><span id="shelfCount" class="shelf-count"></span></div>
             <div class="bookshelf-tools">
-              <input type="text" id="bookshelfSearch" class="bookshelf-search" placeholder="🔍 搜尋書名…" />
-              <select id="bookshelfSort" class="bookshelf-sort">
+              <input type="search" id="bookshelfSearch" class="bookshelf-search" aria-label="搜尋書名或標籤" placeholder="搜尋書名或標籤" />
+              <div class="shelf-view-toggle" role="group" aria-label="書本展示方式">
+                <button type="button" data-shelf-view="cover" aria-pressed="true">封面</button>
+                <button type="button" data-shelf-view="spine" aria-pressed="false">書脊</button>
+              </div>
+              <select id="bookshelfSort" class="bookshelf-sort" aria-label="藏書排序">
                 <option value="newest">📅 最新優先</option>
                 <option value="oldest">📅 最舊優先</option>
                 <option value="name">🔤 書名（字首）</option>
@@ -639,15 +644,15 @@
           <div class="bookshelf-scroll">
             <div id="bookshelfBody" class="bookshelf-body"></div>
             <div id="bookshelfEmpty" class="bookshelf-empty">
-              <span>📚</span>
-              <p>書櫃還是空的</p>
+              <span class="shelf-empty-mark" aria-hidden="true">▥</span>
+              <p id="shelfEmptyTitle">你的典藏，從第一本開始</p>
               <p class="hint">生成或載入小說後，點 💾 把它收藏進書櫃</p>
             </div>
           </div>
         </div>
 
         <!-- 書本詳情 -->
-        <div id="bookDetail" class="book-detail">
+        <div id="bookDetail" class="book-detail" role="dialog" aria-modal="true" aria-labelledby="bookDetailTitle">
           <div class="book-detail-card">
             <div class="book-detail-cover" id="bookDetailCover"></div>
             <div class="book-detail-info">
@@ -661,7 +666,7 @@
                 <button id="bookDetailEdit" type="button" class="bd-btn bd-edit">✏️ 編輯</button>
                 <button id="bookDetailDelete" type="button" class="bd-btn bd-delete">🗑️ 刪除</button>
               </div>
-              <button id="bookDetailClose" type="button" class="book-detail-close">✕</button>
+              <button id="bookDetailClose" type="button" class="book-detail-close" aria-label="關閉書本詳情">✕</button>
             </div>
           </div>
         </div>
@@ -1219,6 +1224,7 @@
     <script defer src="js/edge-tts-speech.js"></script>
     <script defer src="js/deepseek-pricing.js"></script>
     <script defer src="js/generation-planning.js"></script>
+    <script defer src="js/book-design.js"></script>
     <script defer src="js/app.js"></script>
   </body>
 </html>

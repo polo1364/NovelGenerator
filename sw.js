@@ -7,7 +7,7 @@
    - /api/* 與 /reader/* 不走 SW
    ============================================================ */
 
-const CACHE_VERSION = 'v90';
+const CACHE_VERSION = 'v91';
 const CACHE_NAME = `novel-workshop-${CACHE_VERSION}`;
 
 const APP_SHELL = [
@@ -16,6 +16,8 @@ const APP_SHELL = [
   './css/styles.css',
   './css/layout-polish.css',
   './css/uiverse-editorial.css',
+  './css/bookshelf-atelier.css',
+  './js/book-design.js',
   './js/deepseek-pricing.js',
   './js/generation-planning.js',
   './js/app.js',
