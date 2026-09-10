@@ -62,8 +62,13 @@
 
       <div class="toolbar-divider"></div>
 
-      <!-- 開始生成 -->
-      <button id="generateBtn" class="toolbar-btn btn-generate" title="開始生成">
+      <button id="generationControlsBtn" type="button" class="toolbar-btn btn-generate" title="創作控制" aria-label="創作控制" aria-controls="primaryActions">
+        <span class="text-char">創</span><span class="text-char">作</span>
+        <span class="text-char">控</span><span class="text-char">制</span>
+        <span class="toolbar-tooltip">創作控制</span>
+      </button>
+      <!-- 保留原事件入口；可見操作集中於創作控制台 -->
+      <button id="generateBtn" class="toolbar-btn btn-generate" title="開始生成" hidden>
         <span class="text-char">開</span>
         <span class="text-char">始</span>
         <span class="text-char">生</span>
@@ -72,7 +77,7 @@
       </button>
 
       <!-- 繼續生成 -->
-      <button id="continueBtn" class="toolbar-btn btn-continue" title="繼續生成" disabled>
+      <button id="continueBtn" class="toolbar-btn btn-continue" title="繼續生成" disabled hidden>
         <span class="text-char">繼</span>
         <span class="text-char">續</span>
         <span class="text-char">生</span>
@@ -333,7 +338,11 @@
         </div>
 
         <!-- ==================== 主要動作列 ==================== -->
-        <div class="primary-actions" id="primaryActions">
+        <div class="primary-actions" id="primaryActions" role="region" aria-labelledby="generationConsoleTitle" tabindex="-1">
+          <div class="generation-console-heading">
+            <div><span class="generation-eyebrow">WRITING DESK</span><h2 id="generationConsoleTitle">創作控制台</h2></div>
+            <span class="generation-console-caption">設定就緒後，開始下一段故事</span>
+          </div>
           <button id="primaryGenerateBtn" type="button" class="primary-action-btn primary-generate" disabled>
             <span class="pa-icon">✍️</span>
             <span class="pa-label">開始生成小說</span>
@@ -348,8 +357,14 @@
           </button>
           <p id="primaryActionHint" class="primary-action-hint" aria-live="polite"></p>
           <div id="generationCostNotice" role="note">
+            <span class="generation-estimate-label">一段生成參考費用 · USD</span>
+            <strong id="generationEstimate">估算中…</strong>
+            <span id="generationEstimateScope"></span>
             <span id="actionPricingPeriod">正在確認計價時段…</span><br>
             每次正文請求包含一次 Flash 章前規劃；完成章節後另做狀態整理，皆依實際 tokens 計費。
+            <details class="generation-estimate-assumptions"><summary>估算包含什麼？</summary>
+              這是一段正文的參考情境，非整章或整本，也不是費用上限。假設正文每字 1～2 tokens、各次輸入 4,000～20,000 tokens 且未命中快取；規劃與整理合計輸出 1,400～4,600 tokens，另計新正文作為整理輸入。長上下文、推理、重試、補寫與自動續章可能超出區間；快取可能降低費用。以 API 實際用量為準。
+            </details>
           </div>
         </div>
 
@@ -373,6 +388,7 @@
 
         <!-- 生成進度 -->
         <div id="generationProgress" class="generation-progress">
+          <div class="generation-live-heading"><span class="generation-eyebrow">LIVE · 創作中</span><span>字數為目前全文累計</span></div>
           <p id="generationStage" role="status" aria-live="polite">準備生成</p>
           <div class="progress-stats">
             <span id="progressChapter">準備中...</span>

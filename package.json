@@ -14,6 +14,7 @@
     "verify:editorial": "node scripts/verify-editorial-console.js",
     "verify:bookshelf": "node scripts/verify-bookshelf.js",
     "verify:reader": "python scripts/verify-book-reader.py",
+    "verify:generation": "python scripts/verify-generation-console.py",
     "sync": "node scripts/sync-workshop.js"
   },
   "dependencies": {

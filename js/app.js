@@ -803,6 +803,20 @@
         }
         const actionReminder = document.getElementById('actionPricingPeriod');
         if (actionReminder) actionReminder.textContent = reminder.textContent;
+        updateGenerationEstimate();
+      }
+
+      function updateGenerationEstimate() {
+        const estimateEl = document.getElementById('generationEstimate');
+        if (!estimateEl) return;
+        if (typeof deepSeekPricing.estimateSegmentCost !== 'function') {
+          estimateEl.textContent = '請重新整理以載入費用估算';
+          return;
+        }
+        const words = getWordsPerApiCall(getStoryLengthPlan().wordsPerChapter);
+        const range = deepSeekPricing.estimateSegmentCost(words, modelSelect.value);
+        estimateEl.textContent = `$${range.low.toFixed(4)} – $${range.high.toFixed(4)}`;
+        document.getElementById('generationEstimateScope').textContent = `約 ${words.toLocaleString()} 字正文＋規劃與整理；自動接續另計。`;
       }
 
       // 更新用量統計的畫面顯示
@@ -919,6 +933,7 @@
       modelSelect.addEventListener('change', () => {
         updateUsageUI();
         updateModelHint();
+        updateGenerationEstimate();
       });
 
       // 初始顯示
@@ -1084,7 +1099,7 @@
       function setGenerationStage(stage) {
         const panel = typeof document !== 'undefined' ? document.getElementById('generationStage') : null;
         if (!panel) return;
-        const labels = { plan: '1/3 規劃本章', story: '2/3 撰寫正文', state: '3/3 整理狀態與檢查依據',
+        const labels = { connecting: '正在連接 AI 服務…', plan: '1/3 規劃本章', story: '2/3 撰寫正文', state: '3/3 整理狀態與檢查依據',
           done: '本次生成流程完成，請查看連貫性結果', failed: '正文已保留，狀態整理未完成' };
         panel.textContent = labels[stage] || '準備生成';
       }
@@ -7196,7 +7211,7 @@ ${shouldGenerateChapterByChapter ? '\n⚠️ 本次僅需創作第1章，後續�
         // 直排：比照橫式，生成時跟著最新內容捲動
         streamAnchorStart = false;
         try {
-          document.getElementById('progressChapter').textContent = '正在連接 AI 服務...';
+          setGenerationStage('connecting');
           resultDiv.textContent = '';
           if (isVerticalWriting()) {
             verticalScrollStartAtMin = null;
@@ -12973,7 +12988,8 @@ ${chapterListTemplate}
         // 重置進度條
         document.getElementById('progressBarFill').style.width = '0%';
         document.getElementById('progressPercent').textContent = '0%';
-        document.getElementById('progressWords').textContent = '已生成 0 字';
+        document.getElementById('progressWords').textContent = `已生成 ${countStoryWords(latestStory).toLocaleString()} 字`;
+        setGenerationStage('connecting');
         document.getElementById('progressTime').textContent = '已耗時 0:00';
       }
 
@@ -14152,6 +14168,7 @@ ${currentOutline.slice(0, 1600)}
 
       function refreshPrimaryUI() {
         updatePerChapterHint();
+        updateGenerationEstimate();
         if (!primaryGenerateBtn) return;
         const valid = hasAnyStorySetting();
         primaryGenerateBtn.disabled = generateBtn.disabled || !valid;
@@ -14196,6 +14213,12 @@ ${currentOutline.slice(0, 1600)}
       }
 
       if (primaryGenerateBtn) {
+        document.getElementById('generationControlsBtn')?.addEventListener('click', () => {
+          const active = document.body.classList.contains('is-generating');
+          const target = document.getElementById(active ? 'stopGenerationBtn' : 'primaryActions');
+          target.scrollIntoView({ block: 'center', behavior: 'instant' });
+          target.focus({ preventScroll: true });
+        });
         primaryGenerateBtn.addEventListener('click', () => { if (!primaryGenerateBtn.disabled) generateBtn.click(); });
         primaryContinueBtn.addEventListener('click', () => { if (!primaryContinueBtn.disabled) continueBtn.click(); });
         resetWorkspaceBtn.addEventListener('click', resetWorkspace);

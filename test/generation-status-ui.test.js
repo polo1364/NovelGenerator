@@ -32,9 +32,11 @@ test('primary action area explains extra requests and mirrors pricing period', (
   assert.match(html, /Flash 章前規劃/);
   const panel = { dataset: {} }, reminder = { dataset: {} };
   const ctx = { document: { getElementById: id => id === 'offPeakReminder' ? reminder : panel },
-    deepSeekPricing: { isPeakTime: () => true }, peakPriceMessage: () => '尖峰較貴，仍可生成' };
+    deepSeekPricing: { isPeakTime: () => true }, peakPriceMessage: () => '尖峰較貴，仍可生成',
+    getWordsPerApiCall: n => n, getStoryLengthPlan: () => ({wordsPerChapter:2500}), modelSelect: {value:'deepseek-flash'} };
   vm.createContext(ctx);
-  vm.runInContext(section('function updateOffPeakReminder(', '// 更新用量統計'), ctx);
+  vm.runInContext(section('function updateOffPeakReminder(', 'function updateGenerationEstimate('), ctx);
+  ctx.updateGenerationEstimate = () => {};
   ctx.updateOffPeakReminder();
   assert.match(panel.textContent, /尖峰/);
   ctx.deepSeekPricing.isPeakTime = () => false;

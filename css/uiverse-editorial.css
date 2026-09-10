@@ -545,6 +545,80 @@
   font-weight: 700;
 }
 
+/* One visible writing entry, with the original handlers retained for shortcuts. */
+.floating-toolbar :is(#generateBtn, #continueBtn)[hidden] { display: none !important; }
+
+.editorial-console #primaryActions {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) auto;
+  gap: 16px;
+  padding: 24px;
+  background: var(--ec-paper);
+  color: var(--ec-ink);
+  border: 1px solid var(--ec-ink);
+  border-radius: 8px;
+  box-shadow: none;
+  scroll-margin: 24px;
+}
+.generation-console-heading {
+  grid-column: 1 / -1;
+  display: flex;
+  align-items: end;
+  justify-content: space-between;
+  gap: 16px;
+}
+.generation-eyebrow { font: 600 11px/1.5 system-ui, sans-serif; letter-spacing: .12em; }
+#generationConsoleTitle { font-size: 22px; line-height: 1.4; margin: 4px 0 0; }
+.generation-console-caption { font-size: 13px; color: var(--ec-muted); }
+#primaryActions .primary-action-btn { min-width: 0; min-height: 48px; }
+#primaryActions .primary-reset:not(:disabled) { background: transparent; color: var(--ec-ink); border: 1px solid var(--ec-muted); box-shadow: none; }
+#primaryActions .primary-action-hint { grid-column: 1 / -1; margin: 0; }
+#primaryActions .primary-action-hint:empty { display: none; }
+#primaryActions #generationCostNotice {
+  margin: 4px 0 0;
+  padding: 18px 0 0;
+  border: 0;
+  border-top: 1px solid var(--ec-muted);
+  border-radius: 0;
+  background: transparent;
+  color: var(--ec-ink);
+  font-size: 13px;
+}
+.generation-estimate-label, #generationEstimateScope { display: block; }
+#generationEstimate { display: block; font: 600 26px/1.6 system-ui, sans-serif; font-variant-numeric: tabular-nums; letter-spacing: -.025em; }
+#generationEstimateScope { margin-bottom: 12px; }
+.generation-estimate-assumptions { margin-top: 8px; color: var(--ec-muted); }
+.generation-estimate-assumptions summary { cursor: pointer; min-height: 44px; padding: 10px 0; box-sizing: border-box; }
+#primaryActions:focus-visible, .generation-estimate-assumptions summary:focus-visible { outline: 3px solid var(--ec-teal); outline-offset: 4px; }
+
+/* Live status remains reachable while following the manuscript. No fake percent. */
+#generationProgress.show {
+  padding: 16px 20px;
+  border-radius: 12px;
+  background: #f8f5ec;
+  color: #242820;
+  border: 1px solid #bdb9a9;
+  box-shadow: 0 8px 32px #0003;
+  animation: none;
+}
+.generation-live-heading { display: flex; flex-wrap: wrap; gap: 4px 12px; justify-content: space-between; font-size: 11px; }
+#generationProgress #generationStage { margin: 8px 0; padding: 0; border: 0; background: transparent; color: inherit; font-size: 17px; }
+#generationProgress .progress-stats { margin: 0; font-size: 13px; }
+#generationProgress .progress-details { padding-top: 10px; margin-top: 10px; border-top: 1px solid #bdb9a9; gap: 12px; color: inherit; font-size: 14px; font-variant-numeric: tabular-nums; }
+#generationProgress .stop-generation-btn { min-height: 44px; margin-top: 12px; color: #922f26; border-color: #922f26; }
+#generationProgress .stop-generation-btn:hover { background: #922f26; color: #fff; }
+[data-theme="dark"] #generationProgress.show { background: #252821; color: #f5f0df; border-color: #626856; }
+[data-theme="dark"] #generationProgress .stop-generation-btn { color: #ffc0b8; border-color: #ffc0b8; }
+@media (max-width: 768px) {
+  #generationProgress.show { bottom: calc(96px + env(safe-area-inset-bottom, 0px)); }
+}
+@media (max-width: 600px) {
+  .editorial-console #primaryActions { grid-template-columns: minmax(0, 1fr); padding: 16px; gap: 12px; }
+  .generation-console-heading { align-items: start; flex-direction: column; gap: 6px; }
+  #generationEstimate { font-size: 23px; }
+  #generationProgress.show { padding: 12px 16px; }
+}
+
 @media (prefers-reduced-motion: reduce) {
   .editorial-console *,
   .editorial-console *::before,

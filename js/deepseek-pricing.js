@@ -67,5 +67,18 @@
     ) / 1_000_000;
   }
 
-  return { PRICING, isPeakTime, getNextOffPeakTime, getUsageBreakdown, calculateUsageCost };
+  // Local planning scenarios, not a tokenizer or a spending cap. Each request
+  // assumes 4k–20k uncached input tokens; state also reads the new segment.
+  function estimateSegmentCost(words, model, date = new Date()) {
+    const target = tokenCount(words) || 2500;
+    const cost = (prompt, completion, requestModel) => calculateUsageCost({
+      prompt_tokens: prompt, completion_tokens: completion
+    }, requestModel, date);
+    return {
+      low: cost(4000, target, model) + cost(8000 + target, 1400, 'deepseek-flash'),
+      high: cost(20000, target * 2, model) + cost(40000 + target * 2, 4600, 'deepseek-flash')
+    };
+  }
+
+  return { PRICING, isPeakTime, getNextOffPeakTime, getUsageBreakdown, calculateUsageCost, estimateSegmentCost };
 });

@@ -207,7 +207,7 @@ test('工作坊依序載入規劃模組並快取到新版離線殼層', () => {
   const sw = fs.readFileSync(path.join(__dirname, '..', 'public', 'sw.js'), 'utf8');
 
   assert.match(html, /generation-planning\.js[\s\S]*app\.js/);
-  assert.match(sw, /const CACHE_VERSION\s*=\s*'v93'/);
+  assert.match(sw, /const CACHE_VERSION\s*=\s*'v94'/);
   assert.match(sw, /\.\/js\/generation-planning\.js/);
 });
 
