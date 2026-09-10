@@ -38,6 +38,7 @@
     <link rel="stylesheet" href="css/layout-polish.css" />
     <link rel="stylesheet" href="css/uiverse-editorial.css" />
     <link rel="stylesheet" href="css/bookshelf-atelier.css" />
+    <link rel="stylesheet" href="css/reader-modes.css" />
   </head>
   <body>
     <!-- 離線狀態提示 -->
@@ -1203,27 +1204,60 @@
     <!-- 翻書閱讀模式 -->
     <div id="bookReaderOverlay" class="book-reader-overlay" role="dialog" aria-modal="true" aria-labelledby="bookReaderTitle">
       <div class="book-reader-bar">
-        <span id="bookReaderTitle" class="book-reader-title">📖 翻書閱讀</span>
+        <div class="book-reader-heading">
+          <span class="book-reader-eyebrow">私人閱覽室 · READING ROOM</span>
+          <span id="bookReaderTitle" class="book-reader-title">翻書閱讀</span>
+        </div>
         <div class="book-reader-tools">
-          <button id="bookResetProgress" class="book-tool-btn book-tool-btn-text" type="button" title="清除書籤，從頭閱讀">↺ 重頭</button>
-          <button id="bookFontDec" class="book-tool-btn" title="縮小字級">A−</button>
-          <button id="bookFontInc" class="book-tool-btn" title="放大字級">A+</button>
-          <button id="bookReaderClose" class="book-tool-btn" title="關閉（Esc）">✕</button>
+          <button id="bookResetProgress" class="book-tool-btn book-tool-btn-text" type="button" title="清除書籤，從頭閱讀" aria-label="從頭閱讀">↺ 從頭閱讀</button>
+          <div class="book-font-controls" role="group" aria-label="閱讀字級">
+            <button id="bookFontDec" class="book-tool-btn" type="button" title="縮小字級" aria-label="縮小字級">A−</button>
+            <output id="bookFontValue" aria-live="polite" aria-label="目前字級">19 px</output>
+            <button id="bookFontInc" class="book-tool-btn" type="button" title="放大字級" aria-label="放大字級">A+</button>
+          </div>
+          <button id="bookReaderClose" class="book-tool-btn" type="button" title="關閉（Esc）" aria-label="關閉閱讀器">✕</button>
+        </div>
+        <div class="book-mode-tools">
+          <select id="bookReaderMode" aria-label="閱讀版型">
+            <option value="clean">01 · 簡約清新</option><option value="book">02 · 沉浸書本</option>
+            <option value="night">03 · 星空夜讀</option><option value="illustrated">04 · 圖文插畫</option>
+            <option value="outline" selected>05 · 分欄目錄</option><option value="scroll">06 · 長文捲動</option>
+            <option value="spread">08 · 雙頁橫向</option><option value="focus">09 · 純文字專注</option>
+          </select>
+          <button id="bookTocToggle" class="book-tool-btn" type="button" aria-label="章節目錄" aria-controls="bookToc" aria-expanded="false">☰</button>
+          <button id="bookSettingsToggle" class="book-tool-btn" type="button" aria-label="閱讀設定" aria-controls="bookSettings" aria-expanded="false">Aa</button>
         </div>
       </div>
+      <section id="bookSettings" class="book-settings" aria-label="閱讀設定" hidden>
+        <div class="book-panel-heading"><strong>07 · 個人閱讀設定</strong><button id="bookSettingsClose" type="button" aria-label="關閉閱讀設定">✕</button></div>
+        <label>字級<input id="bookReaderSize" type="range" min="14" max="28" value="19" aria-label="閱讀字級"></label>
+        <label>字體<select id="bookReaderFont"><option value="serif">書卷宋體</option><option value="sans">清晰黑體</option></select></label>
+        <label>行距<select id="bookReaderLeading"><option value="1.7">緊湊</option><option value="1.95" selected>標準</option><option value="2.2">寬鬆</option></select></label>
+        <label>頁面寬度<select id="bookReaderWidth"><option value="narrow">窄</option><option value="standard" selected>標準</option><option value="wide">寬</option></select></label>
+        <label>紙面色彩<select id="bookReaderTone"><option value="auto">依版型／網站主題</option><option value="paper">暖紙</option><option value="mist">霧綠</option><option value="dark">深色</option></select></label>
+        <p>設定立即套用，閱讀位置會保留。</p>
+      </section>
+      <div class="book-workspace">
+        <aside id="bookToc" class="book-toc" aria-label="章節目錄" hidden>
+          <div class="book-panel-heading"><strong>CONTENTS · 章節</strong><button id="bookTocClose" type="button" aria-label="關閉章節目錄">✕</button></div>
+          <nav id="bookTocList" aria-label="本書章節"></nav>
+        </aside>
       <div class="book-stage">
-        <button id="bookPrev" class="book-nav-btn" title="上一頁（←）">‹</button>
+        <button id="bookPrev" class="book-nav-btn" type="button" title="上一頁（←）" aria-label="上一頁">‹</button>
         <div id="bookBook" class="book-book">
-          <div class="book-page left"><div id="bookPageLeft" class="book-page-inner"></div><div class="book-page-num" id="bookPageNumLeft"></div></div>
-          <div class="book-page right"><div id="bookPageRight" class="book-page-inner"></div><div class="book-page-num" id="bookPageNumRight"></div></div>
+          <div class="book-page left"><div class="book-running-head" aria-hidden="true">PRIVATE LIBRARY <span>私人藏書</span></div><div id="bookPageLeft" class="book-page-inner"></div><div class="book-page-num" id="bookPageNumLeft"></div></div>
+          <div class="book-page right"><div class="book-running-head" aria-hidden="true">READING ROOM <span>靜讀時光</span></div><div id="bookPageRight" class="book-page-inner"></div><div class="book-page-num" id="bookPageNumRight"></div></div>
           <div id="bookFlip" class="book-flip">
             <div class="book-flip-face book-flip-front"></div>
             <div class="book-flip-face book-flip-back"></div>
           </div>
         </div>
-        <button id="bookNext" class="book-nav-btn" title="下一頁（→）">›</button>
+        <button id="bookNext" class="book-nav-btn" type="button" title="下一頁（→）" aria-label="下一頁">›</button>
+      </div>
+        <div id="bookScrollView" class="book-scroll-view" tabindex="0" role="region" aria-label="連續閱讀正文" hidden><article id="bookScrollText"></article></div>
       </div>
       <div id="bookIndicator" class="book-indicator"></div>
+      <div class="book-reading-hint"><span class="book-hint-keyboard">← → 翻頁 · Esc 返回</span><span class="book-hint-touch">輕點頁面左右側，或使用翻頁按鈕</span></div>
       <div id="bookBookmarkStatus" class="book-bookmark-status" aria-live="polite"></div>
       <div class="book-progress"><div id="bookProgressFill" class="book-progress-fill"></div></div>
       <div id="bookMeasure" class="book-measure"></div>

@@ -935,6 +935,17 @@ button { border-radius: 8px; }
   backdrop-filter: blur(14px);
 }
 
+/* Keep the reading entry reachable on short landscape screens. */
+@media (min-width: 769px) and (max-height: 600px) {
+  body .floating-toolbar {
+    top: 12px;
+    display: grid;
+    grid-template-columns: repeat(2, 54px);
+    overflow: visible;
+  }
+  body .floating-toolbar .toolbar-divider { display: none; }
+}
+
 [data-theme="dark"] .floating-toolbar {
   background: rgba(24, 29, 29, 0.86);
   border-color: rgba(255, 255, 255, 0.10);

@@ -5,6 +5,7 @@ import functools
 import http.server
 import json
 import os
+import re
 from pathlib import Path
 import tempfile
 import threading
@@ -27,6 +28,7 @@ class QuietHandler(http.server.SimpleHTTPRequestHandler):
 
 def boot(browser, width, story, url):
     context = browser.new_context(viewport={'width': width, 'height': 900}, is_mobile=width < 500, has_touch=width < 500, service_workers='block')
+    context.add_init_script('if(!localStorage.getItem("bookReaderPreferences"))localStorage.setItem("bookReaderPreferences",JSON.stringify({mode:"book"}));')
     context.add_init_script('if(!localStorage.getItem("readerQaSeeded")){localStorage.setItem("savedStory",'+json.dumps(story)+');localStorage.setItem("readerQaSeeded","1");}')
     bookmarks = [{'id':1720000000000,'title':'測試藏書','content':STORY}, {'id':1720000000001,'title':'第二本書','content':STORY.replace('測試藏書','第二本書')}]
     context.add_init_script('localStorage.setItem("bookmarks",'+json.dumps(json.dumps(bookmarks))+');')
@@ -54,9 +56,32 @@ def snapshot(page):
     return page.evaluate(r'''() => ({indicator:bookIndicator.textContent,
       total:Number(bookIndicator.textContent.match(/共 (\d+)/)[1]),
       focusInside:bookReaderOverlay.contains(document.activeElement),
+      measuredHeight:parseFloat(bookMeasure.style.height), actualHeight:bookPageRight.clientHeight,
       text:[bookPageLeft,bookPageRight].filter(e=>e.getBoundingClientRect().width>0).map(e=>e.textContent).join(''),
       clipped:[bookPageLeft,bookPageRight].filter(e=>e.getBoundingClientRect().width>0).some(e=>e.scrollHeight>e.clientHeight+1 || e.scrollWidth>e.clientWidth+1),
       overflow:bookReaderOverlay.scrollWidth>innerWidth})''')
+
+def check_presentation(page, label):
+    layout = page.evaluate('''() => {const book=bookBook.getBoundingClientRect(), inner=bookPageRight.getBoundingClientRect(), stage=document.querySelector('.book-stage').getBoundingClientRect();return {width:innerWidth, height:innerHeight, bookLeft:book.left, bookRight:book.right, headCount:document.querySelectorAll('.book-running-head').length, headOutsideText:![...document.querySelectorAll('.book-running-head')].some(e=>e.closest('.book-page-inner')), caseVisible:getComputedStyle(bookBook,'::before').content!=='none', safeTop:inner.top-book.top, stageTop:stage.top};}''')
+    check(layout['headCount']==2 and layout['headOutsideText'], f'{label}: running heads stay outside paginated story')
+    if layout['width'] > 820:
+        check(layout['caseVisible'] and layout['safeTop']>=56, f'{label}: hardcover and separate running-head space')
+    elif layout['height'] > 500:
+        check(layout['bookLeft']<=1 and layout['bookRight']>=layout['width']-1, f'{label}: edge-to-edge mobile paper')
+    controls = page.locator('#bookReaderOverlay button').evaluate_all('''els=>els.filter(e=>e.getClientRects().length&&getComputedStyle(e).visibility!=='hidden').map(e=>{const r=e.getBoundingClientRect();return {id:e.id,w:r.width,h:r.height,visible:r.top>=0&&r.bottom<=innerHeight&&r.left>=0&&r.right<=innerWidth,hit:e.contains(document.elementFromPoint(r.x+r.width/2,r.y+r.height/2))};})''')
+    check(all(c['w']>=44 and c['h']>=44 and c['visible'] and c['hit'] for c in controls), f'{label}: all controls reachable with 44px targets')
+    for theme in ['light','dark']:
+        page.evaluate('(theme)=>setTheme(theme)',theme)
+        colors = page.locator('#bookPageRight').evaluate('''e=>{const s=getComputedStyle(e.parentElement),f=getComputedStyle(document.querySelector('.book-flip-front'));return {ink:s.color,paper:s.backgroundColor,flipInk:f.color,flipPaper:f.backgroundColor};}''')
+        def luminance(value):
+            channels = [float(v)/255 for v in re.findall(r'[\d.]+',value)[:3]]
+            linear = [v/12.92 if v<=.04045 else ((v+.055)/1.055)**2.4 for v in channels]
+            return sum(a*b for a,b in zip(linear,[.2126,.7152,.0722]))
+        a,b = luminance(colors['ink']),luminance(colors['paper'])
+        check((max(a,b)+.05)/(min(a,b)+.05)>=4.5, f'{label}: {theme} body contrast >= 4.5')
+        check(colors['ink']==colors['flipInk'] and colors['paper']==colors['flipPaper'], f'{label}: {theme} flip matches paper')
+        page.screenshot(path=str(OUT/f'reader-{label}-{theme}.png'))
+    page.evaluate('setTheme("light")')
 
 def collect_pages(page):
     text, clipped = '', False
@@ -79,10 +104,12 @@ def run():
     try:
         with sync_playwright() as p:
             browser = p.chromium.launch(executable_path=os.environ.get('CHROME_BIN', 'C:/Program Files/Google/Chrome/Application/chrome.exe'), headless=True)
-            for width in ([int(os.environ['READER_QA_WIDTH'])] if os.environ.get('READER_QA_WIDTH') else [375,428,768,1280,1536]):
+            widths = [] if os.environ.get('READER_QA_SHORT_ONLY') else ([int(os.environ['READER_QA_WIDTH'])] if os.environ.get('READER_QA_WIDTH') else [375,428,768,1280,1536])
+            for width in widths:
                 context,page = boot(browser,width,STORY,url)
                 open_reader(page)
                 initial = snapshot(page)
+                check(abs(initial['measuredHeight']-initial['actualHeight'])<=1, f'{width}: initial measurement matches visible page')
                 check(initial['focusInside'], f'{width}: focus enters reader')
                 page.keyboard.press('Tab')
                 check(snapshot(page)['focusInside'], f'{width}: Tab stays inside reader')
@@ -103,6 +130,7 @@ def run():
                 check(text == STORY.replace('# ', '').replace('\n', ''), f'{width}: complete text exactly once')
                 check(not initial['overflow'], f'{width}: no horizontal overflow')
                 page.locator('#bookResetProgress').click()
+                check_presentation(page,str(width))
                 page.screenshot(path=str(OUT / f'reader-{width}.png'))
                 report[str(width)] = initial
                 if width == 375:
@@ -146,6 +174,39 @@ def run():
                         check(page.evaluate('Object.keys(JSON.parse(localStorage.getItem("bookReaderProgressByStory"))).length')==1, 'legacy progress migrates on save')
                     else:
                         check(False, 'legacy progress available for compatibility check')
+                    open_reader(page)
+                    for _ in range(14):
+                        if page.locator('#bookFontInc').is_disabled(): break
+                        page.locator('#bookFontInc').click()
+                    check(page.locator('#bookFontValue').inner_text()=='28 px' and page.locator('#bookFontInc').is_disabled(), 'font upper limit and value visible')
+                    check(not snapshot(page)['clipped'], 'large font remains within page')
+                    for _ in range(14): page.locator('#bookFontDec').click()
+                    check(page.locator('#bookFontValue').inner_text()=='14 px' and page.locator('#bookFontDec').is_disabled(), 'font lower limit and value visible')
+                    page.locator('#bookFontInc').click()
+                    check(page.locator('#bookFontValue').inner_text()=='15 px', 'font controls work after reaching limit')
+                context.close()
+            for width,height in [(375,667),(812,375)]:
+                context,page = boot(browser,width,STORY,url)
+                page.set_viewport_size({'width':width,'height':height})
+                if height == 375:
+                    for format_name in ['txt','html']:
+                        page.locator('#downloadBtn').click()
+                        with page.expect_download():
+                            page.locator(f'#toolbarDownloadMenu [data-format="{format_name}"]').click(timeout=4000)
+                    check(True, 'landscape TXT and HTML downloads remain reachable')
+                open_reader(page)
+                check_presentation(page,f'{width}x{height}')
+                check(abs(snapshot(page)['measuredHeight']-snapshot(page)['actualHeight'])<=1, f'{width}x{height}: measurement matches')
+                page.emulate_media(reduced_motion='reduce')
+                text,clipped = collect_pages(page)
+                check(not clipped and text==STORY.replace('# ','').replace('\n',''),f'{width}x{height}: complete text fits')
+                if height == 375:
+                    while not page.locator('#bookFontInc').is_disabled(): page.locator('#bookFontInc').click()
+                    page.locator('#bookResetProgress').click()
+                    text,clipped = collect_pages(page)
+                    check(not clipped and text==STORY.replace('# ','').replace('\n',''), 'landscape 28px: complete text fits')
+                    page.locator('#bookResetProgress').click()
+                    page.screenshot(path=str(OUT/'landscape-large-font.png'))
                 context.close()
             long_story = '# 超長' + '標題' * 150 + '\n' + '漫長的旅程沒有停歇📚<&>' * 180 + '最後一句應能看見'
             context,page = boot(browser,375,long_story,url)

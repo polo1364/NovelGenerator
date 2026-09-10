@@ -13641,6 +13641,21 @@ ${currentOutline.slice(0, 1600)}
         const resetProgressBtn = document.getElementById('bookResetProgress');
         const bookmarkStatusEl = document.getElementById('bookBookmarkStatus');
         const measure = document.getElementById('bookMeasure');
+        const modeSelect = document.getElementById('bookReaderMode');
+        const toc = document.getElementById('bookToc');
+        const tocList = document.getElementById('bookTocList');
+        const tocToggle = document.getElementById('bookTocToggle');
+        const settings = document.getElementById('bookSettings');
+        const settingsToggle = document.getElementById('bookSettingsToggle');
+        const scrollView = document.getElementById('bookScrollView');
+        const scrollText = document.getElementById('bookScrollText');
+        const modes = ['clean', 'book', 'night', 'illustrated', 'outline', 'scroll', 'spread', 'focus'];
+        let preferences = {};
+        try { preferences = JSON.parse(localStorage.getItem('bookReaderPreferences') || '{}') || {}; } catch { /* use defaults */ }
+        if (typeof preferences !== 'object' || Array.isArray(preferences)) preferences = {};
+        let readerMode = modes.includes(preferences.mode) ? preferences.mode : 'outline';
+        let scrollAnchor = 0;
+        let chapters = [];
 
         const BOOK_PROGRESS_KEY = 'bookReaderProgress';
         const BOOK_PROGRESS_BY_STORY_KEY = 'bookReaderProgressByStory';
@@ -13659,8 +13674,169 @@ ${currentOutline.slice(0, 1600)}
         let backgroundState = [];
         let previousOverflow = '';
 
-        const isSingle = () => window.matchMedia('(max-width: 820px)').matches;
+        const isSingle = () => !['book', 'spread'].includes(readerMode) || window.matchMedia('(max-width: 820px)').matches;
         const step = () => (isSingle() ? 1 : 2);
+
+        function savePreferences() {
+          try { localStorage.setItem('bookReaderPreferences', JSON.stringify(preferences)); } catch { /* storage may be full */ }
+        }
+
+        function setToc(open) {
+          if (!toc) return;
+          toc.hidden = !open;
+          overlay.classList.toggle('toc-open', open);
+          tocToggle.setAttribute('aria-expanded', String(open));
+        }
+
+        function setSettings(open) {
+          if (!settings) return;
+          settings.hidden = !open;
+          settingsToggle.setAttribute('aria-expanded', String(open));
+          if (open) document.getElementById('bookReaderFont').focus();
+          else settingsToggle.focus();
+        }
+
+        function applyReaderMode() {
+          overlay.dataset.readerMode = readerMode;
+          if (modeSelect) modeSelect.value = readerMode;
+          if (scrollView) scrollView.hidden = readerMode !== 'scroll';
+          bookEl.inert = readerMode === 'scroll';
+          prevBtn.tabIndex = nextBtn.tabIndex = readerMode === 'scroll' ? -1 : 0;
+          setToc(['outline', 'night'].includes(readerMode) && window.innerWidth > 900);
+          if (settings) settings.hidden = true;
+          if (settingsToggle) settingsToggle.setAttribute('aria-expanded', 'false');
+        }
+
+        // Map the first visible character, not a percentage, across scroll/paged layouts.
+        function captureScrollAnchor() {
+          if (!scrollText || !scrollText.children.length) return scrollAnchor;
+          const top = scrollView.getBoundingClientRect().top + 1;
+          for (const block of scrollText.children) {
+            if (block.getBoundingClientRect().bottom <= top) continue;
+            const text = block.firstChild;
+            if (!text) continue;
+            const chars = Array.from(text.textContent);
+            let low = 0, high = chars.length;
+            const range = document.createRange();
+            while (low < high) {
+              const mid = Math.floor((low + high) / 2);
+              const start = chars.slice(0, mid).join('').length;
+              range.setStart(text, start);
+              range.setEnd(text, start + chars[mid].length);
+              if (range.getBoundingClientRect().bottom <= top) low = mid + 1;
+              else high = mid;
+            }
+            return Number(block.dataset.offset) + low;
+          }
+          return scrollAnchor;
+        }
+
+        function restoreScrollAnchor(offset) {
+          scrollAnchor = Math.max(0, offset);
+          if (!scrollText) return;
+          const blocks = Array.from(scrollText.children);
+          const block = blocks.reverse().find(el => Number(el.dataset.offset) <= scrollAnchor);
+          if (!block || !block.firstChild) return;
+          const text = block.firstChild;
+          const index = Array.from(text.textContent).slice(0, scrollAnchor - Number(block.dataset.offset)).join('').length;
+          const range = document.createRange();
+          range.setStart(text, Math.min(index, text.length));
+          range.setEnd(text, Math.min(text.length, index + (text.textContent.codePointAt(index) > 0xffff ? 2 : 1)));
+          scrollView.scrollTop += range.getBoundingClientRect().top - scrollView.getBoundingClientRect().top;
+        }
+
+        function currentAnchor() { return readerMode === 'scroll' ? scrollAnchor : (pageOffsets[pos] || 0); }
+
+        function buildReaderNavigation() {
+          if (!tocList || !scrollText) return;
+          tocList.replaceChildren(); scrollText.replaceChildren(); chapters = [];
+          let offset = 0;
+          for (const block of parseBlocks(latestStory)) {
+            const el = document.createElement(block.type === 'title' ? 'h3' : 'p');
+            if (block.type === 'title') el.className = 'book-chapter';
+            el.textContent = block.text;
+            el.dataset.offset = offset;
+            scrollText.appendChild(el);
+            if (block.type === 'title') {
+              const chapterOffset = offset;
+              const button = document.createElement('button');
+              button.type = 'button'; button.textContent = block.text;
+              button.addEventListener('click', () => {
+                if (!readerReady) return;
+                if (finishFlip) finishFlip();
+                const closeToc = window.innerWidth <= 900 || !['outline', 'night'].includes(readerMode);
+                if (closeToc) { setToc(false); tocToggle.focus(); }
+                if (readerMode === 'scroll') restoreScrollAnchor(chapterOffset);
+                pos = positionAtOffset(chapterOffset); clampPos(); render();
+              });
+              chapters.push({ offset, button }); tocList.appendChild(button);
+            }
+            offset += Array.from(block.text).length;
+          }
+          if (!chapters.length) { const p = document.createElement('p'); p.textContent = '本文沒有章節標題，可直接閱讀。'; tocList.appendChild(p); }
+        }
+
+        function updateChapterHighlight() {
+          const anchor = currentAnchor();
+          let index = chapters.length - 1;
+          while (index >= 0 && chapters[index].offset > anchor) index--;
+          chapters.forEach((chapter, i) => chapter.button.setAttribute('aria-current', String(i === index)));
+        }
+
+        function reflowReader(anchor) {
+          if (!readerReady) return;
+          if (finishFlip) finishFlip();
+          if (anchor === undefined) anchor = currentAnchor();
+          paginate();
+          pos = positionAtOffset(anchor); clampPos();
+          if (readerMode === 'scroll') restoreScrollAnchor(anchor);
+          render();
+        }
+
+        if (modeSelect) modeSelect.addEventListener('change', () => {
+          if (finishFlip) finishFlip();
+          const anchor = currentAnchor();
+          readerMode = modes.includes(modeSelect.value) ? modeSelect.value : 'outline';
+          preferences.mode = readerMode; savePreferences(); applyReaderMode(); reflowReader(anchor);
+        });
+        if (tocToggle) tocToggle.addEventListener('click', () => { const anchor = currentAnchor(); setToc(toc.hidden); reflowReader(anchor); });
+        document.getElementById('bookTocClose')?.addEventListener('click', () => { const anchor = currentAnchor(); setToc(false); tocToggle.focus(); reflowReader(anchor); });
+        if (settingsToggle) settingsToggle.addEventListener('click', () => setSettings(settings.hidden));
+        document.getElementById('bookSettingsClose')?.addEventListener('click', () => setSettings(false));
+        for (const [id, key, allowed, fallback] of [
+          ['bookReaderFont', 'font', ['serif', 'sans'], 'serif'],
+          ['bookReaderLeading', 'leading', ['1.7', '1.95', '2.2'], '1.95'],
+          ['bookReaderWidth', 'width', ['narrow', 'standard', 'wide'], 'standard'],
+          ['bookReaderTone', 'tone', ['auto', 'paper', 'mist', 'dark'], 'auto']
+        ]) {
+          const control = document.getElementById(id);
+          if (!control) continue;
+          preferences[key] = allowed.includes(preferences[key]) ? preferences[key] : fallback;
+          control.value = preferences[key];
+          const apply = () => {
+            overlay.style.setProperty('--reader-font', preferences.font === 'sans' ? 'system-ui, sans-serif' : '"Noto Serif TC", serif');
+            overlay.style.setProperty('--reader-leading', preferences.leading || '1.95');
+            overlay.style.setProperty('--reader-width', { narrow: '620px', standard: '760px', wide: '920px' }[preferences.width] || '760px');
+            overlay.dataset.readerTone = preferences.tone || 'auto';
+          };
+          apply();
+          control.addEventListener('change', () => {
+            const anchor = currentAnchor(); preferences[key] = allowed.includes(control.value) ? control.value : fallback;
+            apply(); savePreferences(); reflowReader(anchor);
+          });
+        }
+        document.getElementById('bookReaderSize')?.addEventListener('input', (event) => {
+          fontSize = Math.max(14, Math.min(28, Number(event.target.value) || 19));
+          localStorage.setItem('bookFontSize', fontSize); reflowReader();
+        });
+        if (scrollView) scrollView.addEventListener('scroll', () => {
+          if (readerMode !== 'scroll' || !readerReady) return;
+          scrollAnchor = captureScrollAnchor(); pos = positionAtOffset(scrollAnchor);
+          updateChapterHighlight();
+          const fraction = scrollView.scrollTop / Math.max(1, scrollView.scrollHeight - scrollView.clientHeight);
+          indicator.textContent = `連續閱讀 · ${Math.round(fraction * 100)}%`;
+          progressFill.style.width = `${fraction * 100}%`; scheduleSaveBookProgress();
+        });
 
         function getStoryTitle() {
           const m = (latestStory || '').match(/^\s*#{1,4}\s*([^\n#]+)/m);
@@ -13710,7 +13886,7 @@ ${currentOutline.slice(0, 1600)}
               storyKey: key,
               title: getStoryTitle(),
               pos,
-              offset: pageOffsets[pos] || 0,
+              offset: currentAnchor(),
               totalPages: pages.length,
               fontSize,
               updatedAt: Date.now()
@@ -13858,6 +14034,13 @@ ${currentOutline.slice(0, 1600)}
           [leftInner.parentElement, rightInner.parentElement, flipFront, flipBack].forEach(el => {
             el.style.fontSize = fontSize + 'px';
           });
+          const fontValue = document.getElementById('bookFontValue');
+          if (fontValue) fontValue.textContent = fontSize + ' px';
+          fontDec.disabled = fontSize <= 14;
+          fontInc.disabled = fontSize >= 28;
+          if (scrollText) scrollText.style.fontSize = fontSize + 'px';
+          const sizeSlider = document.getElementById('bookReaderSize');
+          if (sizeSlider) { sizeSlider.value = fontSize; sizeSlider.setAttribute('aria-valuetext', fontSize + ' px'); }
         }
 
         function render() {
@@ -13881,6 +14064,13 @@ ${currentOutline.slice(0, 1600)}
           progressFill.style.width = (total <= 1 ? 100 : (shownEnd / total) * 100) + '%';
           prevBtn.disabled = pos <= 0;
           nextBtn.disabled = pos + step() >= total;
+          if (readerMode === 'scroll') {
+            const fraction = scrollView.scrollTop / Math.max(1, scrollView.scrollHeight - scrollView.clientHeight);
+            indicator.textContent = `連續閱讀 · ${Math.round(fraction * 100)}%`;
+            progressFill.style.width = `${fraction * 100}%`;
+          }
+          updateChapterHighlight();
+          updateBookmarkStatus();
           scheduleSaveBookProgress();
         }
 
@@ -13891,7 +14081,7 @@ ${currentOutline.slice(0, 1600)}
           if (dir > 0 && pos + s >= total) return;
           if (dir < 0 && pos <= 0) return;
 
-          if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
+          if (!['book', 'spread'].includes(readerMode) || window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
             pos += dir > 0 ? s : -s;
             render();
             return;
@@ -13957,7 +14147,8 @@ ${currentOutline.slice(0, 1600)}
             showStatus('error', '目前沒有可閱讀的內容');
             return;
           }
-          titleEl.textContent = '📖 ' + getStoryTitle();
+          titleEl.textContent = getStoryTitle();
+          titleEl.title = getStoryTitle();
           const revision = ++openRevision;
           readerReady = false;
           opener = document.activeElement;
@@ -13966,6 +14157,8 @@ ${currentOutline.slice(0, 1600)}
           backgroundState = Array.from(document.body.children).filter(el => el !== overlay).map(el => [el, el.inert]);
           backgroundState.forEach(([el]) => { el.inert = true; });
           overlay.classList.add('open');
+          applyReaderMode();
+          buildReaderNavigation();
           closeBtn.focus();
           const saved = loadBookProgress();
           // 等版面就緒再分頁
@@ -13989,6 +14182,7 @@ ${currentOutline.slice(0, 1600)}
                 }
               }
               readerReady = true;
+              if (readerMode === 'scroll') restoreScrollAnchor(Number.isFinite(saved?.offset) ? saved.offset : (pageOffsets[pos] || 0));
               render();
               updateBookmarkStatus(resumed);
               if (resumed) saveBookProgress();
@@ -14014,6 +14208,7 @@ ${currentOutline.slice(0, 1600)}
         function resetToStart() {
           if (finishFlip) finishFlip();
           pos = 0;
+          if (readerMode === 'scroll') { scrollAnchor = 0; scrollView.scrollTop = 0; }
           clearBookProgress();
           clampPos();
           render();
@@ -14024,10 +14219,10 @@ ${currentOutline.slice(0, 1600)}
         window.addEventListener('resize', () => {
           if (!overlay.classList.contains('open')) return;
           clearTimeout(resizeTimer);
-          resizeTimer = setTimeout(() => { if (overlay.classList.contains('open')) { paginate(); render(); } }, 200);
+          resizeTimer = setTimeout(() => { if (overlay.classList.contains('open')) { const anchor = currentAnchor(); applyReaderMode(); reflowReader(anchor); } }, 200);
         });
         if (document.fonts) document.fonts.addEventListener('loadingdone', () => {
-          if (overlay.classList.contains('open')) { paginate(); render(); }
+          if (overlay.classList.contains('open')) reflowReader();
         });
 
         openBtn.addEventListener('click', () => { if (!openBtn.disabled) open(); });
@@ -14038,7 +14233,7 @@ ${currentOutline.slice(0, 1600)}
 
         // 點擊書本左右半邊翻頁
         bookEl.addEventListener('click', (e) => {
-          if (animating) return;
+          if (animating || readerMode === 'scroll' || window.getSelection()?.toString()) return;
           const r = bookEl.getBoundingClientRect();
           if ((e.clientX - r.left) < r.width / 2) go(-1); else go(1);
         });
@@ -14046,18 +14241,18 @@ ${currentOutline.slice(0, 1600)}
         fontInc.addEventListener('click', () => {
           fontSize = Math.min(28, fontSize + 1);
           localStorage.setItem('bookFontSize', fontSize);
-          paginate(); render();
+          reflowReader();
         });
         fontDec.addEventListener('click', () => {
           fontSize = Math.max(14, fontSize - 1);
           localStorage.setItem('bookFontSize', fontSize);
-          paginate(); render();
+          reflowReader();
         });
 
         document.addEventListener('keydown', (e) => {
           if (!overlay.classList.contains('open')) return;
           if (e.key === 'Tab') {
-            const controls = Array.from(overlay.querySelectorAll('button:not(:disabled)'));
+            const controls = Array.from(overlay.querySelectorAll('button:not(:disabled),select,input,[tabindex="0"]')).filter(el => el.getClientRects().length && getComputedStyle(el).visibility !== 'hidden' && !el.closest('[inert]'));
             const first = controls[0], last = controls[controls.length - 1];
             if (e.shiftKey && (document.activeElement === first || !overlay.contains(document.activeElement))) {
               e.preventDefault(); last.focus();
@@ -14068,9 +14263,14 @@ ${currentOutline.slice(0, 1600)}
             return;
           }
           if (!['Escape', 'ArrowLeft', 'ArrowRight'].includes(e.key)) return;
+          if (e.key !== 'Escape' && (e.target.matches('select,input,textarea') || readerMode === 'scroll')) return;
           e.preventDefault();
           e.stopPropagation();
-          if (e.key === 'Escape') { close(); }
+          if (e.key === 'Escape') {
+            if (settings && !settings.hidden) setSettings(false);
+            else if (toc && !toc.hidden && window.innerWidth <= 900) { setToc(false); tocToggle.focus(); }
+            else close();
+          }
           else if (e.key === 'ArrowLeft') { go(-1); }
           else if (e.key === 'ArrowRight') { go(1); }
         }, true);

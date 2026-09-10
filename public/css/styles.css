@@ -4582,14 +4582,19 @@
       }
 
       .book-reader-overlay {
+        --reader-paper: #f7f2e6;
+        --reader-ink: #30291f;
+        --reader-chapter: #684921;
+        --reader-folio: #756449;
         position: fixed;
         inset: 0;
         z-index: 4000;
         display: none;
         flex-direction: column;
         background:
-          radial-gradient(circle at 50% -20%, rgba(120, 90, 50, 0.35), transparent 60%),
-          linear-gradient(160deg, #2b2018 0%, #1a130d 100%);
+          radial-gradient(ellipse at 50% 40%, #655b4566, transparent 72%),
+          repeating-linear-gradient(0deg, #ffffff02 0 1px, transparent 1px 4px),
+          #171e1c;
         opacity: 0;
         transition: opacity 0.35s ease;
       }
@@ -4600,50 +4605,64 @@
       }
 
       .book-reader-bar {
+        position: relative;
         display: flex;
         align-items: center;
         justify-content: space-between;
         gap: 12px;
-        padding: 12px 18px;
+        padding: max(16px, env(safe-area-inset-top)) max(24px, env(safe-area-inset-right)) 16px max(24px, env(safe-area-inset-left));
         color: #f3e9d8;
         flex-shrink: 0;
+        border-bottom: 1px solid #d4c39e18;
+        background: #171e1c;
       }
+
+      .book-reader-heading { min-width: 0; display: grid; gap: 4px; }
+      .book-reader-eyebrow { color: #c3b496; font: 600 10px/1.5 system-ui, sans-serif; letter-spacing: .14em; }
 
       .book-reader-title {
         font-family: "Noto Serif TC", serif;
-        font-size: 1rem;
+        font-size: 1.15rem;
         font-weight: 600;
         white-space: nowrap;
         overflow: hidden;
         text-overflow: ellipsis;
-        max-width: 50vw;
-        opacity: 0.92;
+        max-width: 48vw;
       }
 
       .book-reader-tools {
         display: flex;
         align-items: center;
         gap: 8px;
+        flex-shrink: 0;
       }
 
+      .book-font-controls { display: flex; align-items: center; border: 1px solid #d4c39e40; border-radius: 8px; }
+      .book-font-controls .book-tool-btn { border: 0; background: transparent; }
+      #bookFontValue { min-width: 50px; text-align: center; font: 500 13px/1 system-ui, sans-serif; font-variant-numeric: tabular-nums; }
+
       .book-tool-btn {
-        background: rgba(255, 255, 255, 0.1);
+        background: rgba(255, 255, 255, 0.04);
         border: 1px solid rgba(255, 255, 255, 0.18);
         color: #f3e9d8;
-        width: 38px;
-        height: 38px;
-        border-radius: 10px;
+        width: 44px;
+        height: 44px;
+        border-radius: 8px;
         cursor: pointer;
         font-size: 1rem;
         display: flex;
         align-items: center;
         justify-content: center;
-        transition: all 0.2s;
+        transition: background-color 160ms ease, color 160ms ease;
       }
 
       .book-tool-btn:hover {
         background: rgba(255, 255, 255, 0.2);
       }
+      .book-tool-btn:disabled { opacity: .4; cursor: not-allowed; }
+      #bookReaderOverlay .book-tool-btn:focus-visible,
+      #bookReaderOverlay .book-nav-btn:focus-visible { outline: 2px solid #f4d58d; outline-offset: 4px; }
+      #bookReaderOverlay button:active:not(:disabled) { background-color: #bda26b55; }
 
       .book-tool-btn-text {
         width: auto;
@@ -4658,8 +4677,10 @@
         text-align: center;
         font-size: 0.82rem;
         color: rgba(243, 233, 216, 0.78);
-        padding: 0 16px 4px;
-        min-height: 1.25em;
+        padding: 4px 16px max(12px, env(safe-area-inset-bottom));
+        box-sizing: content-box;
+        line-height: 1.5;
+        min-height: 1.5em;
       }
 
       .book-stage {
@@ -4668,7 +4689,7 @@
         align-items: center;
         justify-content: center;
         gap: 18px;
-        padding: 0 18px 8px;
+        padding: 28px 24px 26px;
         min-height: 0;
       }
 
@@ -4701,11 +4722,51 @@
       .book-book {
         position: relative;
         display: flex;
-        height: min(78vh, 720px);
-        width: min(92vw, 960px);
+        height: min(72vh, 700px);
+        max-height: 100%;
+        width: min(80vw, 1080px);
         perspective: 2400px;
-        border-radius: 6px;
-        box-shadow: 0 30px 70px rgba(0, 0, 0, 0.55);
+        border-radius: 3px 8px 8px 3px;
+        isolation: isolate;
+        box-shadow: 0 2px 0 #c9b997, 0 4px 0 #786c55, 0 6px 0 #c9b997, 0 8px 0 #786c55, 0 10px 0 #c9b997, 0 32px 64px #0009;
+      }
+
+      /* The case and gutter never participate in text measurement. */
+      .book-book::before {
+        content: "";
+        position: absolute;
+        inset: -12px -14px -20px;
+        z-index: -1;
+        border: 1px solid #a88f5966;
+        border-radius: 8px 14px 14px 8px;
+        background: repeating-linear-gradient(90deg, #ffffff05 0 1px, transparent 1px 3px), linear-gradient(90deg, #243c35, #142923 48%, #0c1b17 50%, #243c35 53%, #1b3029);
+        box-shadow: inset 0 0 0 5px #14251f, inset 0 0 0 6px #a88f5944, 0 18px 40px #0006;
+        pointer-events: none;
+      }
+      .book-book::after {
+        content: "";
+        position: absolute;
+        inset: 0 auto 0 50%;
+        width: 70px;
+        transform: translateX(-50%);
+        background: linear-gradient(90deg, transparent, #4a381417 30%, #30250f38 46%, #20170770 50%, #fff7d32b 53%, #4a381415 65%, transparent);
+        pointer-events: none;
+        z-index: 1;
+      }
+      .book-book.single::after { display: none; }
+      .book-running-head {
+        position: absolute;
+        top: 23px;
+        left: 52px;
+        right: 52px;
+        display: flex;
+        justify-content: space-between;
+        padding-bottom: 9px;
+        border-bottom: 1px solid #88755233;
+        color: var(--reader-folio);
+        font: 500 9px/1.4 system-ui, sans-serif;
+        letter-spacing: .14em;
+        pointer-events: none;
       }
 
       .book-page {
@@ -4715,7 +4776,7 @@
         background: #f7f1e3;
         color: #2c2418;
         box-sizing: border-box;
-        padding: 38px 40px 46px;
+        padding: 64px 52px 50px;
         overflow: hidden;
         font-family: "Noto Serif TC", serif;
         font-size: 19px;
@@ -4755,10 +4816,12 @@
       }
 
       .book-page .book-chapter, .book-flip-face .book-chapter, .book-measure .book-chapter {
-        font-size: 1.35em;
+        font-size: 1.6em;
         font-weight: 700;
         text-align: center;
-        margin: 0.2em 0 0.9em;
+        margin: 0.45em 0 0.9em;
+        padding-bottom: 0.7em;
+        border-bottom: 1px solid #88755244;
         letter-spacing: 0.05em;
         color: #5a3d1e;
         overflow-wrap: anywhere;
@@ -4773,12 +4836,12 @@
 
       .book-page-num {
         position: absolute;
-        bottom: 16px;
+        bottom: 18px;
         left: 0;
         right: 0;
         text-align: center;
-        font-size: 0.72rem;
-        color: #a8987a;
+        font-size: 0.82rem;
+        color: var(--reader-folio);
         font-family: "Noto Serif TC", serif;
       }
 
@@ -4815,7 +4878,7 @@
         background: #f7f1e3;
         color: #2c2418;
         box-sizing: border-box;
-        padding: 38px 40px 46px;
+        padding: 64px 52px 50px;
         overflow: hidden;
         font-family: "Noto Serif TC", serif;
         font-size: 19px;
@@ -4871,36 +4934,104 @@
       }
 
       .book-indicator {
+        box-sizing: content-box;
+        line-height: 1.5;
+        min-height: 1.5em;
         text-align: center;
         color: #cdbb9b;
         font-size: 0.8rem;
-        padding: 8px 0 12px;
+        padding: 8px 0 4px;
         flex-shrink: 0;
         font-family: "Noto Serif TC", serif;
+        font-variant-numeric: tabular-nums;
       }
 
+      /* Paper treatments share geometry with the measured/animated text. */
+      .book-page,
+      .book-flip-face {
+        background: linear-gradient(110deg, #ffffff0a, transparent 60%), var(--reader-paper);
+        color: var(--reader-ink);
+      }
+      .book-page .book-chapter, .book-flip-face .book-chapter { color: var(--reader-chapter); }
+      [data-theme="dark"] .book-reader-overlay {
+        --reader-paper: #292b27;
+        --reader-ink: #e4dfd1;
+        --reader-chapter: #dcc18d;
+        --reader-folio: #b8ad94;
+        background: radial-gradient(ellipse at 50% 15%, #383a2d50, transparent 65%), #141611;
+      }
+      [data-theme="dark"] .book-reader-bar { background: #191c16; }
+      .book-reading-hint { text-align: center; color: #bfb399; font: 12px/1.5 system-ui, sans-serif; flex-shrink: 0; }
+      .book-hint-touch { display: none; }
+
       @media (max-width: 820px) {
+        .book-reader-overlay,
+        [data-theme="dark"] .book-reader-overlay { background: var(--reader-paper); }
+        .book-reader-bar,
+        [data-theme="dark"] .book-reader-bar { background: var(--reader-paper); color: var(--reader-ink); border-bottom-color: #88755233; }
+        .book-reader-eyebrow { color: var(--reader-folio); }
+        .book-reader-overlay .book-tool-btn { color: var(--reader-ink); border-color: #88755244; background: transparent; }
+        .book-font-controls { border-color: #88755244; }
+        .book-bookmark-status, .book-indicator, .book-reading-hint { color: var(--reader-folio); }
+        .book-progress { background: #88755222; height: 3px; }
+        .book-progress-fill { background: var(--reader-chapter); }
+        #bookReaderOverlay .book-tool-btn:focus-visible,
+        #bookReaderOverlay .book-nav-btn:focus-visible { outline-color: var(--reader-chapter); outline-offset: 2px; }
+        .book-reader-bar { flex-direction: column; align-items: stretch; gap: 12px; padding: max(14px, env(safe-area-inset-top)) 16px 12px; }
+        .book-reader-heading { padding-right: 56px; }
+        .book-reader-tools { justify-content: space-between; }
+        #bookReaderClose { position: absolute; top: max(14px, env(safe-area-inset-top)); right: 16px; }
         .book-book {
-          width: 94vw;
-          height: min(74vh, 640px);
+          grid-column: 1 / -1;
+          grid-row: 1;
+          width: 100%;
+          height: 100%;
+          max-height: none;
+          box-shadow: none;
         }
+        .book-book::before, .book-book::after, .book-running-head { display: none; }
+        .book-book.single .book-page.right { border-radius: 0; box-shadow: none; }
         .book-page,
         .book-flip-face {
-          padding: 26px 22px 40px;
+          padding: 30px max(24px, env(safe-area-inset-right)) 38px max(24px, env(safe-area-inset-left));
           font-size: 18px;
         }
         .book-nav-btn {
           width: 44px;
           height: 44px;
           font-size: 1.2rem;
+          color: var(--reader-ink);
+          background: #88755212;
+          border: 1px solid #88755233;
         }
         .book-stage {
-          gap: 8px;
-          padding: 0 8px 6px;
+          display: grid;
+          grid-template-columns: 1fr 1fr;
+          grid-template-rows: minmax(0, 1fr) 44px;
+          gap: 0 28px;
+          padding: 0;
         }
+        #bookPrev { grid-row: 2; grid-column: 1; justify-self: end; }
+        #bookNext { grid-row: 2; grid-column: 2; justify-self: start; }
         .book-reader-title {
-          max-width: 40vw;
+          max-width: 100%;
         }
+        .book-hint-keyboard { display: none; }
+        .book-hint-touch { display: inline; }
+      }
+
+      /* Landscape uses compact chrome and side controls to preserve text height. */
+      @media (min-width: 601px) and (max-height: 500px) {
+        .book-reader-bar { flex-direction: row; align-items: center; padding: 8px 16px; }
+        .book-reader-heading { padding-right: 0; }
+        .book-reader-eyebrow { display: none; }
+        .book-reader-title { max-width: 32vw; }
+        #bookReaderClose { position: static; }
+        .book-stage { display: flex; gap: 12px; padding: 12px 16px 8px; }
+        .book-book { width: calc(100% - 112px); height: 100%; }
+        .book-page, .book-flip-face { padding: 26px 22px 40px; }
+        .book-running-head { display: none; }
+        .book-page .book-chapter, .book-flip-face .book-chapter, .book-measure .book-chapter { font-size: 1.35em; margin: .2em 0 .9em; padding-bottom: 0; border: 0; }
       }
 
       /* ==================== 我的書櫃 ==================== */
