@@ -2,6 +2,28 @@ const test = require('node:test');
 const assert = require('node:assert/strict');
 const design = require('../public/js/book-design');
 const { books, titles } = require('./fixtures/bookshelf-books');
+
+test('16 art directions have distinct geometry, reproducible variants and safe output', () => {
+  assert.equal(design.STYLES.length, 16);
+  const geometry = new Set();
+  for (const style of design.STYLES) {
+    const first = design.generate(style.words[0] + ' 典藏一', 1);
+    const second = design.generate(style.words[0] + ' 典藏二', 2);
+    assert.equal(first.direction, style.id);
+    assert.equal(second.direction, style.id);
+    assert.equal(first.directionName, style.name);
+    assert.deepEqual(first, design.generate(style.words[0] + ' 典藏一', 999));
+    const svg = design.ornament(first);
+    assert.match(svg, new RegExp('data-art-direction="' + style.id + '"'));
+    assert.notEqual(svg, design.ornament(second));
+    assert.doesNotMatch(svg, /NaN|undefined|<script|onload|<image|<foreignObject|href=/);
+    assert.ok(svg.length < 50000);
+    const neutral = {...first, seed:'same',patternSeed:123,composition:'central',pattern:'lines',secondaryPattern:null,frame:'none',color:'#333333',ink:'#eeeeee',accent:'#aaaaaa',titleBox:[20,26,160,87]};
+    geometry.add(design.ornament(neutral).replace(/data-art-direction="[^"]*"/g,''));
+  }
+  assert.equal(geometry.size, 16, 'directions differ beyond names, color and seed');
+  assert.ok(new Set(books.map(b=>design.generate(b.title,b.id).direction)).size >= 12);
+});
 test('48 books have unique structural configurations without color, title or random IDs', () => {
   const signatures = books.map(b => design.structuralSignature(design.generate(b.title, b.id)));
   assert.equal(new Set(signatures).size, 48);
@@ -19,6 +41,14 @@ test('normalization, reload and sorting preserve designs; unnamed books use IDs'
   assert.deepEqual(design.generate('NEON City', 1), design.generate('neon city', 5));
   assert.notDeepEqual(design.generate('未命名', 1), design.generate('未命名', 2));
   assert.deepEqual(books.map(b => design.generate(b.title, b.id)), books.slice().reverse().map(b => design.generate(b.title, b.id)).reverse());
+});
+test('typography budgets displayed punctuation without changing seeded artwork', () => {
+  const plain = design.generate('哥德時間的藏書', 1);
+  const punctuated = design.generate('哥德：時間的藏書', 1);
+  assert.equal(punctuated.seed, plain.seed);
+  assert.equal(design.structuralSignature(punctuated), design.structuralSignature(plain));
+  assert.equal(design.ornament(punctuated), design.ornament(plain));
+  assert.ok(punctuated.fontSize < plain.fontSize);
 });
 test('mixed topics blend and unknown titles fall back deterministically', () => {
   const mixed = design.generate('星艦上的魔法師', 1);

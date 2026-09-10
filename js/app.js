@@ -9426,7 +9426,7 @@ ${continueWordReq}
       function createShelfCover(appearance) {
         const { name, design: d, svg } = appearance;
         const cover = document.createElement('span');
-        cover.className = `book-object binding-${d.structure} material-${d.material} layout-${d.layout} composition-${d.composition} frame-${d.frame} metal-${d.metal}`;
+        cover.className = `book-object direction-${d.direction} binding-${d.structure} material-${d.material} layout-${d.layout} composition-${d.composition} frame-${d.frame} metal-${d.metal}`;
         cover.dataset.design = d.seed;
         const vars = { '--cover-color': d.color, '--cover-ink': d.ink, '--cover-accent': d.accent,
           '--book-width': d.width + '%', '--book-height': d.height + '%', '--book-thickness': d.thickness + 'px',
@@ -9441,7 +9441,7 @@ ${continueWordReq}
         title.className = 'cover-title'; title.textContent = name;
         if (/[a-z]/i.test(name)) title.classList.add('has-latin');
         const imprint = document.createElement('span');
-        imprint.className = 'cover-imprint'; imprint.textContent = d.collection;
+        imprint.className = 'cover-imprint'; imprint.textContent = d.directionName;
         const shine = document.createElement('span'); shine.className = 'cover-shine';
         cover.append(art, title, imprint, shine);
         cover.setAttribute('aria-hidden', 'true');
@@ -9624,6 +9624,9 @@ ${continueWordReq}
         metaEl.innerHTML =
           `<span>📅 ${formatDate(bm.id)}</span><span>📝 ${formatWordCount(bm.content || '')}</span>`
           + (isSeries ? `<span>📚 ${bm.totalVolumes || bm.volumes.length} 集</span>` : '');
+        const bindingLabel = document.createElement('span');
+        bindingLabel.textContent = getShelfAppearance(bm).design.directionName;
+        metaEl.appendChild(bindingLabel);
         const previewEl = document.getElementById('bookDetailPreview');
         if (isSeries) {
           const volLines = bm.volumes.map((v, i) => {

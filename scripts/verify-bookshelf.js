@@ -6,12 +6,14 @@ const os = require('node:os');
 const { spawn } = require('node:child_process');
 const { CdpClient, poll, getJson, stopProcess, setViewport } = require('./verify-editorial-console');
 const { books } = require('../test/fixtures/bookshelf-books');
+const { STYLES } = require('../public/js/book-design');
 const baseline = process.argv.includes('--baseline');
 const root = path.join(__dirname, '..');
 const output = path.resolve(process.env.SHELF_QA_OUTPUT || path.join(os.tmpdir(), 'novel-bookshelf-qa'));
 const fixture = Array.from({ length: 200 }, (_, i) => ({ ...books[i % 48], id: 1720000000000 + i,
   tags: i < 48 ? [...books[i].tags, 'gallery', `sample-${i}-only`] : ['performance'],
-  title: i < 48 ? books[i].title : books[i % 48].title + ' · ' + (i + 1) }));
+  title: i < 48 ? books[i].title : books[i % 48].title + ' · ' + (i + 1),
+  ...(i>=48 && i<64 ? {title:STYLES[i-48].words[0]+'：時間的藏書',tags:['styles',`style-page-${Math.floor((i-48)/8)+1}`],kind:'novel',volumes:[],totalVolumes:1} : {}) }));
 const settle = client => client.evaluate('new Promise(r => requestAnimationFrame(() => requestAnimationFrame(r)))');
 async function click(client, selector, touch = false) {
   const p = await client.evaluate(`(() => { const e=document.querySelector(${JSON.stringify(selector)}); e.scrollIntoView({block:'nearest'}); const r=e.getBoundingClientRect(); return {x:r.x+r.width/2,y:r.y+r.height/2}; })()`);
@@ -123,6 +125,25 @@ async function run() {
       await client.evaluate(`(() => {const s=document.createElement('style');s.id='qa-grayscale';s.textContent='.book-object {filter:grayscale(1)} .cover-title,.cover-imprint,.shelf-caption,.shelf-book-meta {visibility:hidden}';document.head.append(s)})()`);
       await screenshot(client,'fantasy-grayscale-no-titles');
       await client.evaluate("document.getElementById('qa-grayscale').remove()");
+      await setViewport(client,1280);
+      const directions = new Set();
+      for (const page of [1,2]) {
+        await search(client,`style-page-${page}`);
+        assert.equal(await client.evaluate("document.querySelectorAll('.shelf-book').length"),8);
+        for(const id of await client.evaluate("[...document.querySelectorAll('.shelf-book [data-art-direction]')].map(e=>e.dataset.artDirection)")) directions.add(id);
+        await screenshot(client,`styles-${page}`);
+        await client.evaluate(`(() => {const s=document.createElement('style');s.id='qa-grayscale';s.textContent='.book-object {filter:grayscale(1)} .cover-title,.cover-imprint,.shelf-caption,.shelf-book-meta {visibility:hidden}';document.head.append(s)})()`);
+        await screenshot(client,`styles-${page}-grayscale`);
+        await client.evaluate("document.getElementById('qa-grayscale').remove()");
+      }
+      assert.equal(directions.size,16);
+      await setViewport(client,375);
+      await search(client,'styles');
+      const clippedStyles = await client.evaluate("[...document.querySelectorAll('.cover-title')].filter(e=>e.scrollHeight>e.clientHeight+2 || e.scrollWidth>e.clientWidth+2).map(e=>({title:e.textContent,layout:e.className,width:e.clientWidth,height:e.clientHeight,scrollWidth:e.scrollWidth,scrollHeight:e.scrollHeight}))");
+      assert.deepEqual(clippedStyles, [], '375px art direction title fit');
+      await screenshot(client,'styles-mobile');
+      await setViewport(client,1536);
+      report.artDirections = [...directions];
       await search(client,'sample-0-only');
       await key(client,'Tab','Tab',9,8);
       assert.equal(await client.evaluate('document.activeElement.className'),'shelf-book');
@@ -218,7 +239,7 @@ async function run() {
       assert.equal(exported.length,202);
       assert.deepEqual(exported.find(b=>b.id===fixture[0].id),fixture[0]);
       assert.ok(exported.every(b=>!('design' in b) && !('appearance' in b)));
-      await poll('offline shell cached',()=>client.evaluate(`caches.open('novel-workshop-v91').then(async c => !!(await c.match('./js/book-design.js')) && !!(await c.match('./css/bookshelf-atelier.css')))`));
+      await poll('offline shell cached',()=>client.evaluate(`caches.open('novel-workshop-v92').then(async c => !!(await c.match('./js/book-design.js')) && !!(await c.match('./css/bookshelf-atelier.css')))`));
       await client.send('Network.emulateNetworkConditions',{offline:true,latency:0,downloadThroughput:0,uploadThroughput:0});
       await client.evaluate('window.__qaReloading=true');
       await client.send('Page.reload');
