@@ -1,0 +1,89 @@
+/* Phone interaction layer: original controls and events, larger separated targets. */
+@media (max-width: 768px) {
+  html { scroll-padding-block: 16px calc(156px + env(safe-area-inset-bottom, 0px)); }
+  body { padding-bottom: calc(156px + env(safe-area-inset-bottom, 0px)); }
+  body button, body summary, body select { min-width: 44px; min-height: 44px; touch-action: manipulation; }
+  body input, body textarea { touch-action: manipulation; }
+  body button { scroll-margin-block: 16px; }
+  body #dockToggle { display: none; }
+  body.dock-collapsed :is(.floating-toolbar,.api-panel,.chapter-nav-container,.bookmark-nav-container) {
+    transform: none; opacity: 1; pointer-events: auto;
+  }
+
+  body .floating-toolbar {
+    gap: 6px; padding: 8px 8px calc(8px + env(safe-area-inset-bottom, 0px));
+    height: calc(76px + env(safe-area-inset-bottom, 0px)); box-sizing: border-box;
+  }
+  body .floating-toolbar .toolbar-divider { display: none; }
+  body .floating-toolbar .toolbar-btn {
+    min-width: 48px; min-height: 58px; height: 58px; gap: 6px;
+    padding: 6px 2px; border-radius: 8px; transform: none;
+  }
+  body .floating-toolbar > .toolbar-download-wrap { min-width: 48px; }
+  /* The global ripple uses ::after with zero size / absolute positioning. Labels must opt out. */
+  body .floating-toolbar .toolbar-btn::after {
+    content: attr(title); position: static; display: block; width: auto; height: auto;
+    top: auto; left: auto; transform: none; background: none; border-radius: 0;
+    opacity: 1; transition: none; font-size: 10px; line-height: 1.3; white-space: nowrap;
+  }
+  body .floating-toolbar .toolbar-btn::before { font-size: 18px; }
+
+  /* One secondary row instead of three floating buttons covering the right side. */
+  body .floating-toolbar::before {
+    content: ''; position: absolute; left: 0; right: 0; bottom: 100%; height: 60px;
+    background: var(--card-bg, #fffdf8); border-top: 1px solid var(--border);
+  }
+  body :is(.chapter-nav-container,.bookmark-nav-container,.settings-panel) {
+    position: fixed; top: auto; bottom: calc(82px + env(safe-area-inset-bottom, 0px));
+    width: calc((100% - 40px) / 3); right: auto; z-index: 3601;
+  }
+  body .bookmark-nav-container { left: 12px; }
+  body .settings-panel { left: calc((100% - 40px) / 3 + 20px); }
+  body .chapter-nav-container { left: calc((100% - 40px) / 3 * 2 + 28px); }
+  body.library-open :is(.chapter-nav-container,.bookmark-nav-container,.settings-panel) { display: none; }
+  body :is(.chapter-nav-toggle,.bookmark-nav-toggle,.settings-toggle) {
+    width: 100%; height: 48px; padding: 8px; border-radius: 7px; box-shadow: none;
+    display: flex; align-items: center; justify-content: center; transform: none;
+  }
+  body :is(.chapter-nav-toggle,.bookmark-nav-toggle,.settings-toggle) .text-char { display: none; }
+  body :is(.chapter-nav-toggle,.bookmark-nav-toggle,.settings-toggle)::after {
+    content: attr(title); position: static; width: auto; height: auto; background: none;
+    transform: none; border-radius: 0; font-size: 13px; line-height: 1.4; color: #fff;
+  }
+  body :is(.chapter-nav-panel,.bookmark-nav-panel,.settings-dropdown),
+  body .api-panel, body .api-panel.open {
+    position: fixed; left: 12px; right: 12px; top: auto;
+    bottom: calc(142px + env(safe-area-inset-bottom, 0px));
+    width: auto; max-width: none; max-height: calc(100dvh - 166px - env(safe-area-inset-bottom, 0px));
+    box-sizing: border-box; overflow-y: auto;
+  }
+  body .toolbar-download-menu { bottom: calc(142px + env(safe-area-inset-bottom, 0px)); }
+  body :is(.settings-dropdown,.api-panel,.chapter-nav-panel,.bookmark-nav-panel):not(.open) { pointer-events: none; }
+  body .modal-overlay { z-index: 4001; }
+  body .modal-overlay:not(.show):not(.open) { pointer-events: none; }
+  body #generationProgress.show { bottom: calc(142px + env(safe-area-inset-bottom, 0px)); }
+  body.is-generating { padding-bottom: calc(350px + env(safe-area-inset-bottom, 0px)); }
+  body :is(.chapter-nav-close,.api-panel-close,.settings-close,.modal-close) { min-width: 44px; min-height: 44px; }
+
+  body #readingScene .manuscript-tools { display: flex; flex-wrap: wrap; gap: 8px; }
+  body #readingScene :is(.manuscript-tools button,.manuscript-download summary,.manuscript-footer-actions button) {
+    min-width: 48px; min-height: 48px; padding: 12px; font-size: 13px;
+  }
+  body #readingScene .manuscript-paper-tools > div { gap: 8px; }
+  body #readingScene .manuscript-paper-tools button { min-width: 48px; min-height: 48px; }
+  body #readingScene .manuscript-continuity summary { min-height: 44px; }
+  body #readingScene .manuscript-footer { padding: 16px; }
+  body #readingScene .manuscript-follow { min-height: 48px; padding: 4px; font-size: 13px; }
+  body #readingScene .manuscript-footer-actions { gap: 10px; justify-content: flex-start; }
+  body .editorial-console :is(.btn-small,.btn-outline) { min-height: 48px; }
+  body .editorial-modal :is(.special-element-item,.setting-chip,.toggle-label) { min-height: 44px; }
+  body .workspace-modal--special .special-elements-controls-top .se-clear-btn { min-height: 44px; }
+  body #deskLamp { min-height: 44px; }
+}
+@media (max-width: 360px) {
+  body .floating-toolbar { gap: 3px; padding-inline: 6px; }
+}
+@media (max-width: 768px) and (hover: none) {
+  body button:hover { transform: none; }
+  body button:active:not(:disabled) { filter: brightness(.9); }
+}

@@ -9455,6 +9455,15 @@ ${continueWordReq}
         return shelfDesignCache.get(key);
       }
 
+      // Batch reads before writes; hidden/virtualized shelves must not depend on container font units.
+      function syncShelfTypography() {
+        if (!document.body.classList.contains('library-open')) return;
+        const sizes = [...document.querySelectorAll('#bookshelfModal .book-object')].map(cover => [cover, cover.clientWidth]);
+        for (const [cover, width] of sizes) {
+          if (width > 0) cover.style.setProperty('--cover-unit', width / 100 + 'px');
+        }
+      }
+
       function createShelfCover(appearance) {
         const { name, design: d, svg } = appearance;
         const cover = document.createElement('span');
@@ -9462,7 +9471,7 @@ ${continueWordReq}
         cover.dataset.design = d.seed;
         const vars = { '--cover-color': d.color, '--cover-ink': d.ink, '--cover-accent': d.accent,
           '--book-width': d.width + '%', '--book-height': d.height + '%', '--book-thickness': d.thickness + 'px',
-          '--title-size': d.fontSize/2 + 'cqw', '--spine-size': d.spineFontSize + 'px', '--title-x': d.titleBox[0]/2 + '%', '--title-y': d.titleBox[1]/3 + '%',
+          '--title-size': `calc(${d.fontSize / 2} * var(--cover-unit, 1px))`, '--spine-size': d.spineFontSize + 'px', '--title-x': d.titleBox[0]/2 + '%', '--title-y': d.titleBox[1]/3 + '%',
           '--title-w': d.titleBox[2]/2 + '%', '--title-h': d.titleBox[3]/3 + '%' };
         for (const [key, value] of Object.entries(vars)) cover.style.setProperty(key, value);
         const art = document.createElement('span');
@@ -9614,6 +9623,7 @@ ${continueWordReq}
           row.appendChild(button);
         });
         body.appendChild(fragment);
+        syncShelfTypography();
         if (focusId) [...body.querySelectorAll('.shelf-book')].find(b => b.dataset.bookId === focusId)?.focus({ preventScroll: true });
       }
 
@@ -9673,6 +9683,7 @@ ${continueWordReq}
             (bm.content || '').replace(/[#*]/g, '').replace(/\n+/g, ' ').substring(0, 140) + '…';
         }
         document.getElementById('bookDetail').classList.add('open');
+        syncShelfTypography();
         document.getElementById('bookDetailClose').focus({ preventScroll: true });
       }
 
@@ -9699,6 +9710,7 @@ ${continueWordReq}
             const width = scroller.clientWidth - parseFloat(getComputedStyle(scroller).paddingLeft) - parseFloat(getComputedStyle(scroller).paddingRight);
             const columns = shelfView === 'cover' ? (width < 600 ? 2 : Math.max(2, Math.floor(width / 200))) : Math.max(2, Math.floor(width / 82));
             if (columns !== shelfColumns) renderBookshelf();
+            else syncShelfTypography();
           });
         }).observe(document.querySelector('.bookshelf-scroll'));
       }
