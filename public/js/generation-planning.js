@@ -262,7 +262,7 @@ ${writingPrompt}`;
     return selected && typeof selected === 'object' ? selected.value : selected;
   }
 
-  function buildAdvancedRandomSelection({ seed, mode = 'rich', options } = {}) {
+  function buildAdvancedRandomSelection({ seed, mode = 'rich', options, current = {} } = {}) {
     const normalizedMode = Object.hasOwn(DIVERSITY_POOL_FRACTIONS, mode) ? mode : 'rich';
     const fraction = DIVERSITY_POOL_FRACTIONS[normalizedMode];
     const source = options || {};
@@ -271,7 +271,8 @@ ${writingPrompt}`;
       const items = Array.isArray(source[key]) ? source[key] : [];
       const poolSize = key === 'era' ? items.length : Math.max(1, Math.ceil(items.length * fraction));
       const pool = items.slice(0, poolSize);
-      result[key] = pickSeededValue(pool, createSeededRandom(seed, `advanced:${key}`));
+      const alternatives = pool.filter(item => (item && typeof item === 'object' ? item.value : item) !== current[key]);
+      result[key] = pickSeededValue(alternatives.length ? alternatives : pool, createSeededRandom(seed, `advanced:${key}`));
     }
     return result;
   }

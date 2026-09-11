@@ -5456,10 +5456,24 @@
       function randomizeAdvancedSettings() {
         if (!narrativeSelect) return;
         const planner = globalThis.NovelGenerationPlanning;
+        const current = {
+          narrative: narrativeSelect.value,
+          era: eraSelect.value,
+          pacing: pacingSelect.value,
+          rating: ratingSelect.value,
+          worldComplexity: worldComplexitySelect.value,
+          emotionalTone: emotionalToneSelect.value,
+          ending: endingSelect.value
+        };
+        const choose = (options, value) => {
+          const alternatives = options.filter(item => item.value !== value);
+          return pickRandom(alternatives.length ? alternatives : options).value;
+        };
         const selection = planner && typeof planner.buildAdvancedRandomSelection === 'function'
           ? planner.buildAdvancedRandomSelection({
-              seed: getRandomSeed(),
+              seed: createLocalRandomSeed(),
               mode: getDiversityMode(),
+              current,
               options: {
                 narrative: narrativeOptions,
                 era: eraOptions,
@@ -5471,13 +5485,13 @@
               }
             })
           : {
-              narrative: pickRandom(narrativeOptions).value,
-              era: pickRandom(eraOptions).value,
-              pacing: pickRandom(pacingOptions).value,
-              rating: pickRandom(ratingOptions).value,
-              worldComplexity: pickRandom(worldComplexityOptions).value,
-              emotionalTone: pickRandom(emotionalToneOptions).value,
-              ending: pickRandom(endingOptions).value
+              narrative: choose(narrativeOptions, current.narrative),
+              era: choose(eraOptions, current.era),
+              pacing: choose(pacingOptions, current.pacing),
+              rating: choose(ratingOptions, current.rating),
+              worldComplexity: choose(worldComplexityOptions, current.worldComplexity),
+              emotionalTone: choose(emotionalToneOptions, current.emotionalTone),
+              ending: choose(endingOptions, current.ending)
             };
         narrativeSelect.value = selection.narrative;
         eraSelect.value = selection.era;

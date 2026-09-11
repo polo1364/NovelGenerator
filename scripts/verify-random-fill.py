@@ -35,6 +35,20 @@ with sync_playwright() as p:
             activate = lambda selector: page.locator(selector).tap() if width < 500 else page.locator(selector).click()
             activate('#openAdvancedModalBtn')
             page.locator('#randomSeed').fill('keep-my-story-seed')
+            advanced_names = ['narrative', 'era', 'pacing', 'rating', 'worldComplexity', 'emotionalTone', 'ending']
+            read_advanced = lambda: [page.locator('#' + name).input_value() for name in advanced_names]
+            for mode in ['stable', 'rich', 'experimental']:
+                page.locator('#diversityMode').select_option(mode)
+                previous_advanced = read_advanced()
+                for attempt in range(5):
+                    activate('#randomAdvancedBtn')
+                    current_advanced = read_advanced()
+                    assert all(current_advanced), current_advanced
+                    assert current_advanced != previous_advanced, f'{engine}/{width}/{mode} advanced click {attempt + 1} reused selections: {current_advanced}'
+                    previous_advanced = current_advanced
+                    assert page.locator('#randomSeed').input_value() == 'keep-my-story-seed'
+                    assert page.locator('#diversityMode').input_value() == mode
+            page.locator('#advancedSettingsModal').screenshot(path=str(OUT / f'advanced-{engine}-{width}.png'))
             activate('#advancedSettingsModal .modal-close')
             activate('#openStoryModalBtn')
             previous = None
@@ -49,6 +63,12 @@ with sync_playwright() as p:
             page.locator('#storyElementsModal').screenshot(path=str(OUT / f'{engine}-{width}.png'))
             activate('#storyElementsModal .modal-close')
             page.reload(wait_until='networkidle')
+            activate('#openAdvancedModalBtn')
+            assert read_advanced() == previous_advanced
+            activate('#randomAdvancedBtn')
+            assert read_advanced() != previous_advanced
+            assert page.locator('#randomSeed').input_value() == 'keep-my-story-seed'
+            activate('#advancedSettingsModal .modal-close')
             activate('#openStoryModalBtn')
             assert [page.locator('#' + name).input_value() for name in ['theme', 'setting', 'style']] == previous
             activate('#randomStoryElementsBtn')

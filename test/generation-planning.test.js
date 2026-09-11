@@ -182,6 +182,31 @@ test('同一種子可重現整組進階設定', () => {
   assert.deepEqual(first, second);
 });
 
+test('進階重抽避開目前選項但不超出創意幅度範圍', () => {
+  const keys = ['narrative', 'era', 'pacing', 'rating', 'worldComplexity', 'emotionalTone', 'ending'];
+  const options = Object.fromEntries(keys.map(key => [key, Array.from({ length: 8 }, (_, i) => ({ value: `${key}-${i}` }))]));
+  for (const mode of ['stable', 'rich', 'experimental']) {
+    let current = planning.buildAdvancedRandomSelection({ seed: 'repeatable', mode, options });
+    for (let i = 0; i < 5; i++) {
+      const next = planning.buildAdvancedRandomSelection({ seed: 'repeatable', mode, options, current });
+      assert.deepEqual(next, planning.buildAdvancedRandomSelection({ seed: 'repeatable', mode, options, current }));
+      for (const key of keys) {
+        assert.notEqual(next[key], current[key]);
+        const limit = key === 'era' ? 8 : Math.ceil(8 * ({ stable: 0.25, rich: 0.65, experimental: 1 })[mode]);
+        assert.ok(options[key].slice(0, limit).some(item => item.value === next[key]));
+      }
+      current = next;
+    }
+  }
+});
+
+test('進階重抽允許單一選項保持不變並處理空選項', () => {
+  const selection = planning.buildAdvancedRandomSelection({ seed: 'single', mode: 'stable', options: { narrative: [{ value: 'only' }, { value: 'outside' }], era: ['only'] }, current: { narrative: 'only', era: 'only' } });
+  assert.equal(selection.narrative, 'only');
+  assert.equal(selection.era, 'only');
+  assert.equal(selection.ending, '');
+});
+
 test('創意幅度會調整正文溫度但不影響狀態整理', () => {
   const stable = planning.getSamplingProfile('story', 'stable');
   const rich = planning.getSamplingProfile('story', 'rich');
@@ -207,7 +232,7 @@ test('工作坊依序載入規劃模組並快取到新版離線殼層', () => {
   const sw = fs.readFileSync(path.join(__dirname, '..', 'public', 'sw.js'), 'utf8');
 
   assert.match(html, /generation-planning\.js[\s\S]*app\.js/);
-  assert.match(sw, /const CACHE_VERSION\s*=\s*'v101'/);
+  assert.match(sw, /const CACHE_VERSION\s*=\s*'v102'/);
   assert.match(sw, /\.\/js\/generation-planning\.js/);
 });
 
