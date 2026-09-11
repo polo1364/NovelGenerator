@@ -7,7 +7,7 @@
    - /api/* 與 /reader/* 不走 SW
    ============================================================ */
 
-const CACHE_VERSION = 'v100';
+const CACHE_VERSION = 'v101';
 const CACHE_NAME = `novel-workshop-${CACHE_VERSION}`;
 
 const APP_SHELL = [
@@ -26,6 +26,7 @@ const APP_SHELL = [
   './js/book-design.js',
   './js/deepseek-pricing.js',
   './js/generation-planning.js',
+  './js/character-design.js',
   './js/app.js',
   './js/edge-tts-speech.js',
   './js/tts-polyphone-hints.js',

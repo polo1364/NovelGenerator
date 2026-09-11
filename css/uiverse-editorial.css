@@ -116,7 +116,7 @@
 
 .editorial-console .editorial-console__modules {
   display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
+  grid-template-columns: repeat(4, minmax(0, 1fr));
   gap: 14px;
 }
 
@@ -516,7 +516,7 @@
 
 @media (min-width: 768px) {
   .editorial-console .editorial-workspace {
-    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+    grid-template-columns: minmax(0, 1fr);
     align-items: start;
   }
 }
@@ -639,4 +639,19 @@
   .editorial-modal .drama-switch-text::after {
     transform: none;
   }
+}
+
+/* 人物設定沿用既有編輯視窗；較長的設定可換行，不擠壓手機欄位。 */
+.workspace-modal--character { max-width: 960px; }
+.workspace-modal--character .char-field textarea { width: 100%; min-width: 0; min-height: 80px; resize: vertical; font: inherit; }
+.workspace-modal--character .character-context pre { white-space: pre-wrap; overflow-wrap: anywhere; font: inherit; }
+.workspace-modal--character summary { min-height: 48px; padding: 12px 8px; cursor: pointer; }
+.workspace-modal--character .character-more { margin-top: 14px; }
+.workspace-modal--character button { min-height: 48px; }
+.workspace-modal--character #characterDesignStatus { white-space: pre-wrap; overflow-wrap: anywhere; }
+.workspace-modal--character #characterDesignStatus[data-stale="true"] { border-left: 3px solid currentColor; padding-left: 10px; }
+.character-rules-note { margin-top: 24px; }
+.character-rules-note textarea { min-height: 130px; }
+@media (min-width: 601px) and (max-width: 1100px) {
+  .editorial-console .editorial-console__modules { grid-template-columns: repeat(2, minmax(0, 1fr)); }
 }

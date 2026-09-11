@@ -266,7 +266,7 @@
             <span class="wsl-icon" aria-hidden="true">📖</span>
             <span class="editorial-module-tag" aria-hidden="true">CORE</span>
             <span class="wsl-text">
-              <span class="wsl-title">故事元素</span>
+              <span class="wsl-title">① 故事設定</span>
               <span class="wsl-sub" id="launcherStorySub">尚未設定</span>
             </span>
           </button>
@@ -274,7 +274,7 @@
             <span class="wsl-icon" aria-hidden="true">🎛️</span>
             <span class="editorial-module-tag" aria-hidden="true">TUNE</span>
             <span class="wsl-text">
-              <span class="wsl-title">進階設定</span>
+              <span class="wsl-title">② 進階設定</span>
               <span class="wsl-sub" id="launcherAdvancedSub">尚未設定</span>
             </span>
           </button>
@@ -282,9 +282,13 @@
             <span class="wsl-icon" aria-hidden="true">✨</span>
             <span class="editorial-module-tag" aria-hidden="true">SPICE</span>
             <span class="wsl-text">
-              <span class="wsl-title">特殊元素</span>
+              <span class="wsl-title">③ 特殊元素與規則</span>
               <span class="wsl-sub" id="launcherSpecialSub">尚未設定</span>
             </span>
+          </button>
+          <button type="button" id="openCharacterModalBtn" class="workspace-launcher-btn editorial-module">
+            <span class="wsl-icon" aria-hidden="true">👤</span><span class="editorial-module-tag" aria-hidden="true">CAST</span>
+            <span class="wsl-text"><span class="wsl-title">④ 人物設計</span><span class="wsl-sub" id="launcherCharacterSub">尚未設定</span></span>
           </button>
         </div>
 
@@ -310,18 +314,13 @@
             </div>
             <div class="config-summary-body" id="summarySpecial"></div>
           </section>
+          <section class="config-summary-block" data-block="character">
+            <div class="config-summary-head"><h3 class="config-summary-title">👤 人物設計</h3><button type="button" class="btn-outline btn-small config-summary-edit" data-open-modal="character">編輯</button></div>
+            <div class="config-summary-body" id="summaryCharacter"></div>
+          </section>
         </div>
 
         <div class="editorial-workspace">
-        <!-- 自訂規則 -->
-        <div class="section editorial-note">
-          <h2 class="section-title" data-icon="📌">自訂規則</h2>
-          <div class="input-group input-group--flush">
-            <p class="input-group-desc">補充故事元素與進階設定未涵蓋的要求；生成大綱、設計角色與撰寫正文時會強制遵守。劇情大綱請在下方「預覽大綱」管理，勿寫在此。</p>
-            <textarea id="notes" aria-label="自訂規則" placeholder="例如：結局必須是悲劇、禁止穿越設定、全劇不可出現男性角色…"></textarea>
-          </div>
-        </div>
-
         <!-- 預覽大綱（與補充說明分開顯示） -->
         <div class="section editorial-outline" id="outlineAttachSection">
           <h2 class="section-title" data-icon="📋">預覽大綱</h2>
@@ -902,6 +901,35 @@
 
     </div>
 
+    <!-- 人物設定：在完整故事條件之後設計 -->
+    <div id="characterSettingsModal" class="modal-overlay" role="dialog" aria-modal="true" aria-labelledby="characterModalTitle">
+      <div class="modal-content workspace-modal workspace-modal--character editorial-modal">
+        <div class="modal-header">
+          <span class="modal-title" id="characterModalTitle">④ 人物設計</span>
+          <button type="button" class="modal-close" data-modal-close="character" aria-label="關閉">✕</button>
+        </div>
+        <div class="modal-body editorial-modal__body">
+          <details class="character-context"><summary>本次人物設計會參考的故事條件</summary><pre id="characterDesignContext"></pre></details>
+          <p id="characterDesignStatus" class="char-hint" role="status" aria-live="polite"></p>
+          <div class="workspace-char-card input-group" id="stepCast">
+            <div class="label-row">
+              <label>主要人物設定</label>
+              <div class="label-row-actions">
+                <button id="aiGenerateCharactersBtn" type="button" class="btn-outline btn-small" title="依你目前的人物列數量，呼叫 AI 完整設計一組彼此關聯、貼合劇情的角色，所有欄位一次生成好供你微調（會覆蓋現有內容，覆蓋前會先詢問；想要幾位就先用「+ 新增人物」調整列數）">✨ AI 設計角色群</button>
+                <button id="namePoolBtn" type="button" class="btn-outline btn-small" title="管理自訂人名清單；勾選的名字供 AI 挑選（不必依順序）">📋 人名清單</button>
+                <button id="randomAllCharactersBtn" type="button" class="btn-outline btn-small" title="不參考故事設定，純從內建詞庫隨機抽選，把目前每一列重新填滿（免費、瞬間完成）">🎲 隨機湊組</button>
+                <button id="addCharacterBtn" type="button" class="btn-outline btn-small" title="新增一位空白人物">+ 新增人物</button>
+              </div>
+            </div>
+            <p class="char-hint">✨ <strong>AI 設計</strong>：依完整故事條件及「目前人物列數量」生成貼合劇情、彼此連貫的角色群，所有欄位一次設計好供你微調（覆蓋現有內容，覆蓋前會詢問；想要幾位先用「+ 新增人物」加列；建議先完成前三區故事條件，需付費 API）。🎲 <strong>隨機湊組</strong>：純詞庫亂數，快但不看劇情。</p>
+            <div id="characterTabs" class="char-tabs"></div>
+            <div id="charactersContainer"></div>
+          </div>
+        </div>
+        <div class="workspace-modal-footer"><button type="button" class="btn-primary" data-modal-done="character">完成</button></div>
+      </div>
+    </div>
+
     <!-- 大綱預覽模態視窗 -->
     <div id="namePoolModal" class="modal-overlay">
       <div class="modal-content name-pool-modal">
@@ -936,7 +964,7 @@
     <div id="storyElementsModal" class="modal-overlay" role="dialog" aria-modal="true" aria-labelledby="storyModalTitle">
       <div class="modal-content workspace-modal workspace-modal--story editorial-modal">
         <div class="modal-header">
-          <span class="modal-title" id="storyModalTitle">📖 故事元素</span>
+          <span class="modal-title" id="storyModalTitle">① 故事設定</span>
           <button type="button" class="modal-close" data-modal-close="story" aria-label="關閉">✕</button>
         </div>
         <div class="modal-body editorial-modal__body">
@@ -962,20 +990,6 @@
                 <option value="">請選擇風格</option>
               </select>
             </div>
-          </div>
-          <div class="workspace-char-card input-group" id="stepCast">
-            <div class="label-row">
-              <label>主要人物設定</label>
-              <div class="label-row-actions">
-                <button id="aiGenerateCharactersBtn" type="button" class="btn-outline btn-small" title="依你目前的人物列數量，呼叫 AI 完整設計一組彼此關聯、貼合劇情的角色，所有欄位一次生成好供你微調（會覆蓋現有內容，覆蓋前會先詢問；想要幾位就先用「+ 新增人物」調整列數）">✨ AI 設計角色群</button>
-                <button id="namePoolBtn" type="button" class="btn-outline btn-small" title="管理自訂人名清單；勾選的名字供 AI 挑選（不必依順序）">📋 人名清單</button>
-                <button id="randomAllCharactersBtn" type="button" class="btn-outline btn-small" title="不參考故事設定，純從內建詞庫隨機抽選，把目前每一列重新填滿（免費、瞬間完成）">🎲 隨機湊組</button>
-                <button id="addCharacterBtn" type="button" class="btn-outline btn-small" title="新增一位空白人物">+ 新增人物</button>
-              </div>
-            </div>
-            <p class="char-hint">✨ <strong>AI 設計</strong>：依「目前人物列數量」完整生成貼合劇情、彼此連貫的角色群，所有欄位一次設計好供你微調（覆蓋現有內容，覆蓋前會詢問；想要幾位先用「+ 新增人物」加列；建議先選好主題／背景，需 API）。🎲 <strong>隨機湊組</strong>：純詞庫亂數，快但不看劇情。</p>
-            <div id="characterTabs" class="char-tabs"></div>
-            <div id="charactersContainer"></div>
           </div>
           <div class="form-grid-2">
             <div class="input-group input-group--flush">
@@ -1009,7 +1023,7 @@
     <div id="advancedSettingsModal" class="modal-overlay" role="dialog" aria-modal="true" aria-labelledby="advancedModalTitle">
       <div class="modal-content workspace-modal workspace-modal--advanced editorial-modal">
         <div class="modal-header">
-          <span class="modal-title" id="advancedModalTitle">🎛️ 進階設定</span>
+          <span class="modal-title" id="advancedModalTitle">② 進階設定</span>
           <button type="button" class="modal-close" data-modal-close="advanced" aria-label="關閉">✕</button>
         </div>
         <div class="modal-body editorial-modal__body" id="advancedBody">
@@ -1017,6 +1031,49 @@
             <button id="randomAdvancedBtn" type="button" class="btn-outline btn-small advanced-random-btn" title="隨機設定敘事視角、時代、節奏、分級、世界觀、基調、結局傾向">🎲 隨機進階</button>
           </div>
           <div class="workspace-advanced-fields">
+            <div class="input-group input-group--flush">
+              <label for="era">時代設定</label>
+              <select id="era">
+                <option value="">請選擇時代</option>
+              </select>
+            </div>
+            <div class="input-group input-group--flush">
+              <label for="worldComplexity">世界觀複雜度</label>
+              <select id="worldComplexity">
+                <option value="">請選擇複雜度</option>
+              </select>
+            </div>
+            <div class="input-group input-group--flush">
+              <label for="rating">內容分級</label>
+              <select id="rating">
+                <option value="">請選擇分級</option>
+              </select>
+            </div>
+            <div class="input-group input-group--flush">
+              <label for="narrative">敘事視角</label>
+              <select id="narrative">
+                <option value="">請選擇視角</option>
+              </select>
+            </div>
+            <div class="input-group input-group--flush">
+              <label for="pacing">故事節奏</label>
+              <select id="pacing">
+                <option value="">請選擇節奏</option>
+              </select>
+            </div>
+            <div class="input-group input-group--flush">
+              <label for="emotionalTone">情感基調</label>
+              <select id="emotionalTone">
+                <option value="">請選擇基調</option>
+              </select>
+            </div>
+            <div class="input-group input-group--flush">
+              <label for="ending">結局傾向</label>
+              <select id="ending">
+                <option value="">請選擇結局</option>
+              </select>
+              <small class="char-hint hint-below">「番外預告」主線完結後會再寫一篇完整番外篇；「開放留白」等會補一段後日談；「續集鋪墊／伏筆結局」會建議分集（見故事元素中的預計集數）</small>
+            </div>
             <div class="input-group input-group--flush">
               <label for="diversityMode">創意幅度</label>
               <select id="diversityMode">
@@ -1033,49 +1090,6 @@
               </div>
               <small class="char-hint hint-below">同一種子可重現隨機設定組合；不保證 AI 正文逐字相同。</small>
             </div>
-            <div class="input-group input-group--flush">
-              <label for="narrative">敘事視角</label>
-              <select id="narrative">
-                <option value="">請選擇視角</option>
-              </select>
-            </div>
-            <div class="input-group input-group--flush">
-              <label for="era">時代設定</label>
-              <select id="era">
-                <option value="">請選擇時代</option>
-              </select>
-            </div>
-            <div class="input-group input-group--flush">
-              <label for="pacing">故事節奏</label>
-              <select id="pacing">
-                <option value="">請選擇節奏</option>
-              </select>
-            </div>
-            <div class="input-group input-group--flush">
-              <label for="rating">內容分級</label>
-              <select id="rating">
-                <option value="">請選擇分級</option>
-              </select>
-            </div>
-            <div class="input-group input-group--flush">
-              <label for="worldComplexity">世界觀複雜度</label>
-              <select id="worldComplexity">
-                <option value="">請選擇複雜度</option>
-              </select>
-            </div>
-            <div class="input-group input-group--flush">
-              <label for="emotionalTone">情感基調</label>
-              <select id="emotionalTone">
-                <option value="">請選擇基調</option>
-              </select>
-            </div>
-            <div class="input-group input-group--flush">
-              <label for="ending">結局傾向</label>
-              <select id="ending">
-                <option value="">請選擇結局</option>
-              </select>
-              <small class="char-hint hint-below">「番外預告」主線完結後會再寫一篇完整番外篇；「開放留白」等會補一段後日談；「續集鋪墊／伏筆結局」會建議分集（見故事元素中的預計集數）</small>
-            </div>
           </div>
         </div>
         <div class="workspace-modal-footer">
@@ -1088,7 +1102,7 @@
     <div id="specialElementsModal" class="modal-overlay" role="dialog" aria-modal="true" aria-labelledby="specialModalTitle">
       <div class="modal-content workspace-modal workspace-modal--special editorial-modal">
         <div class="modal-header">
-          <span class="modal-title" id="specialModalTitle">✨ 特殊元素</span>
+          <span class="modal-title" id="specialModalTitle">③ 特殊元素與規則</span>
           <button type="button" class="modal-close" data-modal-close="special" aria-label="關閉">✕</button>
         </div>
         <div class="modal-body editorial-modal__body">
@@ -1132,6 +1146,15 @@
               </div>
             </div>
           </div>
+        <!-- 自訂規則 -->
+        <div class="section character-rules-note">
+          <h2 class="section-title" data-icon="📌">自訂規則</h2>
+          <div class="input-group input-group--flush">
+            <p class="input-group-desc">補充故事元素與進階設定未涵蓋的要求；生成大綱、設計角色與撰寫正文時會強制遵守。劇情大綱請在下方「預覽大綱」管理，勿寫在此。</p>
+            <textarea id="notes" aria-label="自訂規則" placeholder="例如：結局必須是悲劇、禁止穿越設定、全劇不可出現男性角色…"></textarea>
+          </div>
+        </div>
+
         </div>
         <div class="workspace-modal-footer">
           <button type="button" class="btn-primary" data-modal-done="special">完成</button>
@@ -1308,6 +1331,7 @@
     <script defer src="js/edge-tts-speech.js"></script>
     <script defer src="js/deepseek-pricing.js"></script>
     <script defer src="js/generation-planning.js"></script>
+    <script defer src="js/character-design.js"></script>
     <script defer src="js/book-design.js"></script>
     <script defer src="js/manuscript-workspace.js"></script>
     <script defer src="js/app.js"></script>

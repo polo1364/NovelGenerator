@@ -1259,7 +1259,8 @@
         const prompt = planner.buildStoryStatePrompt({
           previousState: previous && previous.state,
           storyText: story,
-          chapterCount: countChapters(story)
+          chapterCount: countChapters(story),
+          characterCanon: collectCharactersInfo().charactersInfo
         });
 
         try {
@@ -5490,6 +5491,37 @@
       }
 
       // ==================== 人物設定 ====================
+      const characterExtraFields = globalThis.NovelCharacterDesign?.fields || [];
+      function readCharacterExtras(row) {
+        return Object.fromEntries(characterExtraFields.map(({ key }) => [key, row.querySelector(`.char-${key}`)?.value.trim() || '']));
+      }
+      function characterRowSignature(row) {
+        return JSON.stringify(Array.from(row.querySelectorAll('input, select, textarea')).map(el => el.value));
+      }
+      function collectCharacterDesignSnapshot() {
+        const settings = Object.fromEntries(['theme', 'setting', 'style', 'chapters', 'length', 'narrative', 'era', 'pacing', 'rating', 'worldComplexity', 'emotionalTone', 'ending', 'diversityMode']
+          .map(id => [id, document.getElementById(id)?.value || '']));
+        settings.volumes = getPlannedVolumes();
+        settings.notes = getUserNotesText();
+        settings.specialElements = Array.from(specialElementsContainer.querySelectorAll('.special-element-item.selected')).map(el => el.querySelector('.element-label')?.textContent || '');
+        const text = globalThis.NovelCharacterDesign?.buildContext(settings) || '';
+        const names = getSelectedNamePool().map(entry => `${entry.name}:${entry.gender}`).sort();
+        const key = globalThis.NovelGenerationPlanning.createStoryFingerprint(text + JSON.stringify(names));
+        return { text, key };
+      }
+      function updateCharacterDesignStatus() {
+        const panel = document.getElementById('characterDesignStatus');
+        if (!panel) return;
+        const snapshot = collectCharacterDesignSnapshot();
+        document.getElementById('characterDesignContext').textContent = snapshot.text;
+        const rows = Array.from(charactersContainer.children);
+        const stale = rows.filter(row => row.dataset.aiDesignContextKey && row.dataset.aiDesignContextKey !== snapshot.key).length;
+        const unknown = rows.filter(row => !row.dataset.aiDesignContextKey).length;
+        panel.textContent = stale ? `故事設定已變更：${stale} 位人物的 AI 設計依據為舊設定，建議確認是否仍符合；不會自動重做或扣費。`
+          : unknown ? `${unknown} 位人物尚無 AI 設計依據，可手動設定或付費使用 AI 設計。`
+          : 'AI 設計依據與目前設定一致；人物仍可自由微調，並非內容正確性保證。';
+        panel.dataset.stale = String(stale > 0);
+      }
       function addCharacterRow(randomize = false) {
         const row = document.createElement('div');
         row.className = 'character-row';
@@ -5522,11 +5554,13 @@
           </div>
           <div class="char-fields">
             <label class="char-field"><span class="char-field-label">個性</span><input type="text" class="char-personality" placeholder="個性特質…" autocomplete="off" /></label>
-            <label class="char-field"><span class="char-field-label">目標</span><input type="text" class="char-goal" placeholder="想達成的目標…" autocomplete="off" /></label>
+            <label class="char-field"><span class="char-field-label">目標</span><input type="text" class="char-goal" placeholder="想得到什麼、為何非要不可、失敗代價…" autocomplete="off" /></label>
             <label class="char-field"><span class="char-field-label">弱點</span><input type="text" class="char-weakness" placeholder="致命弱點…" autocomplete="off" /></label>
-            <label class="char-field"><span class="char-field-label">祕密</span><input type="text" class="char-secret" placeholder="不可告人的祕密…" autocomplete="off" /></label>
-            <label class="char-field char-field-wide"><span class="char-field-label">人際</span><input type="text" class="char-relation" placeholder="與其他角色的關係…" autocomplete="off" /></label>
+            <label class="char-field"><span class="char-field-label">祕密</span><input type="text" class="char-secret" placeholder="秘密、誰知道、揭露的後果…" autocomplete="off" /></label>
+            <label class="char-field char-field-wide"><span class="char-field-label">人際</span><input type="text" class="char-relation" placeholder="與誰的關係、彼此利益與衝突…" autocomplete="off" /></label>
+            ${characterExtraFields.filter(field => !field.more).map(field => `<label class="char-field"><span class="char-field-label">${field.label}</span><textarea class="char-${field.key}" placeholder="${field.placeholder}" rows="2"></textarea></label>`).join('')}
           </div>
+          <details class="character-more"><summary>更多人物設定</summary><div class="char-fields">${characterExtraFields.filter(field => field.more).map(field => `<label class="char-field"><span class="char-field-label">${field.label}</span><textarea class="char-${field.key}" placeholder="${field.placeholder}" rows="2"></textarea></label>`).join('')}</div></details>
         `;
         const randBtn = row.querySelector('.char-random-btn');
         randBtn.addEventListener('click', () => {
@@ -5555,7 +5589,7 @@
         
         // 監聽輸入變更以自動儲存，並同步 title 讓滑鼠懸停可看完整內容
         const saveDebounced = debounce(saveSettingsToLocal, 500);
-        row.querySelectorAll('input, select').forEach(el => {
+        row.querySelectorAll('input, select, textarea').forEach(el => {
           el.addEventListener('change', saveSettingsToLocal);
           el.addEventListener('input', () => { el.title = el.value; saveDebounced(); });
         });
@@ -5693,6 +5727,8 @@
 
       // 單行隨機化（用於單個人物的隨機按鈕）
       function randomizeRow(row, isFullRandom = false) {
+        // 免費詞庫僅重抽原有欄位；保留新增的手動人物設定，但不再宣稱有 AI 設計依據。
+        delete row.dataset.aiDesignContextKey;
         // 如果是單獨隨機一行，先收集其他行已用的名字
         if (!isFullRandom) {
           usedNames.clear();
@@ -6074,6 +6110,7 @@ ${n}
             style: styleSelect.value,
             chapters: chaptersInput.value,
             length: lengthInput.value,
+            volumes: getPlannedVolumes(),
             notes: stripInjectedOutlineFromNotes(notesInput.value),
             storyOutline: currentOutline || '',
             storyBookTitle: currentBookTitle || '',
@@ -6104,7 +6141,9 @@ ${n}
               goal: row.querySelector('.char-goal').value,
               weakness: row.querySelector('.char-weakness').value,
               secret: row.querySelector('.char-secret').value,
-              relation: row.querySelector('.char-relation').value
+              relation: row.querySelector('.char-relation').value,
+              ...readCharacterExtras(row),
+              aiDesignContextKey: row.dataset.aiDesignContextKey || ''
             });
           });
           
@@ -6115,6 +6154,7 @@ ${n}
           saveNamePoolToLocal();
         }
         if (typeof updateStepper === 'function') updateStepper();
+        updateCharacterDesignStatus();
       }
       
       // 設定下拉選單的值；若選項不存在則臨時補一個，確保值真的套得進去
@@ -6145,6 +6185,7 @@ ${n}
           if (settings.style) { setSelectValue(styleSelect, settings.style); hasData = true; }
           if (settings.chapters) { chaptersInput.value = settings.chapters; hasData = true; }
           if (settings.length) { lengthInput.value = settings.length; hasData = true; }
+          if (settings.volumes) document.getElementById('volumes').value = String(Math.max(1, Math.min(5, parseInt(settings.volumes, 10) || 1)));
           if (settings.storyOutline) {
             currentOutline = settings.storyOutline;
             currentBookTitle = settings.storyBookTitle || '';
@@ -6227,6 +6268,8 @@ ${n}
                 setVal('.char-weakness', char.weakness);
                 setVal('.char-secret', char.secret);
                 setVal('.char-relation', char.relation);
+                characterExtraFields.forEach(({ key }) => setVal(`.char-${key}`, char[key]));
+                if (typeof char.aiDesignContextKey === 'string') row.dataset.aiDesignContextKey = char.aiDesignContextKey;
               }
             });
             renderCharacterTabs();
@@ -6245,7 +6288,7 @@ ${n}
       // 監聽基本設定的變更
       [themeSelect, settingSelect, styleSelect, chaptersInput, lengthInput, notesInput,
        diversityModeSelect, randomSeedInput, narrativeSelect, eraSelect, pacingSelect, ratingSelect,
-       worldComplexitySelect, emotionalToneSelect, endingSelect].forEach(el => {
+       worldComplexitySelect, emotionalToneSelect, endingSelect, document.getElementById('volumes')].forEach(el => {
         el.addEventListener('change', saveSettingsToLocal);
         el.addEventListener('input', debounce(saveSettingsToLocal, 500));
       });
@@ -11332,6 +11375,8 @@ ${continueWordReq}
           if (weakness) fields.push(`弱點：${weakness}`);
           if (secret) fields.push(`秘密：${secret}`);
           if (relation) fields.push(`人際關係：${relation}`);
+          const extras = globalThis.NovelCharacterDesign?.formatExtras(readCharacterExtras(row));
+          if (extras) fields.push(extras);
           if (fields.length > 0) {
             charactersInfo += `角色${idx + 1}：${fields.join('，')}。\n`;
             characterCount++;
@@ -11347,6 +11392,7 @@ ${continueWordReq}
           secondaryNames.length = 0;
           characterNames.forEach(n => mainNames.push(n));
         }
+        if (charactersInfo && globalThis.NovelCharacterDesign) charactersInfo += `人物行為約束：${globalThis.NovelCharacterDesign.rules}\n`;
         return { charactersInfo, characterNames, characterCount, mainNames, secondaryNames };
       }
 
@@ -13431,19 +13477,7 @@ ${currentOutline.slice(0, 1600)}
           outlineEndingNote = `\n\n【結局結構（重要）】\n本作結局傾向為「${ending}」，最後一章需採「兩段式」：先完整收束本書主線（核心衝突有結果、開頭主問題有答案），再另起一段作為「② 後段」——${spec}\n請在「各章節大綱」最後一章明確標出這兩段內容。`;
         }
 
-        const characterRows = Array.from(charactersContainer.querySelectorAll('.character-row'));
-        let charactersInfo = '';
-        characterRows.forEach((row) => {
-          const name = row.querySelector('.char-name').value.trim();
-          const personality = row.querySelector('.char-personality').value.trim();
-          const goal = row.querySelector('.char-goal').value.trim();
-          if (name) {
-            charactersInfo += `• ${name}`;
-            if (personality) charactersInfo += `（${personality}）`;
-            if (goal) charactersInfo += `：${goal}`;
-            charactersInfo += '\n';
-          }
-        });
+        const { charactersInfo } = collectCharactersInfo();
 
         const selectedElements = [];
         specialElementsContainer.querySelectorAll('.special-element-item.selected').forEach(item => {
@@ -14255,6 +14289,7 @@ ${currentOutline.slice(0, 1600)}
           document.body.style.overflow = 'hidden';
           backgroundState = Array.from(document.body.children).filter(el => el !== overlay).map(el => [el, el.inert]);
           backgroundState.forEach(([el]) => { el.inert = true; });
+          updateCharacterDesignStatus();
           overlay.classList.add('open');
           applyReaderMode();
           buildReaderNavigation();
@@ -14539,6 +14574,7 @@ ${currentOutline.slice(0, 1600)}
 
       // ==================== 三模態設定工作台 ====================
       let openStoryElementsModal = null;
+      let openCharacterSettingsModal = null;
       let openAdvancedSettingsModal = null;
       let openSpecialElementsModal = null;
 
@@ -14701,7 +14737,8 @@ ${currentOutline.slice(0, 1600)}
               goal,
               weakness,
               secret,
-              relation
+              relation,
+              ...readCharacterExtras(row)
             };
           })
           .filter(Boolean);
@@ -14820,7 +14857,8 @@ ${currentOutline.slice(0, 1600)}
             ['目標', ch.goal],
             ['弱點', ch.weakness],
             ['祕密', ch.secret],
-            ['人際', ch.relation]
+            ['人際', ch.relation],
+            ...characterExtraFields.map(({ key, label }) => [label, ch[key]])
           ].filter(([, v]) => v);
 
           if (details.length) {
@@ -14891,9 +14929,9 @@ ${currentOutline.slice(0, 1600)}
         const advancedChips = collectAdvancedSummaryChips();
         const specialChips = collectSpecialSummaryChips();
 
-        const hasStory = storyChips.length > 0 || storyCharacters.length > 0;
+        const hasStory = storyChips.length > 0;
         const hasAdvanced = advancedChips.length > 0;
-        const hasSpecial = specialChips.length > 0;
+        const hasSpecial = specialChips.length > 0 || !!getUserNotesText();
 
         const storyBlock = summaryRoot.querySelector('[data-block="story"]');
         const advancedBlock = summaryRoot.querySelector('[data-block="advanced"]');
@@ -14902,9 +14940,12 @@ ${currentOutline.slice(0, 1600)}
         if (advancedBlock) advancedBlock.hidden = !hasAdvanced;
         if (specialBlock) specialBlock.hidden = !hasSpecial;
 
-        renderStorySummary(document.getElementById('summaryStory'), storyChips, storyCharacters);
+        renderStorySummary(document.getElementById('summaryStory'), storyChips, []);
+        renderStorySummary(document.getElementById('summaryCharacter'), [], storyCharacters);
+        const characterBlock = summaryRoot.querySelector('[data-block="character"]');
+        if (characterBlock) characterBlock.hidden = !storyCharacters.length;
         renderSummaryChips(document.getElementById('summaryAdvanced'), advancedChips);
-        renderSummaryChips(document.getElementById('summarySpecial'), specialChips);
+        renderSummaryChips(document.getElementById('summarySpecial'), [...specialChips, ...(getUserNotesText() ? [{ text: '自訂規則：' + getUserNotesText(), tooltip: getUserNotesText() }] : [])]);
 
         const launcherStorySub = document.getElementById('launcherStorySub');
         const launcherAdvancedSub = document.getElementById('launcherAdvancedSub');
@@ -14915,14 +14956,7 @@ ${currentOutline.slice(0, 1600)}
           } else {
             const parts = [];
             if (storyChips.length) parts.push(summaryChipText(storyChips[0]));
-            if (storyCharacters.length) {
-              const names = storyCharacters
-                .map((c) => c.displayName)
-                .slice(0, 2)
-                .join('、');
-              parts.push(storyCharacters.length + ' 位角色' + (names ? '：' + names : ''));
-            }
-            launcherStorySub.textContent = parts.join(' · ') + (storyChips.length > 1 || storyCharacters.length > 2 ? ' …' : '');
+            launcherStorySub.textContent = parts.join(' · ') + (storyChips.length > 1 ? ' …' : '');
           }
         }
         if (launcherAdvancedSub) {
@@ -14932,11 +14966,14 @@ ${currentOutline.slice(0, 1600)}
         }
         if (launcherSpecialSub) {
           launcherSpecialSub.textContent = hasSpecial
-            ? '已選 ' + specialChips.length + ' 項'
+            ? '已選 ' + specialChips.length + ' 項' + (getUserNotesText() ? ' · 含自訂規則' : '')
             : '尚未設定';
         }
 
-        summaryRoot.hidden = !(hasStory || hasAdvanced || hasSpecial);
+        const characterSub = document.getElementById('launcherCharacterSub');
+        if (characterSub) characterSub.textContent = storyCharacters.length ? `${storyCharacters.length} 位人物 · ${storyCharacters.slice(0, 2).map(ch => ch.displayName).join('、')}` : '尚未設定';
+        summaryRoot.hidden = !(hasStory || hasAdvanced || hasSpecial || storyCharacters.length);
+        updateCharacterDesignStatus();
       }
 
       function initWorkspaceModal({ overlay, openBtn, closeBtns, onClose }) {
@@ -14970,6 +15007,12 @@ ${currentOutline.slice(0, 1600)}
       const storyElementsModal = document.getElementById('storyElementsModal');
       const advancedSettingsModal = document.getElementById('advancedSettingsModal');
       const specialElementsModal = document.getElementById('specialElementsModal');
+      const characterSettingsModal = document.getElementById('characterSettingsModal');
+      openCharacterSettingsModal = initWorkspaceModal({
+        overlay: characterSettingsModal,
+        openBtn: document.getElementById('openCharacterModalBtn'),
+        closeBtns: characterSettingsModal.querySelectorAll('[data-modal-close="character"], [data-modal-done="character"]')
+      });
 
       openStoryElementsModal = initWorkspaceModal({
         overlay: storyElementsModal,
@@ -15001,6 +15044,7 @@ ${currentOutline.slice(0, 1600)}
           if (which === 'story' && openStoryElementsModal) openStoryElementsModal();
           else if (which === 'advanced' && openAdvancedSettingsModal) openAdvancedSettingsModal();
           else if (which === 'special' && openSpecialElementsModal) openSpecialElementsModal();
+          else if (which === 'character' && openCharacterSettingsModal) openCharacterSettingsModal();
         });
       });
 
@@ -15064,7 +15108,7 @@ ${currentOutline.slice(0, 1600)}
           }
           const target = chip.dataset.target;
           if (target === '#stepCast') {
-            if (openStoryElementsModal) openStoryElementsModal();
+            if (openCharacterSettingsModal) openCharacterSettingsModal();
             return;
           }
           if (target) {
@@ -15262,6 +15306,7 @@ ${currentOutline.slice(0, 1600)}
         set('.char-weakness', data.weakness);
         set('.char-secret', data.secret);
         set('.char-relation', data.relation);
+        characterExtraFields.forEach(({ key }) => set(`.char-${key}`, data[key]));
       }
 
       // 從 AI 回應中盡力擷取 JSON
@@ -15327,30 +15372,20 @@ ${currentOutline.slice(0, 1600)}
       }
 
       // 蒐集目前的故事脈絡，給角色生成提示用
-      function collectStoryContext() {
-        const theme = (themeSelect.value || '').trim();
-        const setting = (settingSelect.value || '').trim();
-        const style = (styleSelect.value || '').trim();
-        const parts = [];
-        if (theme) parts.push(`主題：${theme}`);
-        if (setting) parts.push(`背景：${setting}`);
-        if (style) parts.push(`風格：${style}`);
-        // 帶入現有角色名單與定位，讓 AI 設計／補完時能與全體卡司協調分工
-        const roster = [];
-        charactersContainer.querySelectorAll('.character-row').forEach(row => {
-          const name = (row.querySelector('.char-name').value || '').trim();
-          const roleEl = row.querySelector('.char-role');
-          const role = roleEl ? roleEl.value.trim() : '';
-          if (name) roster.push(role ? `${name}（${role}）` : name);
-        });
-        if (roster.length) parts.push(`現有角色：${roster.join('、')}`);
-        return parts.join('；') || '一般通俗小說';
+      function collectStoryContext(snapshot = collectCharacterDesignSnapshot()) {
+        return snapshot.text + '\n現有角色（僅設計方向，非已發生事件）：\n' + collectCharactersInfo().charactersInfo;
+      }
+
+      function characterResponseSchema() {
+        return JSON.stringify({ gender: '男/女/不明', role: '男主角/女主角/男配角/女配角/反派/路人 擇一', age: '數字或描述', name: '真實姓名',
+          personality: '具體個性', goal: '目標、動機及失敗代價', weakness: '弱點', secret: '秘密、知情者與揭露後果', relation: '點名他人並寫出利益及衝突',
+          ...Object.fromEntries(characterExtraFields.map(({ key, label }) => [key, label + '（具體簡潔）'])) });
       }
 
       // AI 生成整組人物
       if (aiGenerateCharactersBtn) {
         aiGenerateCharactersBtn.addEventListener('click', async () => {
-          if (aiGenerateCharactersBtn.classList.contains('ai-loading')) return;
+          if (aiGenerateCharactersBtn.classList.contains('ai-loading') || charactersContainer.querySelector('.char-ai-btn:disabled')) return;
           if (!confirmPeakPricing()) {
             showStatus('warning', '已取消尖峰時段生成；可於離峰時段再試。');
             return;
@@ -15374,7 +15409,8 @@ ${currentOutline.slice(0, 1600)}
             (r.querySelector('.char-goal') && r.querySelector('.char-goal').value.trim()) ||
             (r.querySelector('.char-weakness') && r.querySelector('.char-weakness').value.trim()) ||
             (r.querySelector('.char-secret') && r.querySelector('.char-secret').value.trim()) ||
-            (r.querySelector('.char-relation') && r.querySelector('.char-relation').value.trim())
+            (r.querySelector('.char-relation') && r.querySelector('.char-relation').value.trim()) ||
+            Object.values(readCharacterExtras(r)).some(Boolean)
           );
           if (hasUserData) {
             const ok = confirm(`「AI 設計角色群」會依劇情重新設計目前這 ${rowsNow.length} 位人物，並「覆蓋」已填寫的內容（生成後可再自行微調）。\n\n確定要覆蓋嗎？`);
@@ -15406,13 +15442,16 @@ ${currentOutline.slice(0, 1600)}
               goal: row.querySelector('.char-goal').value.trim(),
               weakness: row.querySelector('.char-weakness').value.trim(),
               secret: row.querySelector('.char-secret').value.trim(),
-              relation: row.querySelector('.char-relation').value.trim()
+              relation: row.querySelector('.char-relation').value.trim(),
+              ...readCharacterExtras(row)
             }));
             // 已填內容只作為「設計方向」參考，不要求保留
-            const hints = existing.filter(e => e.name || e.role || e.age || e.personality || e.goal || e.weakness || e.secret || e.relation);
+            const hints = existing.filter(e => e.name || e.role || e.age || e.personality || e.goal || e.weakness || e.secret || e.relation || Object.values(globalThis.NovelCharacterDesign.normalizeExtras(e)).some(Boolean));
 
             if (!navigator.onLine) { showStatusInView('error', '📴 離線模式下無法使用 AI 生成人物，請連接網路後再試'); return; }
-            const ctx = collectStoryContext();
+            const snapshot = collectCharacterDesignSnapshot();
+            const signatures = rows.map(characterRowSignature);
+            const ctx = collectStoryContext(snapshot);
             const notes = getUserNotesText();
             const namePoolBlock = getNamePoolPromptBlockForCharacters(count);
             const castGuidance = getCharacterCastGuidanceBlock(notes);
@@ -15427,22 +15466,30 @@ ${currentOutline.slice(0, 1600)}
 - 卡司性別依劇情與補充說明決定；若補充說明有明確限制（如全劇不可有某性別），必須嚴格遵守。
 - 避免所有人都是主角，但配角／反派數量不限。
 每位的所有欄位都要填寫完整、具體、避免空泛，讓使用者可直接使用並微調。
+${globalThis.NovelCharacterDesign.rules}
 ${castGuidance}
 ${notesBlock}
 ${nameRules}${namePoolBlock}${ctx}${hintBlock}
 
 只回傳 JSON 陣列，長度必須剛好為 ${count}，不要任何說明文字。每個元素格式如下：
-{"gender":"男/女/不明","role":"男主角/女主角/男配角/女配角/反派/路人 擇一","age":"數字或描述","name":"姓名（真實人名）","personality":"個性（具體，10~20字）","goal":"核心目標（具體）","weakness":"弱點/罩門","secret":"不可告人的祕密","relation":"與其他角色的關係（請點名其他角色）"}`;
+${characterResponseSchema()}`;
             const resp = await callDeepSeek(prompt, null, modelSelect.value, { retries: 1 });
             const list = parseJsonFromText(resp);
-            if (!Array.isArray(list) || list.length === 0) {
-              showStatusInView('error', 'AI 回應格式無法解析，請再試一次');
+            if (!Array.isArray(list) || list.length !== count || !list.every(globalThis.NovelCharacterDesign.isCompleteCharacter)) {
+              showStatusInView('error', 'AI 回傳的人數或人物欄位不完整，未覆蓋原設定；可稍後再試。');
+              return;
+            }
+            if (rows.length !== charactersContainer.children.length || rows.some((row, i) => !charactersContainer.contains(row) || characterRowSignature(row) !== signatures[i])) {
+              showStatusInView('warning', '人物已在等待期間變更，未套用過期 AI 結果；沒有自動重試。');
               return;
             }
             // 覆蓋式套用：完整填入 AI 的設計（保留人物列數量），讓使用者在此基礎上微調
             rows.forEach((row, i) => {
               const item = list[i];
-              if (item && typeof item === 'object') fillCharacterRow(row, item);
+              if (item && typeof item === 'object') {
+                fillCharacterRow(row, item);
+                row.dataset.aiDesignContextKey = snapshot.key;
+              }
             });
             updateCharacterIndices();
             renderCharacterTabs();
@@ -15464,13 +15511,15 @@ ${nameRules}${namePoolBlock}${ctx}${hintBlock}
       // AI 補完單一人物列（保留已填欄位，只補空白）
       async function aiCompleteCharacterRow(row, btn) {
         if (!row) return;
-        if (btn && btn.disabled) return;
+        if ((btn && btn.disabled) || aiGenerateCharactersBtn?.disabled) return;
         if (!confirmPeakPricing()) return;
         if (btn) { btn.disabled = true; btn.classList.add('ai-loading'); }
         showStatusInView('loading', '✨ AI 正在補完此人物…');
         try {
           if (!navigator.onLine) { showStatusInView('error', '📴 離線模式下無法使用 AI，請連接網路後再試'); return; }
-          const ctx = collectStoryContext();
+          const snapshot = collectCharacterDesignSnapshot();
+          const signature = characterRowSignature(row);
+          const ctx = collectStoryContext(snapshot);
           const notes = getUserNotesText();
           const rowGender = row.querySelector('.char-gender').value;
           const needName = !row.querySelector('.char-name').value.trim();
@@ -15488,22 +15537,29 @@ ${nameRules}${namePoolBlock}${ctx}${hintBlock}
             goal: row.querySelector('.char-goal').value.trim(),
             weakness: row.querySelector('.char-weakness').value.trim(),
             secret: row.querySelector('.char-secret').value.trim(),
-            relation: row.querySelector('.char-relation').value.trim()
+            relation: row.querySelector('.char-relation').value.trim(),
+            ...readCharacterExtras(row)
           };
-          const prompt = `你是小說人物設計師。故事設定：${ctx}。\n以下是一位人物目前的部分資料（空白欄位需要你補完，已有內容請盡量保留並使其協調）：\n${JSON.stringify(cur)}${castGuidance}\n${notesBlock}\n\n${nameRules}${namePoolBlock}\n\n只回傳單一 JSON 物件，格式：{"gender":"","role":"男主角/女主角/男配角/女配角/反派/路人 擇一","age":"","name":"姓名（真實人名）","personality":"","goal":"","weakness":"","secret":"","relation":""}`;
+          const prompt = `你是小說人物設計師。故事設定：${ctx}。\n以下是一位人物目前的部分資料（空白欄位需要你補完，已有內容請盡量保留並使其協調）：\n${JSON.stringify(cur)}${castGuidance}\n${notesBlock}\n\n${nameRules}${namePoolBlock}\n\n${globalThis.NovelCharacterDesign.rules}\n只回傳單一 JSON 物件，格式：${characterResponseSchema()}`;
           const resp = await callDeepSeek(prompt, null, modelSelect.value, { retries: 1 });
           const data = parseJsonFromText(resp);
-          if (!data || typeof data !== 'object') {
+          if (!data || typeof data !== 'object' || Array.isArray(data)) {
             showStatusInView('error', 'AI 回應無法解析，請再試一次');
+            return;
+          }
+          if (!charactersContainer.contains(row) || characterRowSignature(row) !== signature) {
+            showStatusInView('warning', '此人物已在等待期間變更，未套用過期 AI 結果；沒有自動重試。');
             return;
           }
           const reconciled = reconcileCharacterWithNamePool(data);
           // 只補空白欄位
+          let filled = 0;
           const fillIfEmpty = (sel, val) => {
             const el = row.querySelector(sel);
-            if (el && !el.value.trim() && val != null && String(val).trim()) {
+            if (el && !el.value.trim() && (typeof val === 'string' || (sel === '.char-age' && typeof val === 'number' && Number.isFinite(val))) && String(val).trim()) {
               el.value = String(val).trim();
               el.title = el.value;
+              if (el.value.trim()) filled++;
             }
           };
           fillIfEmpty('.char-gender', reconciled.gender);
@@ -15515,6 +15571,12 @@ ${nameRules}${namePoolBlock}${ctx}${hintBlock}
           fillIfEmpty('.char-weakness', reconciled.weakness);
           fillIfEmpty('.char-secret', reconciled.secret);
           fillIfEmpty('.char-relation', reconciled.relation);
+          characterExtraFields.forEach(({ key }) => fillIfEmpty(`.char-${key}`, reconciled[key]));
+          if (!filled) {
+            showStatusInView('warning', 'AI 沒有補入任何空白欄位，保留原人物與設計依據；不會自動重試。');
+            return;
+          }
+          row.dataset.aiDesignContextKey = snapshot.key;
           renderCharacterTabs();
           saveSettingsToLocal();
           showStatusInView('success', '✨ 已用 AI 補完此人物');

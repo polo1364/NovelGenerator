@@ -66,6 +66,7 @@
       characterStates: sanitizeStateList(value.characterStates),
       unresolvedThreads: sanitizeStateList(value.unresolvedThreads),
       timeline: sanitizeStateList(value.timeline),
+      characterConflicts: sanitizeRecords(value.characterConflicts, ['character', 'issue', 'evidence']).slice(0, 3),
       ...Object.fromEntries(Object.entries(RECORD_FIELDS).map(([key, fields]) => [key, sanitizeRecords(value[key], fields)])),
       recentOutcome: typeof value.recentOutcome === 'string'
         ? value.recentOutcome.trim().slice(0, 500)
@@ -87,7 +88,7 @@
     }
   }
 
-  function buildStoryStatePrompt({ previousState, storyText, chapterCount } = {}) {
+  function buildStoryStatePrompt({ previousState, storyText, chapterCount, characterCanon = '' } = {}) {
     const previous = sanitizeStoryState(previousState) || {
       establishedFacts: [],
       characterStates: [],
@@ -111,10 +112,15 @@
 • entities 使用穩定名稱；kind 為 character/item，角色 status 為 alive/dead/unknown，並記錄目前 location；物件記錄 holder。
 • evidence 必須逐字引用提供的正文（4～40字）；舊紀錄可沿用。位置、持有人、生死改變時，transitionEvidence 必須逐字引用本次新增正文中造成轉變的事件，不能只重複結果。
 • 不確定時用空字串或 unknown；不要猜測。新揭密不等於矛盾，但不能推翻已確認事實。
+• 對照人物設定檢查能力代價、信念底線與漸進成長；設定是約束，不代表轉變已發生。characterStates 摘要目前傷勢、關係、成長進度，不覆寫初始設定。
+• 另以 characterConflicts 陣列列出本次最近正文中有依據的疑似偏離，最多 3 項，每項 {"character":"人物","issue":"疑似偏離原因","evidence":"4～40字逐字正文"}；有合理建立過程不算偏離，不確定則不報。仍須遵守整份 JSON 字數預算。
 • 只輸出 JSON 物件，不要 Markdown、code fence 或說明文字。
 
 JSON 格式：
 {"establishedFacts":[],"characterStates":[],"unresolvedThreads":[],"timeline":[],"recentOutcome":"", "characterKnowledge":[{"character":"","fact":"","learnedFrom":"","evidence":""}],"causalEvents":[{"event":"","motive":"","cause":"","effect":"","evidence":""}],"foreshadowing":[{"thread":"","plantedChapter":"","payoff":"","status":"open","evidence":""}],"entities":[{"entity":"","kind":"character","status":"unknown","location":"","holder":"","evidence":"","transitionEvidence":""}]}
+
+【人物設定（約束資料，不是已發生事件）】
+${characterCanon || '未提供'}
 
 目前已完成章節：約 ${Number.parseInt(chapterCount, 10) || 0} 章
 
@@ -179,6 +185,9 @@ ${writingPrompt}`;
     if (!state) return { state: previous, warnings: ['狀態表格式無效，保留上一版。'] };
     const warnings = [];
     const hasQuote = (text, quote) => quote.length >= 4 && String(text || '').includes(quote);
+    // 人物偏離是本次分析範圍的檢查，不是狀態轉移；同文重查也須驗證引句。
+    state.characterConflicts = state.characterConflicts.filter(item => item.issue && hasQuote(String(storyText || '').slice(-MAX_STATE_SOURCE_LENGTH), item.evidence));
+    state.characterConflicts.forEach(item => warnings.push(`${item.character}：疑似人物設定偏離 — ${item.issue}（原文：${item.evidence}）`));
     for (const [key, fields] of Object.entries(RECORD_FIELDS)) {
       const oldRecords = previous ? previous[key] : [];
       const identity = item => key === 'characterKnowledge' ? `${item.character}:${item.fact}` : item[fields[0]];

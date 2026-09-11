@@ -20,6 +20,7 @@ function harness(request) {
     AbortController, DOMException, console,
     setGenerationStage: () => {}, startSimulatedProgress: () => {},
     NovelGenerationPlanning: planning,
+    collectCharactersInfo: () => ({ charactersInfo: '' }),
     latestStory: '第一章正文'.repeat(50),
     document: { getElementById: id => id === 'continuityReport' ? panel : null },
     localStorage: {
@@ -378,7 +379,7 @@ test('peak cancellation at the request boundary aborts before fetch', async () =
 });
 
 test('canceling peak confirmation prevents single-character generation', async () => {
-  const context = { confirmPeakPricing: () => false };
+  const context = { confirmPeakPricing: () => false, aiGenerateCharactersBtn: { disabled: false } };
   vm.createContext(context);
   const start = app.indexOf('async function aiCompleteCharacterRow(');
   assert.ok(start > 0);

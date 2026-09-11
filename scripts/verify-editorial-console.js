@@ -322,8 +322,8 @@ async function run() {
       assert.equal(layouts[width].text.launcherSub, 'rgb(30, 119, 116)', `${width}px launcher summary must use editorial teal`);
       assert.equal(layouts[width].text.disabledColor, 'rgb(87, 83, 78)', `${width}px disabled action must remain readable`);
       assert.ok(Number(layouts[width].text.disabledOpacity) >= 0.72, `${width}px disabled action opacity must remain at least 0.72`);
-      assert.equal(layouts[width].moduleColumns.split(' ').length, width < 768 ? 1 : 3);
-      assert.equal(layouts[width].workspaceColumns.split(' ').length, width < 768 ? 1 : 2);
+      assert.equal(layouts[width].moduleColumns.split(' ').length, width <= 600 ? 1 : width <= 1100 ? 2 : 4);
+      assert.equal(layouts[width].workspaceColumns.split(' ').length, 1);
       const continuity = await client.evaluate(`(() => {
         const panel = document.getElementById('continuityReport');
         const initiallyHidden = getComputedStyle(panel).display === 'none';

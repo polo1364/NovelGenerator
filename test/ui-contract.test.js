@@ -115,7 +115,7 @@ test('editorial stylesheet and console structure fulfil the Task 2 contract', ()
     ['openStoryModalBtn', 'editorial-module'],
     ['openAdvancedModalBtn', 'editorial-module'],
     ['openSpecialModalBtn', 'editorial-module'],
-    ['section', 'editorial-note'],
+    ['openCharacterModalBtn', 'editorial-module'],
     ['outlineAttachSection', 'editorial-outline']
   ];
   for (const [identifier, className] of requiredClasses) {
@@ -149,7 +149,7 @@ test('behavior-bearing workshop controls remain present exactly once', () => {
     'openSpecialModalBtn', 'workspaceConfigSummary', 'notes',
     'outlineAttachPanel', 'primaryGenerateBtn', 'primaryContinueBtn',
     'resetWorkspaceBtn', 'storyElementsModal', 'advancedSettingsModal',
-    'specialElementsModal', 'specialElementsContainer'
+    'specialElementsModal', 'characterSettingsModal', 'openCharacterModalBtn', 'specialElementsContainer'
   ];
   for (const id of ids) {
     const matches = html.match(new RegExp(`id=["']${id}["']`, 'g')) || [];
@@ -161,7 +161,7 @@ test('workspace modals retain dialog semantics', () => {
   const editorialStylesheet = path.join(root, 'public', 'css', 'uiverse-editorial.css');
   const css = fs.readFileSync(editorialStylesheet, 'utf8');
 
-  for (const id of ['storyElementsModal', 'advancedSettingsModal', 'specialElementsModal']) {
+  for (const id of ['storyElementsModal', 'advancedSettingsModal', 'specialElementsModal', 'characterSettingsModal']) {
     const tag = html.match(new RegExp(`<[^>]+id=["']${id}["'][^>]*>`, 'i'))?.[0] || '';
     assert.match(tag, /role=["']dialog["']/);
     assert.match(tag, /aria-modal=["']true["']/);
@@ -193,7 +193,7 @@ test('workspace modals retain dialog semantics', () => {
   assert.match(css, /\.editorial-modal \*\s*\{\s*scroll-behavior:\s*auto !important;/);
 });
 
-test('service worker installs the parsed v100 application shell with pricing and generation planning before app.js', async () => {
+test('service worker installs the parsed v101 application shell with pricing and generation planning before app.js', async () => {
   const appShell = parseAppShell();
   const polishIndex = appShell.indexOf('./css/layout-polish.css');
   const pricingIndex = appShell.indexOf('./js/deepseek-pricing.js');
@@ -202,9 +202,10 @@ test('service worker installs the parsed v100 application shell with pricing and
   assert.equal(appShell[polishIndex + 1], './css/uiverse-editorial.css');
   assert.ok(pricingIndex >= 0, 'APP_SHELL must include deepseek-pricing.js');
   assert.equal(appShell[pricingIndex + 1], './js/generation-planning.js');
-  assert.equal(appShell[planningIndex + 1], './js/app.js');
+  assert.equal(appShell[planningIndex + 1], './js/character-design.js');
+  assert.equal(appShell[planningIndex + 2], './js/app.js');
   assert.match(html, /<script defer src="js\/deepseek-pricing\.js"><\/script>[\s\S]*?<script defer src="js\/generation-planning\.js"><\/script>[\s\S]*?<script defer src="js\/app\.js"><\/script>/);
-  assert.match(sw, /const CACHE_VERSION\s*=\s*'v100';/);
+  assert.match(sw, /const CACHE_VERSION\s*=\s*'v101';/);
   for (const asset of ['./css/manuscript-workspace.css', './js/manuscript-workspace.js', './css/mobile-touch.css']) {
     assert.ok(appShell.includes(asset));
     assert.ok(fs.existsSync(path.join(__dirname, '..', 'public', asset)));
@@ -289,7 +290,7 @@ test('final editorial fixes retain scoped shell, workspace, feedback, and verifi
 
   assert.match(css, /--ec-red:\s*#b93833;/);
   assert.match(css, /--ec-blue:\s*#2e5fae;/);
-  assert.match(css, /@media \(min-width:\s*768px\)[\s\S]*?\.editorial-console \.editorial-workspace\s*\{[\s\S]*?grid-template-columns:\s*minmax\(0,\s*1fr\) minmax\(0,\s*1fr\);/);
+  assert.match(css, /@media \(min-width:\s*768px\)[\s\S]*?\.editorial-console \.editorial-workspace\s*\{[\s\S]*?grid-template-columns:\s*minmax\(0,\s*1fr\);/);
   assert.match(css, /\.desk-scene \.card\.editorial-console\s*\{[\s\S]*?background:\s*var\(--ec-paper\);[\s\S]*?border:\s*3px solid var\(--ec-ink\);[\s\S]*?border-radius:\s*4px;[\s\S]*?box-shadow:\s*10px 10px 0 var\(--ec-ink\);/);
   assert.match(css, /\.desk-scene \.card\.editorial-console \.pipeline\s*\{[\s\S]*?background:\s*transparent;[\s\S]*?border-radius:\s*0;[\s\S]*?box-shadow:\s*none;/);
   assert.ok(fs.existsSync(path.join(root, 'scripts', 'verify-editorial-console.js')),

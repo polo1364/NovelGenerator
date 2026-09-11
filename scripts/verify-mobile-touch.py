@@ -60,7 +60,7 @@ def run():
                     detail=page.evaluate('''()=>({body:document.body.className,hits:[.15,.5,.85].map(x=>document.elementFromPoint(innerWidth*x,innerHeight-110)?.outerHTML.slice(0,200))})''')
                     failures.append(f'{width}: bookshelf does not shield secondary dock from touch: {detail}')
                 page.locator('#bookshelfCloseBtn').tap()
-                for opener,scope in [('#openStoryModalBtn','#storyElementsModal'),('#openAdvancedModalBtn','#advancedSettingsModal'),('#openSpecialModalBtn','#specialElementsModal')]:
+                for opener,scope in [('#openStoryModalBtn','#storyElementsModal'),('#openAdvancedModalBtn','#advancedSettingsModal'),('#openSpecialModalBtn','#specialElementsModal'),('#openCharacterModalBtn','#characterSettingsModal')]:
                     page.locator(opener).tap()
                     page.locator(scope).evaluate('e=>Promise.all(e.getAnimations({subtree:true}).map(a=>a.finished.catch(()=>{})))')
                     small=[item for item in targets(page,scope) if item['w']<44 or item['h']<44]
