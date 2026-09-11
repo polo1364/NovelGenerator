@@ -6636,14 +6636,18 @@ ${n}
       function randomizeStoryElements() {
         if (!themeSelect) return;
         const planner = globalThis.NovelGenerationPlanning;
-        const seed = getRandomSeed();
+        // 每次點擊重新抽選，但不更動小說生成使用的種子。
+        const seed = createLocalRandomSeed();
         const random = planner && typeof planner.createSeededRandom === 'function'
           ? planner.createSeededRandom(seed, 'story-elements')
           : Math.random;
-        const choose = values => values[Math.floor(random() * values.length)];
-        themeSelect.value = choose(themes);
-        settingSelect.value = choose(settingsData);
-        styleSelect.value = choose(stylesArr);
+        const choose = (values, current) => {
+          const candidates = values.filter(value => value !== current);
+          return candidates.length ? candidates[Math.floor(random() * candidates.length)] : current;
+        };
+        themeSelect.value = choose(themes, themeSelect.value);
+        settingSelect.value = choose(settingsData, settingSelect.value);
+        styleSelect.value = choose(stylesArr, styleSelect.value);
         saveSettingsToLocal();
       }
 

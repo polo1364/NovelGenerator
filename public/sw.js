@@ -7,7 +7,7 @@
    - /api/* 與 /reader/* 不走 SW
    ============================================================ */
 
-const CACHE_VERSION = 'v99';
+const CACHE_VERSION = 'v100';
 const CACHE_NAME = `novel-workshop-${CACHE_VERSION}`;
 
 const APP_SHELL = [
