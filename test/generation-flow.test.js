@@ -15,11 +15,13 @@ function between(start, end) {
 function harness(request) {
   const storage = new Map();
   const calls = [];
+  const panel = {};
   const ctx = {
     AbortController, DOMException, console,
     setGenerationStage: () => {}, startSimulatedProgress: () => {},
     NovelGenerationPlanning: planning,
     latestStory: '第一章正文'.repeat(50),
+    document: { getElementById: id => id === 'continuityReport' ? panel : null },
     localStorage: {
       getItem: key => storage.get(key) || null,
       setItem: (key, value) => storage.set(key, value),
@@ -33,8 +35,116 @@ function harness(request) {
   };
   vm.createContext(ctx);
   vm.runInContext(between("const STORY_STATE_STORAGE_KEY =", '// 全域中斷控制器'), ctx);
-  return { ctx, storage, calls };
+  return { ctx, storage, calls, panel };
 }
+
+test('truncated state response is distinguished from invalid JSON and never stored', async () => {
+  const h = harness((prompt, key, model, options) => {
+    options.onComplete?.({ finishReason: 'length' });
+    return '{"establishedFacts":["城門關閉"]}';
+  });
+  await h.ctx.refreshStoryStateLedger(h.ctx.latestStory);
+  assert.match(h.panel.textContent, /截斷/);
+  assert.equal(h.storage.size, 0);
+  assert.equal(h.calls.length, 1);
+});
+
+test('state failures expose safe categories without leaking raw upstream messages', async () => {
+  for (const [error, expected] of [[Object.assign(new Error('secret upstream token'), {status:429}), /過於頻繁/],
+    [new TypeError('secret network url'), /連線/], [new Error('secret upstream token'), /未知/]]) {
+    const h = harness(() => { throw error; });
+    await h.ctx.refreshStoryStateLedger(h.ctx.latestStory);
+    assert.match(h.panel.textContent, expected);
+    assert.doesNotMatch(h.panel.textContent, /secret/);
+  }
+  const h = harness(() => '{broken');
+  await h.ctx.refreshStoryStateLedger(h.ctx.latestStory);
+  assert.match(h.panel.textContent, /JSON 格式/);
+});
+
+test('failed update retains prior successful scope and marks new prose unchecked', async () => {
+  let fail = false;
+  const h = harness(() => { if (fail) throw new TypeError('offline'); return '{"establishedFacts":["城門關閉"]}'; });
+  await h.ctx.refreshStoryStateLedger(h.ctx.latestStory);
+  const saved = h.storage.get('novelStoryStateLedger');
+  h.ctx.latestStory += '第二章的新正文';
+  fail = true;
+  await h.ctx.refreshStoryStateLedger(h.ctx.latestStory);
+  assert.equal(h.storage.get('novelStoryStateLedger'), saved);
+  assert.match(h.panel.textContent, /上次成功整理.*新增內容尚未檢查/s);
+});
+
+test('forced state recheck bypasses reuse without changing prose or adding requests', async () => {
+  const h = harness();
+  const original = h.ctx.latestStory;
+  await h.ctx.refreshStoryStateLedger(original);
+  await h.ctx.refreshStoryStateLedger(original, undefined, {force:true, standalone:true});
+  assert.equal(h.calls.length, 2);
+  assert.equal(h.calls[1][3].maxTokens, 3000);
+  assert.equal(h.calls[1][3].retries, 0);
+  assert.equal(h.ctx.latestStory, original);
+});
+
+test('manual recheck cancellation sends no request; accepting sends only one state request', async () => {
+  const h = harness();
+  Object.assign(h.ctx, {currentAbortController:null, seriesRunning:false, autoContinueRunning:false, confirm:()=>false});
+  assert.equal(typeof h.ctx.retryStoryContinuity, 'function');
+  await h.ctx.retryStoryContinuity();
+  assert.equal(h.calls.length, 0);
+  h.ctx.confirm = message => { assert.match(message, /一次.*API.*費用/); return true; };
+  await h.ctx.retryStoryContinuity();
+  assert.equal(h.calls.length, 1);
+  assert.equal(h.calls[0][3].taskType, 'state');
+});
+
+test('manual recheck rejects double tap and cannot start while generation is active', async () => {
+  let release;
+  const h = harness(() => new Promise(resolve => { release = resolve; }));
+  Object.assign(h.ctx, {currentAbortController:{}, seriesRunning:false, autoContinueRunning:false, confirm:()=>true});
+  assert.equal(typeof h.ctx.retryStoryContinuity, 'function');
+  await h.ctx.retryStoryContinuity();
+  assert.equal(h.calls.length, 0);
+  h.ctx.currentAbortController = null;
+  const pending = h.ctx.retryStoryContinuity();
+  await h.ctx.retryStoryContinuity();
+  assert.equal(h.calls.length, 1);
+  release('{"establishedFacts":["城門關閉"]}');
+  await pending;
+});
+
+test('compact extraction prompt bounds output without increasing token budget', () => {
+  const prompt = planning.buildStoryStatePrompt({storyText:'正文'});
+  assert.match(prompt, /每個摘要陣列最多 4 項/);
+  assert.match(prompt, /表格每種最多 3 項/);
+  assert.match(prompt, /2,000 字元/);
+});
+
+test('switching series volumes never displays another volume as checked', async () => {
+  const h = harness();
+  await h.ctx.refreshStoryStateLedger(h.ctx.latestStory);
+  const original = h.ctx.latestStory;
+  Object.assign(h.ctx, {
+    storySeries:{activeVolumeIndex:0,totalVolumes:2,volumes:[{content:original},{content:'第二集不同正文'.repeat(50)}]},
+    seriesRunning:false,currentAbortController:null,resultDiv:{},downloadBtn:{},continueBtn:{},speakBtn:{},bookReaderBtn:{},
+    persistStory:()=>{},saveStorySeries:()=>{},updateWordCount:()=>{},parseAndShowChapters:()=>{},renderSeriesBar:()=>{},getVolumeLabel:()=>'',showStatus:()=>{}
+  });
+  vm.runInContext(between('function switchToVolume(', 'function buildSeriesMergedText('), h.ctx);
+  h.ctx.switchToVolume(1);
+  assert.match(h.panel.textContent, /尚未檢查/);
+  assert.doesNotMatch(h.panel.textContent, /上次成功整理/);
+  h.ctx.switchToVolume(0);
+  assert.match(h.panel.textContent, /上次成功整理/);
+  const saved = h.storage.get('novelStoryStateLedger');
+  let release;
+  h.ctx.callDeepSeek = () => new Promise(resolve => { release = resolve; });
+  const pending = h.ctx.refreshStoryStateLedger(original, undefined, {force:true});
+  h.ctx.switchToVolume(1);
+  h.ctx.switchToVolume(0);
+  release('{"establishedFacts":["不應寫回的延遲結果"]}');
+  await assert.rejects(pending, {name:'AbortError'});
+  assert.equal(h.storage.get('novelStoryStateLedger'), saved);
+  assert.match(h.panel.textContent, /上次成功整理/);
+});
 
 test('Flash defaults and legacy names send the official V4.1 ID with non-thinking options', async () => {
   const requests = [];
@@ -56,6 +166,14 @@ test('Flash defaults and legacy names send the official V4.1 ID with non-thinkin
     assert.equal(body.max_tokens, 1200);
     assert.equal(body.temperature, planning.getSamplingProfile('state').temperature);
   }
+});
+
+test('non-JSON API errors retain HTTP status for continuity diagnostics', async () => {
+  const ctx = { DOMException, confirmPeakPricing:()=>true, DEEPSEEK_ENDPOINT:'/api/chat',
+    NovelGenerationPlanning:planning, fetch:async()=>({status:502,ok:false,json:async()=>{throw new SyntaxError('HTML response');}}) };
+  vm.createContext(ctx);
+  vm.runInContext(between('async function doDeepSeekRequest(', 'function setGenerationStage('), ctx);
+  await assert.rejects(ctx.doDeepSeekRequest('JSON', null, 'deepseek-flash', {taskType:'state', maxTokens:3000}), error=>error.status===502);
 });
 
 test('state extraction receives cancellation and never writes an aborted response', async () => {

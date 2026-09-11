@@ -445,7 +445,10 @@
                 <div id="result" class="output"></div>
               </div>
             </div>
-            <details class="manuscript-continuity"><summary>故事連貫性紀錄</summary><div id="continuityReport" class="usage-last" role="status" aria-live="polite">尚未檢查：完成章節後會整理故事狀態。</div></details>
+            <details class="manuscript-continuity"><summary>故事連貫性紀錄</summary>
+              <div id="continuityReport" class="usage-last" role="status" aria-live="polite">尚未檢查：完成章節後會整理故事狀態。</div>
+              <div class="continuity-actions"><button id="continuityRetry" type="button">重新檢查</button><button id="continuityCancel" type="button" hidden>停止檢查</button><span>只檢查，不改寫；每次重查會產生 API 費用。</span></div>
+            </details>
           </div>
         </div>
         <div class="manuscript-footer">

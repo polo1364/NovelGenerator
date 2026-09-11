@@ -1024,11 +1024,11 @@
           try {
             data = await response.json();
           } catch (e) {
-            throw new Error(`HTTP ${response.status}：無法解析回應`);
+            throw Object.assign(new Error(`HTTP ${response.status}：無法解析回應`), { status: response.status, code: 'API_JSON' });
           }
           if (!response.ok || data.error) {
             const rawMsg = (data && data.error && (data.error.message || data.error)) || `HTTP ${response.status}`;
-            throw new Error(friendlyApiError(response.status, typeof rawMsg === 'string' ? rawMsg : JSON.stringify(rawMsg)));
+            throw Object.assign(new Error(friendlyApiError(response.status, typeof rawMsg === 'string' ? rawMsg : JSON.stringify(rawMsg))), { status: response.status });
           }
           if (!data.choices || data.choices.length === 0) {
             throw new Error('沒有獲得內容');
@@ -1157,15 +1157,16 @@
       let storyStateRevision = 0;
       let storyStateController = null;
 
-      function renderContinuityReport(warnings = [], status = 'unchecked') {
+      function renderContinuityReport(warnings = [], status = 'unchecked', details = {}) {
         const panel = typeof document !== 'undefined' ? document.getElementById('continuityReport') : null;
         if (!panel) return;
         panel.hidden = false;
-        if (status === 'failed') panel.textContent = '整理失敗：本章連貫性尚未檢查，可稍後重試續寫。';
+        if (status === 'failed') panel.textContent = `整理失敗：${details.error || '原因未知'}。本次檢查未完成；正文未修改，可使用「重新檢查」。`;
         else if (warnings.length) panel.textContent = '連貫性待確認（正文未自動修改）：' + warnings.join('；');
         else if (status === 'checked') panel.textContent = '未發現規則衝突：僅檢查已擷取狀態與原文依據，不代表全文保證無矛盾。';
         else if (status === 'checking') panel.textContent = '檢查中：正在整理本章狀態與原文依據。';
         else panel.textContent = '尚未檢查：完成章節後會整理故事狀態。';
+        if (details.coverage) panel.textContent += '\n' + details.coverage;
       }
 
       function readStoryStateLedger() {
@@ -1175,6 +1176,41 @@
         } catch (_) {
           return null;
         }
+      }
+
+      function getContinuityFailureMessage(error) {
+        if (error.code === 'STATE_TRUNCATED') return '回應被截斷（已達 3,000 tokens 上限），未採用不完整狀態';
+        if (error.code === 'STATE_JSON') return 'JSON 格式錯誤或狀態內容為空';
+        if (error.status === 429) return '請求過於頻繁，請稍後再試';
+        if (error.status === 401 || error.status === 403) return 'API 驗證失敗，請管理員檢查金鑰與權限';
+        if (error.status === 402) return 'API 帳戶餘額不足';
+        if (error.status >= 500) return 'API 服務暫時異常，請稍後再試';
+        if (error.status >= 400) return `API 拒絕請求（HTTP ${error.status}）`;
+        if (error.code === 'API_JSON') return 'API 回應不是有效的 JSON 格式';
+        if (error.name === 'TypeError' || error.name === 'NetworkError') return '連線失敗，請確認網路後重試';
+        if (error.name === 'QuotaExceededError') return '本機儲存空間不足，無法保存檢查結果';
+        return '原因未知，請稍後重試；未顯示上游原始資料';
+      }
+
+      function getContinuityCoverage(storyText, stored = readStoryStateLedger()) {
+        const story = String(storyText || '').trim();
+        const planner = globalThis.NovelGenerationPlanning;
+        const length = stored && (stored.sourceLength || Number(String(stored.sourceFingerprint || '').split(':')[0]));
+        if (!stored || stored.checkStatus !== 'checked' || !Number.isInteger(length) || length < 1 ||
+            planner.createStoryFingerprint(story.slice(0, length)) !== stored.sourceFingerprint) return '這篇故事尚無成功整理紀錄。';
+        const date = new Date(stored.updatedAt);
+        const time = Number.isNaN(date.getTime()) ? '時間未記錄' : date.toLocaleString('zh-TW');
+        const chapter = Math.max(0, Number(stored.chapterCount) || 0);
+        const scope = `上次成功整理：${time}，至第 ${chapter} 章／${length.toLocaleString()} 字；分析最近 ${Math.min(length, 12000).toLocaleString()} 字並參考舊狀態，不是全文逐句檢查。`;
+        return scope + (planner.createStoryFingerprint(story) !== stored.sourceFingerprint ? '\n新增內容尚未檢查，舊結果不代表目前全文。' : '');
+      }
+
+      function restoreContinuityReport() {
+        const stored = readStoryStateLedger();
+        const matches = stored && stored.sourceFingerprint === globalThis.NovelGenerationPlanning.createStoryFingerprint(latestStory.trim());
+        renderContinuityReport(matches && Array.isArray(stored.warnings) ? stored.warnings : [],
+          matches ? stored.checkStatus || (stored.version >= 2 ? 'checked' : 'unchecked') : 'unchecked',
+          { coverage: getContinuityCoverage(latestStory, stored) });
       }
 
       function clearStoryStateLedger() {
@@ -1194,7 +1230,7 @@
           ? '\n【待確認項目，不得作為既成事實，也不可新增情節替前文矛盾找藉口】\n' + warnings.join('\n') : '');
       }
 
-      async function refreshStoryStateLedger(storyText, signal) {
+      async function refreshStoryStateLedger(storyText, signal, options = {}) {
         if (signal && signal.aborted) throw new DOMException('已停止狀態整理', 'AbortError');
         const planner = globalThis.NovelGenerationPlanning;
         const story = String(storyText || '').trim();
@@ -1206,8 +1242,8 @@
         const previous = stored && (stored.sourceFingerprint === sourceFingerprint ||
           (Number.isInteger(storedLength) && storedLength > 0 &&
            planner.createStoryFingerprint(story.slice(0, storedLength)) === stored.sourceFingerprint)) ? stored : null;
-        if (previous && previous.sourceFingerprint === sourceFingerprint) {
-          renderContinuityReport(previous.warnings || [], previous.checkStatus || (previous.version >= 2 ? 'checked' : 'unchecked'));
+        if (!options.force && previous && previous.sourceFingerprint === sourceFingerprint) {
+          renderContinuityReport(previous.warnings || [], previous.checkStatus || (previous.version >= 2 ? 'checked' : 'unchecked'), { coverage: getContinuityCoverage(story, previous) });
           return previous.state || null;
         }
         const revision = storyStateRevision;
@@ -1227,19 +1263,21 @@
         });
 
         try {
-          setGenerationStage('state');
-          renderContinuityReport([], 'checking');
-          startSimulatedProgress();
+          if (!options.standalone) { setGenerationStage('state'); startSimulatedProgress(); }
+          renderContinuityReport([], 'checking', { coverage: getContinuityCoverage(story, previous) });
+          let finishReason = null;
           const raw = await callDeepSeek(prompt, null, 'deepseek-flash', {
             taskType: 'state',
             signal: controller.signal,
             maxTokens: 3000,
-            retries: 0
+            retries: 0,
+            onComplete: result => { finishReason = result.finishReason; }
           });
           if (controller.signal.aborted) throw new DOMException('已停止狀態整理', 'AbortError');
           if (revision !== storyStateRevision || planner.createStoryFingerprint(latestStory.trim()) !== sourceFingerprint) return null;
+          if (finishReason === 'length') throw Object.assign(new Error('State output truncated'), { code: 'STATE_TRUNCATED' });
           const proposed = planner.parseStoryState(raw);
-          if (!proposed) throw new Error('回應不是有效的故事狀態 JSON');
+          if (!proposed) throw Object.assign(new Error('Invalid state JSON'), { code: 'STATE_JSON' });
           const { state, warnings } = planner.checkStoryContinuity(previous && previous.state, proposed, story,
             previous && storedLength ? story.slice(storedLength) : story.slice(-12000));
           localStorage.setItem(STORY_STATE_STORAGE_KEY, JSON.stringify({
@@ -1252,23 +1290,49 @@
             warnings,
             checkStatus: 'checked'
           }));
-          renderContinuityReport(warnings, 'checked');
-          setGenerationStage('done');
+          renderContinuityReport(warnings, 'checked', { coverage: getContinuityCoverage(story) });
+          if (!options.standalone) setGenerationStage('done');
           return state;
         } catch (err) {
           if (err.name === 'AbortError') {
-            if (revision === storyStateRevision && storyStateController === controller) renderContinuityReport();
+            if (revision === storyStateRevision && storyStateController === controller) renderContinuityReport([], 'unchecked', { coverage: getContinuityCoverage(story, previous) });
             throw err;
           }
-          console.warn('故事狀態表更新略過：', err && err.message ? err.message : err);
+          console.warn('故事狀態表更新略過：', getContinuityFailureMessage(err));
           if (revision === storyStateRevision && planner.createStoryFingerprint(latestStory.trim()) === sourceFingerprint) {
-            renderContinuityReport([], 'failed');
-            setGenerationStage('failed');
+            renderContinuityReport([], 'failed', { error: getContinuityFailureMessage(err), coverage: getContinuityCoverage(story, previous) });
+            if (!options.standalone) setGenerationStage('failed');
           }
           return previous && previous.state ? previous.state : null;
         } finally {
           if (signal) signal.removeEventListener('abort', abort);
           if (storyStateController === controller) storyStateController = null;
+        }
+      }
+
+      let manualStoryCheck = false;
+
+      async function retryStoryContinuity() {
+        if (manualStoryCheck || storyStateController || currentAbortController || seriesRunning || autoContinueRunning) return;
+        const story = latestStory.trim();
+        if (story.length < 200) {
+          renderContinuityReport([], 'unchecked', { coverage: '正文至少需要 200 字才可重新檢查。' });
+          return;
+        }
+        if (!confirm('重新檢查只整理目前正文，不會續寫或改寫。\n將產生一次 Flash 狀態整理 API 費用（最多輸出 3,000 tokens；尖峰價格另行確認）。\n失敗不會自動重試。是否繼續？')) return;
+        manualStoryCheck = true;
+        const button = document.getElementById('continuityRetry');
+        const cancel = document.getElementById('continuityCancel');
+        if (button) { button.disabled = true; button.textContent = '檢查中…'; }
+        if (cancel) cancel.hidden = false;
+        try {
+          await refreshStoryStateLedger(story, undefined, { force: true, standalone: true });
+        } catch (error) {
+          if (error.name !== 'AbortError') console.warn('重新檢查未完成：', getContinuityFailureMessage(error));
+        } finally {
+          manualStoryCheck = false;
+          if (button) { button.disabled = false; button.textContent = '重新檢查'; }
+          if (cancel) cancel.hidden = true;
         }
       }
 
@@ -1300,16 +1364,17 @@
         });
       }
 
+      document.getElementById('continuityRetry')?.addEventListener('click', retryStoryContinuity);
+      document.getElementById('continuityCancel')?.addEventListener('click', () => {
+        if (manualStoryCheck && storyStateController) storyStateController.abort();
+      });
+
       // ==================== 載入已儲存的故事 ====================
       const savedStory = (localStorage.getItem('savedStory') || '').replace(/\uFFFD/g, '');
       if (savedStory) {
         latestStory = savedStory;
         resultDiv.textContent = savedStory;
-        const savedLedger = readStoryStateLedger();
-        if (savedLedger && savedLedger.sourceFingerprint === globalThis.NovelGenerationPlanning.createStoryFingerprint(savedStory.trim())) {
-          renderContinuityReport(Array.isArray(savedLedger.warnings) ? savedLedger.warnings : [],
-            savedLedger.checkStatus || (savedLedger.version >= 2 ? 'checked' : 'unchecked'));
-        }
+        restoreContinuityReport();
         // 直接用 getElementById 確保獲取正確的元素
         document.getElementById('downloadBtn').disabled = false;
         document.getElementById('continueBtn').disabled = false;
@@ -1328,6 +1393,7 @@
         if (activeVol && activeVol.content && !savedStory) {
           latestStory = activeVol.content;
           resultDiv.textContent = latestStory;
+          restoreContinuityReport();
           parseAndShowChapters(latestStory);
         }
         // renderSeriesBar 於 DOM 後段定義，延後呼叫確保可用
@@ -8182,8 +8248,11 @@ ${continueWordReq}
         storySeries.activeVolumeIndex = idx;
         saveStorySeries();
         const vol = storySeries.volumes[idx];
+        storyStateRevision++;
+        if (storyStateController) storyStateController.abort();
         latestStory = (vol && vol.content) || '';
         resultDiv.textContent = latestStory;
+        restoreContinuityReport();
         try { localStorage.setItem('savedStory', latestStory); } catch (e) {}
         updateWordCount(latestStory);
         parseAndShowChapters(latestStory);
@@ -9222,6 +9291,7 @@ ${continueWordReq}
           if (dbStory) {
             latestStory = dbStory;
             resultDiv.textContent = dbStory;
+            restoreContinuityReport();
             parseAndShowChapters(dbStory);
             updateWordCount(dbStory);
             console.log('已從 IndexedDB 還原故事');

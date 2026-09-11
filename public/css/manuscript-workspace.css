@@ -1,4 +1,11 @@
 /* Art-journal manuscript surface. Reading modes and the generation form stay independent. */
+#readingScene #continuityReport { white-space: pre-line; overflow-wrap: anywhere; }
+#readingScene .continuity-actions { display: flex; flex-wrap: wrap; align-items: center; gap: 12px; padding-top: 12px; }
+#readingScene .continuity-actions button { min-height: 48px; min-width: 96px; padding: 10px 16px; }
+#readingScene #continuityRetry { background: #c29a6c; color: #242721; border: 1px solid #94714a; border-radius: 3px; }
+#readingScene #continuityRetry:disabled { opacity: .55; cursor: wait; }
+#readingScene .continuity-actions button[hidden] { display: none; }
+#readingScene .continuity-actions span { color: var(--ms-ink, #292825); font-size: 12px; line-height: 1.6; }
 #readingScene {
   --ms-ink: #292825;
   --ms-paper: #f4f0e6;
