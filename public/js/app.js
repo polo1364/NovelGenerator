@@ -1163,8 +1163,16 @@
         const panel = typeof document !== 'undefined' ? document.getElementById('continuityReport') : null;
         if (!panel) return;
         panel.hidden = false;
+        const issues = globalThis.NovelGenerationPlanning.getContinuityIssues(warnings, details.issues);
         if (status === 'failed') panel.textContent = `整理失敗：${details.error || '原因未知'}。本次檢查未完成；正文未修改，可使用「重新檢查」。`;
-        else if (warnings.length) panel.textContent = '連貫性待確認（正文未自動修改）：' + warnings.join('；');
+        else if (issues.length) {
+          const headings = { conflict: '疑似劇情衝突（正文未自動修改，仍需對照情境）', extraction: '摘要更新不完整（正文未修改，不代表已確認劇情矛盾）', review: '舊紀錄待確認（可重新檢查）' };
+          panel.textContent = Object.entries(headings).map(([category, heading]) => {
+            const group = issues.filter(issue => issue.category === category);
+            return group.length ? heading + '：\n' + group.map(issue => '• ' + issue.message).join('\n') : '';
+          }).filter(Boolean).join('\n\n');
+          if (issues.some(issue => issue.category === 'extraction')) panel.textContent += '\n其他通過原文驗證的狀態可繼續使用；待確認的舊狀態不視為目前現況。';
+        }
         else if (status === 'checked') panel.textContent = '未發現規則衝突：僅檢查已擷取狀態與原文依據，不代表全文保證無矛盾。';
         else if (status === 'checking') panel.textContent = '檢查中：正在整理本章狀態與原文依據。';
         else panel.textContent = '尚未檢查：完成章節後會整理故事狀態。';
@@ -1203,7 +1211,8 @@
         const date = new Date(stored.updatedAt);
         const time = Number.isNaN(date.getTime()) ? '時間未記錄' : date.toLocaleString('zh-TW');
         const chapter = Math.max(0, Number(stored.chapterCount) || 0);
-        const scope = `上次成功整理：${time}，至第 ${chapter} 章／${length.toLocaleString()} 字；分析最近 ${Math.min(length, 12000).toLocaleString()} 字並參考舊狀態，不是全文逐句檢查。`;
+        const partial = planner.getContinuityIssues(stored.warnings, stored.issues).some(issue => issue.category === 'extraction');
+        const scope = `${partial ? '上次整理（部分狀態未更新）' : '上次成功整理'}：${time}，至第 ${chapter} 章／${length.toLocaleString()} 字；分析最近 ${Math.min(length, 12000).toLocaleString()} 字並參考舊狀態，不是全文逐句檢查。`;
         return scope + (planner.createStoryFingerprint(story) !== stored.sourceFingerprint ? '\n新增內容尚未檢查，舊結果不代表目前全文。' : '');
       }
 
@@ -1212,7 +1221,7 @@
         const matches = stored && stored.sourceFingerprint === globalThis.NovelGenerationPlanning.createStoryFingerprint(latestStory.trim());
         renderContinuityReport(matches && Array.isArray(stored.warnings) ? stored.warnings : [],
           matches ? stored.checkStatus || (stored.version >= 2 ? 'checked' : 'unchecked') : 'unchecked',
-          { coverage: getContinuityCoverage(latestStory, stored) });
+          { coverage: getContinuityCoverage(latestStory, stored), issues: matches ? stored.issues : [] });
       }
 
       function clearStoryStateLedger() {
@@ -1228,8 +1237,10 @@
         const stored = readStoryStateLedger();
         if (!stored || stored.sourceFingerprint !== planner.createStoryFingerprint(storyText)) return '';
         const warnings = Array.isArray(stored.warnings) ? stored.warnings : [];
-        return planner.formatStoryStateGuidance(stored.state) + (warnings.length
-          ? '\n【待確認項目，不得作為既成事實，也不可新增情節替前文矛盾找藉口】\n' + warnings.join('\n') : '');
+        const issues = planner.getContinuityIssues(warnings, stored.issues);
+        return planner.formatStoryStateGuidance(stored.state, { issues }) + (issues.length
+          ? '\n【待確認項目：下列新舊值皆不是確定現況，須對照正文；不得新增情節替檢查報告補理由】\n'
+            + issues.map(issue => `${issue.category === 'extraction' ? '摘要依據缺漏（不是已確認劇情矛盾）' : '疑似衝突待確認'}：${issue.message}`).join('\n') : '');
       }
 
       async function refreshStoryStateLedger(storyText, signal, options = {}) {
@@ -1245,9 +1256,15 @@
           (Number.isInteger(storedLength) && storedLength > 0 &&
            planner.createStoryFingerprint(story.slice(0, storedLength)) === stored.sourceFingerprint)) ? stored : null;
         if (!options.force && previous && previous.sourceFingerprint === sourceFingerprint) {
-          renderContinuityReport(previous.warnings || [], previous.checkStatus || (previous.version >= 2 ? 'checked' : 'unchecked'), { coverage: getContinuityCoverage(story, previous) });
+          renderContinuityReport(previous.warnings || [], previous.checkStatus || (previous.version >= 2 ? 'checked' : 'unchecked'), { coverage: getContinuityCoverage(story, previous), issues: previous.issues });
           return previous.state || null;
         }
+        // 同文重查重新驗證上一輪範圍；一般續寫仍只接受新正文的轉變依據。
+        const recheckingSameText = options.force && previous && previous.sourceFingerprint === sourceFingerprint;
+        const windowStart = Math.max(0, story.length - 12000);
+        const priorStart = previous && Number.isInteger(previous.analysisStart) && previous.analysisStart >= 0 && previous.analysisStart <= story.length
+          ? previous.analysisStart : windowStart;
+        const analysisStart = Math.max(windowStart, recheckingSameText ? priorStart : previous ? storedLength : windowStart);
         const revision = storyStateRevision;
         const controller = new AbortController();
         if (storyStateController) storyStateController.abort();
@@ -1260,6 +1277,7 @@
 
         const prompt = planner.buildStoryStatePrompt({
           previousState: previous && previous.state,
+          previousIssues: previous ? planner.getContinuityIssues(previous.warnings, previous.issues) : [],
           storyText: story,
           chapterCount: countChapters(story),
           characterCanon: collectCharactersInfo().charactersInfo
@@ -1281,19 +1299,22 @@
           if (finishReason === 'length') throw Object.assign(new Error('State output truncated'), { code: 'STATE_TRUNCATED' });
           const proposed = planner.parseStoryState(raw);
           if (!proposed) throw Object.assign(new Error('Invalid state JSON'), { code: 'STATE_JSON' });
-          const { state, warnings } = planner.checkStoryContinuity(previous && previous.state, proposed, story,
-            previous && storedLength ? story.slice(storedLength) : story.slice(-12000), collectCharactersInfo().charactersInfo);
+          const { state, warnings, issues } = planner.checkStoryContinuity(previous && previous.state, proposed, story,
+            story.slice(analysisStart), collectCharactersInfo().charactersInfo,
+            previous ? planner.getContinuityIssues(previous.warnings, previous.issues) : []);
           localStorage.setItem(STORY_STATE_STORAGE_KEY, JSON.stringify({
             version: 2,
             sourceLength: story.length,
+            analysisStart,
             sourceFingerprint,
             chapterCount: countChapters(story),
             updatedAt: new Date().toISOString(),
             state,
             warnings,
+            issues,
             checkStatus: 'checked'
           }));
-          renderContinuityReport(warnings, 'checked', { coverage: getContinuityCoverage(story) });
+          renderContinuityReport(warnings, 'checked', { coverage: getContinuityCoverage(story), issues });
           if (!options.standalone) setGenerationStage('done');
           return state;
         } catch (err) {

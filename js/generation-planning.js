@@ -88,7 +88,7 @@
     }
   }
 
-  function buildStoryStatePrompt({ previousState, storyText, chapterCount, characterCanon = '' } = {}) {
+  function buildStoryStatePrompt({ previousState, storyText, chapterCount, characterCanon = '', previousIssues = [] } = {}) {
     const previous = sanitizeStoryState(previousState) || {
       establishedFacts: [],
       characterStates: [],
@@ -111,6 +111,7 @@
 • foreshadowing 記錄伏筆、埋設章節、預計回收位置與 open/resolved 狀態；預計回收不是已發生事件。
 • entities 使用穩定名稱；kind 為 character/item，角色 status 為 alive/dead/unknown，並記錄目前 location；物件記錄 holder。
 • evidence 必須逐字引用提供的正文（4～40字）；舊紀錄可沿用。位置、持有人、生死改變時，transitionEvidence 必須逐字引用本次新增正文中造成轉變的事件，不能只重複結果。
+• 引句須為連續原文，不可合併不同句子、改寫同義字或自行加入省略號；引用缺漏只是摘要更新不完整，不可因此宣稱正文矛盾。
 • 不確定時用空字串或 unknown；不要猜測。新揭密不等於矛盾，但不能推翻已確認事實。
 • 對照人物設定檢查能力代價、信念底線與漸進成長；設定是約束，不代表轉變已發生。characterStates 摘要目前傷勢、關係、成長進度，不覆寫初始設定。
 • characterConflicts 最多 3 項，每項 {"character":"設定中的人物名","conflictType":"hard_boundary / ability_limit / unearned_change 三選一","constraint":"逐字引用該人物設定中的具體限制，4～40字","issue":"具體行動如何違反限制","evidence":"4～40字逐字正文，必須呈現違反限制的行動"}。分別只用於明確底線、能力限制、無合理建立的能力或立場轉變；不確定則不報，仍遵守 JSON 預算。
@@ -129,13 +130,26 @@ ${characterCanon || '未提供'}
 【上一版狀態表】
 ${JSON.stringify(previous)}
 
+【上一版待確認項目（保留值不是確定現況；須用正文引句修正，不得補造情節）】
+${JSON.stringify(getContinuityIssues([], previousIssues))}
+
 【最近已寫正文】
 ${recentStory}`;
   }
 
-  function formatStoryStateGuidance(value) {
+  function formatStoryStateGuidance(value, { issues = [] } = {}) {
     const state = sanitizeStoryState(value);
     if (!state) return '';
+    if (issues.length) {
+      const uncertain = new Set(issues.map(issue => issue.entity).filter(Boolean));
+      for (const [key, fields] of Object.entries(RECORD_FIELDS)) {
+        state[key] = state[key].filter(item => !uncertain.has(item[fields[0]]));
+      }
+      // 舊版摘要沒有逐項依據；僅注入仍有效表格中的原文，避免把保留的舊地點當成現況。
+      const quotes = new Set(Object.keys(RECORD_FIELDS).flatMap(key => state[key].flatMap(item => [item.evidence, item.transitionEvidence])).filter(Boolean));
+      for (const key of ['establishedFacts', 'characterStates', 'unresolvedThreads', 'timeline']) state[key] = state[key].filter(text => quotes.has(text));
+      if (!quotes.has(state.recentOutcome)) state.recentOutcome = '';
+    }
     const lines = ['\n\n【已確認故事狀態（不得矛盾）】'];
     if (state.establishedFacts.length) lines.push(`• 已確定事實：${state.establishedFacts.join('；')}`);
     if (state.characterStates.length) lines.push(`• 人物目前狀態：${state.characterStates.join('；')}`);
@@ -181,12 +195,36 @@ ${writingPrompt}`;
     } catch (_) { return null; }
   }
 
-  function checkStoryContinuity(previousValue, nextValue, storyText, addedText = storyText, characterCanon = '') {
+  function getContinuityIssues(warnings = [], issues) {
+    const valid = Array.isArray(issues) ? issues.filter(issue => issue && typeof issue.message === 'string').map(issue => ({
+      ...issue, category: ['extraction', 'conflict', 'review'].includes(issue.category) ? issue.category : 'review'
+    })) : [];
+    if (valid.length) return valid;
+    return (Array.isArray(warnings) ? warnings : []).filter(message => typeof message === 'string').map(message => ({
+      category: /找不到逐字原文依據|缺少本次轉變依據|狀態表格式無效/.test(message) ? 'extraction' : /疑似人物設定偏離/.test(message) ? 'conflict' : 'review',
+      entity: message.split('：')[0], code: 'legacy', message
+    }));
+  }
+
+  function checkStoryContinuity(previousValue, nextValue, storyText, addedText = storyText, characterCanon = '', previousIssues = []) {
     const previous = sanitizeStoryState(previousValue);
     const state = sanitizeStoryState(nextValue);
-    if (!state) return { state: previous, warnings: ['狀態表格式無效，保留上一版。'] };
+    if (!state) {
+      const warnings = ['狀態表格式無效，保留上一版。'];
+      return { state: previous, warnings, issues: getContinuityIssues(warnings) };
+    }
     const warnings = [];
-    const hasQuote = (text, quote) => quote.length >= 4 && String(text || '').includes(quote);
+    const issues = [];
+    const acceptedQuotes = [];
+    const pending = getContinuityIssues([], previousIssues).filter(issue => issue.category === 'extraction');
+    const resolved = new Set();
+    const matchesRecord = (issue, table, item, id) => (!issue.table || issue.table === table)
+      && issue.entity === item[RECORD_FIELDS[table][0]] && (!issue.recordId || issue.recordId === id);
+    const report = (category, code, table, entity, message, recordId) => {
+      warnings.push(message);
+      issues.push({ category, code, table, entity, message, recordId });
+    };
+    const hasQuote = (text, quote) => typeof quote === 'string' && quote.length >= 4 && String(text || '').includes(quote);
     // 人物偏離是本次分析範圍的檢查，不是狀態轉移；同文重查也須驗證引句。
     state.characterConflicts = state.characterConflicts.filter(item => {
       const ownCanon = String(characterCanon).split('\n').find(line => /^角色\d+：\s*【([^】]+)】/.exec(line)?.[1] === item.character) || '';
@@ -194,7 +232,8 @@ ${writingPrompt}`;
         && item.issue && hasQuote(ownCanon, item.constraint)
         && hasQuote(String(storyText || '').slice(-MAX_STATE_SOURCE_LENGTH), item.evidence);
     });
-    state.characterConflicts.forEach(item => warnings.push(`${item.character}：疑似人物設定偏離 — ${item.issue}（設定：${item.constraint}；原文：${item.evidence}）`));
+    state.characterConflicts.forEach(item => report('conflict', 'character_conflict', 'characterConflicts', item.character,
+      `${item.character}：疑似人物設定偏離 — ${item.issue}（設定：${item.constraint}；原文：${item.evidence}）`));
     for (const [key, fields] of Object.entries(RECORD_FIELDS)) {
       const oldRecords = previous ? previous[key] : [];
       const identity = item => key === 'characterKnowledge' ? `${item.character}:${item.fact}` : item[fields[0]];
@@ -209,27 +248,50 @@ ${writingPrompt}`;
         }
         if (old && JSON.stringify(old) === JSON.stringify(item)) continue;
         if (!hasQuote(storyText, item.evidence)) {
-          warnings.push(`${item[fields[0]]}：找不到逐字原文依據，未採用這項狀態。`);
+          report('extraction', 'missing_quote', key, item[fields[0]],
+            `${item[fields[0]]}：找不到逐字原文依據，未採用這項狀態。（AI 提供的引句：${item.evidence || '未提供'}）`, id);
           continue;
         }
         const changes = key === 'entities' && old
           ? ['status', 'location', 'holder'].filter(field => old[field] && item[field] && old[field] !== 'unknown' && item[field] !== 'unknown' && old[field] !== item[field]) : [];
         if (changes.length && !hasQuote(addedText, item.transitionEvidence)) {
-          warnings.push(`${item.entity}：${changes.join('／')} 改變但缺少本次轉變依據，保留原狀態。`);
+          const labels = { status: '生死狀態', location: '地點', holder: '持有人' };
+          const changeText = changes.map(field => `${labels[field]}：${old[field]} → ${item[field]}`).join('；');
+          report('extraction', 'missing_transition', key, item.entity,
+            `${item.entity}：${changeText}；改變但缺少本次轉變依據，保留原狀態供對照，現況待確認。\n結果引句：${item.evidence}；轉變引句：${item.transitionEvidence || '未提供'}。`, id);
           continue;
+        }
+        for (const issue of pending) {
+          const needsTransition = issue.code === 'missing_transition' || issue.message.includes('缺少本次轉變依據');
+          if (matchesRecord(issue, key, item, id) &&
+              (!needsTransition || hasQuote(addedText, item.transitionEvidence))) resolved.add(issue);
         }
         merged.delete(id);
         merged.set(id, item);
+        acceptedQuotes.push(item.transitionEvidence && hasQuote(addedText, item.transitionEvidence) ? item.transitionEvidence : item.evidence);
       }
       state[key] = [...merged.values()].slice(-8);
     }
-    // 摘要沒有逐項引句，遇到衝突時不可透過摘要重新引入被拒絕的狀態。
-    if (warnings.length) {
-      for (const key of ['establishedFacts', 'characterStates', 'unresolvedThreads', 'timeline', 'recentOutcome']) {
-        state[key] = previous ? previous[key] : (key === 'recentOutcome' ? '' : []);
+    // 模型省略或重複舊紀錄不等於解決問題；只保留仍有對應狀態的待確認標記。
+    for (const issue of pending) {
+      const retained = Object.entries(RECORD_FIELDS).some(([key]) => state[key].some(item =>
+        matchesRecord(issue, key, item, key === 'characterKnowledge' ? `${item.character}:${item.fact}` : item[RECORD_FIELDS[key][0]])));
+      if (!resolved.has(issue) && retained && !issues.some(current => current.category === 'extraction' && current.code === issue.code && current.entity === issue.entity && current.table === issue.table && current.recordId === issue.recordId)) {
+        issues.push(issue);
+        warnings.push(issue.message);
       }
     }
-    return { state, warnings: warnings.slice(0, 12) };
+    // 部分紀錄失敗時，以已驗證表格原文更新摘要，不採用可能重新引入拒絕內容的自由摘要。
+    if (warnings.length) {
+      const uncertain = new Set(issues.map(issue => issue.entity));
+      const quotesFor = key => [...new Set(state[key].filter(item => !uncertain.has(item[RECORD_FIELDS[key][0]]) && (key !== 'foreshadowing' || item.status !== 'resolved')).map(item => item.evidence).filter(Boolean))].slice(-MAX_STATE_ITEMS);
+      state.establishedFacts = previous ? previous.establishedFacts : [];
+      state.characterStates = quotesFor('entities');
+      state.unresolvedThreads = quotesFor('foreshadowing');
+      state.timeline = quotesFor('causalEvents');
+      state.recentOutcome = acceptedQuotes.at(-1) || '';
+    }
+    return { state, warnings: warnings.slice(0, 12), issues };
   }
 
   function createStoryFingerprint(storyText) {
@@ -358,6 +420,7 @@ ${writingPrompt}`;
     buildContinuityRules,
     buildChapterPlanPrompt,
     parseChapterPlan,
-    checkStoryContinuity
+    checkStoryContinuity,
+    getContinuityIssues
   };
 });

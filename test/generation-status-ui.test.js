@@ -13,7 +13,7 @@ function section(start, end) { return app.slice(app.indexOf(start), app.indexOf(
 
 test('continuity panel distinguishes unchecked, failed and checked states', () => {
   const panel = {};
-  const ctx = { document: { getElementById: () => panel } };
+  const ctx = { document: { getElementById: () => panel }, NovelGenerationPlanning: require('../public/js/generation-planning') };
   vm.createContext(ctx);
   vm.runInContext(section('function renderContinuityReport(', 'function readStoryStateLedger('), ctx);
   ctx.renderContinuityReport();
@@ -23,7 +23,7 @@ test('continuity panel distinguishes unchecked, failed and checked states', () =
   ctx.renderContinuityReport([], 'failed');
   assert.match(panel.textContent, /整理失敗/);
   ctx.renderContinuityReport(['缺少轉交依據'], 'checked');
-  assert.match(panel.textContent, /待確認.*缺少轉交依據/);
+  assert.match(panel.textContent, /待確認.*缺少轉交依據/s);
   assert.equal(panel.hidden, false);
 });
 

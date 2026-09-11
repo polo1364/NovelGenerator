@@ -86,6 +86,29 @@ test('forced state recheck bypasses reuse without changing prose or adding reque
   assert.equal(h.ctx.latestStory, original);
 });
 
+test('same-text recheck can repair a missing transition within the previous analysis window', async () => {
+  let record = { entity: '李斯', location: '城外', evidence: '李斯站在城外。' };
+  const h = harness(() => JSON.stringify({ entities: [record] }));
+  h.ctx.latestStory = '李斯站在城外。' + '夜色漸深。'.repeat(50);
+  await h.ctx.refreshStoryStateLedger(h.ctx.latestStory);
+  const start = h.ctx.latestStory.length;
+  h.ctx.latestStory += '李斯離開城外，走進書房。李斯坐在書房。';
+  record = { entity: '李斯', location: '書房', evidence: '李斯坐在書房。' };
+  await h.ctx.refreshStoryStateLedger(h.ctx.latestStory);
+  assert.match(h.panel.textContent, /摘要更新不完整/);
+  record.transitionEvidence = '李斯離開城外，走進書房。';
+  await h.ctx.refreshStoryStateLedger(h.ctx.latestStory, undefined, { force: true });
+  const saved = JSON.parse(h.storage.get('novelStoryStateLedger'));
+  assert.equal(saved.state.entities[0].location, '書房');
+  assert.equal(saved.analysisStart, start);
+  assert.deepEqual(saved.warnings, []);
+  assert.equal(h.calls.length, 3);
+  record = { entity: '李斯', location: '城外', evidence: '李斯站在城外。', transitionEvidence: '李斯離開城外，走進書房。' };
+  h.ctx.latestStory += '天亮了。';
+  await h.ctx.refreshStoryStateLedger(h.ctx.latestStory);
+  assert.equal(JSON.parse(h.storage.get('novelStoryStateLedger')).state.entities[0].location, '書房', 'ordinary update must not reuse an earlier transition');
+});
+
 test('manual recheck cancellation sends no request; accepting sends only one state request', async () => {
   const h = harness();
   Object.assign(h.ctx, {currentAbortController:null, seriesRunning:false, autoContinueRunning:false, confirm:()=>false});
@@ -246,6 +269,16 @@ test('state warnings are persisted, displayed and injected without the rejected 
   h.ctx.clearStoryStateLedger();
   assert.equal(panel.hidden, false);
   assert.match(panel.textContent, /尚未檢查/);
+});
+
+test('report separates extraction notices from character conflicts including restored legacy warnings', () => {
+  const h = harness();
+  h.ctx.renderContinuityReport(['李斯：location 改變但缺少本次轉變依據，保留原狀態。'], 'checked');
+  assert.match(h.panel.textContent, /摘要更新不完整/);
+  assert.doesNotMatch(h.panel.textContent, /連貫性待確認|未發現規則衝突/);
+  h.ctx.renderContinuityReport(['小林：疑似人物設定偏離 — 違反底線', '花：找不到逐字原文依據，未採用這項狀態。'], 'checked');
+  assert.match(h.panel.textContent, /疑似劇情衝突/);
+  assert.match(h.panel.textContent, /摘要更新不完整/);
 });
 
 test('unrelated stored book is not supplied as the previous state', async () => {

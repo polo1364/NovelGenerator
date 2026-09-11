@@ -13,7 +13,7 @@ sys.stdout.reconfigure(encoding='utf-8')
 ROOT = Path(__file__).resolve().parent.parent
 OUT = Path(tempfile.gettempdir()) / 'novel-continuity-qa'
 OUT.mkdir(exist_ok=True)
-STORY = '# 旅行手記\n\n## 第1章 城門\n\n' + '旅人走到城門前，守門人告訴他今晚不能進城。\n' * 35
+STORY = '# 旅行手記\n\n## 第1章 城門\n\n' + '旅人走到城門前，守門人告訴他今晚不能進城。\n' * 35 + '旅人離開城門，走到河岸。旅人站在河岸。守門人仍在城門。'
 
 class Handler(http.server.SimpleHTTPRequestHandler):
     def log_message(self, *_):
@@ -30,6 +30,19 @@ class Handler(http.server.SimpleHTTPRequestHandler):
             self.server.release.wait(8)
         status = 429 if mode == 'rate' else 200
         content = '{broken' if mode == 'json' else json.dumps({'recentOutcome': '旅人未能進城'})
+        if mode in ('baseline', 'partial', 'repaired'):
+            traveler = {'entity': '旅人', 'location': '城門', 'evidence': '旅人走到城門前'}
+            records = [traveler]
+            if mode != 'baseline':
+                traveler.update(location='河岸', evidence='旅人站在河岸。')
+                records.append({'entity': '守門人', 'location': '城門', 'evidence': '守門人仍在城門。'})
+                if mode == 'repaired':
+                    traveler['transitionEvidence'] = '旅人離開城門，走到河岸。'
+                else:
+                    records.append({'entity': '花朵', 'location': '窗邊', 'evidence': '<img src=x onerror=alert(1)>'})
+            content = json.dumps({'entities': records, 'characterStates': ['不可採用的無依據摘要']})
+        if mode == 'omitted':
+            content = json.dumps({'entities': [{'entity': '守門人', 'location': '城門', 'evidence': '守門人仍在城門。'}]})
         data = {'error': {'message': 'private upstream detail'}} if status == 429 else {
             'choices': [{'message': {'content': content}, 'finish_reason': 'length' if mode == 'length' else 'stop'}],
             'usage': {'prompt_tokens': 1000, 'completion_tokens': 3000 if mode == 'length' else 100, 'total_tokens': 4000 if mode == 'length' else 1100}}
@@ -114,6 +127,49 @@ def run():
                     page.reload(wait_until='networkidle')
                     activate('.manuscript-continuity summary')
                     expect(report).to_contain_text('上次成功整理')
+                    for mode in ('baseline', 'partial'):
+                        server.mode = mode
+                        before = len(server.requests)
+                        activate('#continuityRetry')
+                        expect(page.locator('#continuityRetry')).to_be_enabled()
+                        assert len(server.requests) == before + 1
+                    expect(report).to_contain_text('摘要更新不完整')
+                    expect(report).to_contain_text('地點：城門 → 河岸')
+                    expect(report).to_contain_text('轉變引句：未提供')
+                    expect(report).not_to_contain_text('疑似劇情衝突')
+                    expect(report).not_to_contain_text('上次成功整理')
+                    assert page.locator('#continuityReport img').count() == 0
+                    ledger = page.evaluate('JSON.parse(localStorage.getItem("novelStoryStateLedger"))')
+                    assert len(ledger['issues']) == 2
+                    assert ledger['state']['characterStates'] == ['守門人仍在城門。']
+                    assert next(e for e in ledger['state']['entities'] if e['entity'] == '旅人')['location'] == '城門'
+                    page.locator('.manuscript-continuity').screenshot(path=str(OUT / f'{engine}-{width}-partial.png'))
+                    before = len(server.requests)
+                    page.reload(wait_until='networkidle')
+                    activate('.manuscript-continuity summary')
+                    expect(report).to_contain_text('摘要更新不完整')
+                    assert len(server.requests) == before, 'restoring categories must not call API'
+                    server.mode = 'omitted'
+                    activate('#continuityRetry')
+                    expect(page.locator('#continuityRetry')).to_be_enabled()
+                    expect(report).to_contain_text('地點：城門 → 河岸')
+                    expect(report).not_to_contain_text('未發現規則衝突')
+                    assert len(server.requests) == before + 1
+                    before = len(server.requests)
+                    # Older saved records only have warning strings and must also restore safely.
+                    page.evaluate('const x=JSON.parse(localStorage.getItem("novelStoryStateLedger"));delete x.issues;delete x.analysisStart;localStorage.setItem("novelStoryStateLedger",JSON.stringify(x));')
+                    page.reload(wait_until='networkidle')
+                    activate('.manuscript-continuity summary')
+                    expect(report).to_contain_text('摘要更新不完整')
+                    server.mode = 'repaired'
+                    activate('#continuityRetry')
+                    expect(page.locator('#continuityRetry')).to_be_enabled()
+                    expect(report).to_contain_text('未發現規則衝突')
+                    repaired = page.evaluate('JSON.parse(localStorage.getItem("novelStoryStateLedger"))')
+                    assert next(e for e in repaired['state']['entities'] if e['entity'] == '旅人')['location'] == '河岸'
+                    assert page.locator('#result').text_content() == original
+                    assert page.evaluate('localStorage.getItem("savedStory")') == STORY
+                    assert len(server.requests) == before + 1
                     assert page.evaluate('document.documentElement.scrollWidth<=innerWidth')
                     box = page.locator('#continuityRetry').bounding_box()
                     assert box['height'] >= 44 and box['width'] >= 44
