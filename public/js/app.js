@@ -1057,12 +1057,13 @@
         let usage = null;
         let gotContent = false;
         let finishReason = null;
+        let streamDone = false;
 
         const processLine = (line) => {
           const t = line.trim();
           if (!t || !t.startsWith('data:')) return;
           const payload = t.slice(5).trim();
-          if (payload === '[DONE]') return;
+          if (payload === '[DONE]') { streamDone = true; return; }
           let json;
           try { json = JSON.parse(payload); } catch (e) { return; }
           if (json.usage) usage = json.usage;
@@ -1096,6 +1097,7 @@
         if (!finishReason && usage && requestedMax && usage.completion_tokens >= Math.floor(requestedMax * 0.92)) {
           finishReason = 'length';
         }
+        if (!finishReason && !streamDone) finishReason = 'interrupted';
         if (typeof options.onComplete === 'function') options.onComplete({ finishReason });
         return { text: fullText.trim(), gotContent, finishReason };
       }
@@ -1104,7 +1106,7 @@
         const panel = typeof document !== 'undefined' ? document.getElementById('generationStage') : null;
         if (!panel) return;
         const labels = { connecting: '正在連接 AI 服務…', plan: '1/3 規劃本章', story: '2/3 撰寫正文', state: '3/3 整理狀態與檢查依據',
-          done: '本次生成流程完成，請查看連貫性結果', failed: '正文已保留，狀態整理未完成' };
+          done: '本次生成流程完成，請查看連貫性結果', incomplete: '正文尚未完成，已保留內容，可接續本章', failed: '正文已保留，狀態整理未完成' };
         panel.textContent = labels[stage] || '準備生成';
       }
 
@@ -1280,7 +1282,7 @@
           const proposed = planner.parseStoryState(raw);
           if (!proposed) throw Object.assign(new Error('Invalid state JSON'), { code: 'STATE_JSON' });
           const { state, warnings } = planner.checkStoryContinuity(previous && previous.state, proposed, story,
-            previous && storedLength ? story.slice(storedLength) : story.slice(-12000));
+            previous && storedLength ? story.slice(storedLength) : story.slice(-12000), collectCharactersInfo().charactersInfo);
           localStorage.setItem(STORY_STATE_STORAGE_KEY, JSON.stringify({
             version: 2,
             sourceLength: story.length,
@@ -7346,6 +7348,7 @@ ${shouldGenerateChapterByChapter ? '\n⚠️ 本次僅需創作第1章，後續�
 
         const signal = beginGeneration();
         let wasTruncated = false;
+        let receivedProse = false;
         const generationRevision = storyStateRevision;
         let finishReasonMeta = null;
         // 直排：比照橫式，生成時跟著最新內容捲動
@@ -7370,11 +7373,13 @@ ${shouldGenerateChapterByChapter ? '\n⚠️ 本次僅需創作第1章，後續�
             onChunk: (full) => { setResultStreaming(full); },
             onComplete: ({ finishReason }) => { finishReasonMeta = finishReason; }
           });
+          receivedProse = true;
           wasTruncated = shouldAutoResumeSegment(finishReasonMeta, story, lengthPlan, { isAlreadyComplete: false });
           
           if (story) {
             latestStory = story.trim();
             resultDiv.textContent = latestStory;
+            setStoryResumePending(latestStory, wasTruncated);
             
             persistStory(latestStory);
             
@@ -7409,7 +7414,14 @@ ${shouldGenerateChapterByChapter ? '\n⚠️ 本次僅需創作第1章，後續�
 
             // 截斷或本章字數不足時自動接續，再顯示完成狀態
             if (wasTruncated || isCurrentChapterUnderTarget(lengthPlan, latestStory)) {
-              await doContinueGenerationWithAutoResume({ auto: true, truncatedResume: true });
+              const resumed = await doContinueGenerationWithAutoResume({ auto: true, truncatedResume: true });
+              if (resumed.aborted) throw new DOMException('已停止生成', 'AbortError');
+              if (!resumed.ok || resumed.incomplete) {
+                setGenerationStage('incomplete');
+                continueBtn.disabled = false;
+                hideGenerationProgress();
+                return;
+              }
               updateWordCount(latestStory);
               parseAndShowChapters(latestStory);
               const wc = countStoryWords(latestStory);
@@ -7461,6 +7473,7 @@ ${shouldGenerateChapterByChapter ? '\n⚠️ 本次僅需創作第1章，後續�
             const partial = resultDiv.textContent.trim();
             if (partial) {
               latestStory = partial;
+              if (!receivedProse) setStoryResumePending(latestStory, true);
               persistStory(latestStory);
               updateWordCount(latestStory);
               parseAndShowChapters(latestStory);
@@ -7476,6 +7489,7 @@ ${shouldGenerateChapterByChapter ? '\n⚠️ 本次僅需創作第1章，後續�
             const partial = resultDiv.textContent.trim();
             if (partial) {
               latestStory = partial;
+              if (!receivedProse) setStoryResumePending(latestStory, true);
               persistStory(latestStory);
               updateWordCount(latestStory);
               parseAndShowChapters(latestStory);
@@ -7536,6 +7550,7 @@ ${shouldGenerateChapterByChapter ? '\n⚠️ 本次僅需創作第1章，後續�
         const maxResume = opts.maxResume ?? AUTO_TRUNCATE_RESUME_MAX;
         const plan = getStoryLengthPlan();
         const targetChapters = parseInt(chaptersInput.value) || 0;
+        opts = { ...opts, truncatedResume: opts.truncatedResume === true || isStoryResumePending(latestStory) || isLikelyTruncated(getLastChapterText(latestStory)) };
         let result = await doContinueGeneration(opts);
         if (result.aborted || !result.ok) return result;
         if (!result.truncated && !isCurrentChapterUnderTarget(plan, latestStory)) return result;
@@ -7547,16 +7562,22 @@ ${shouldGenerateChapterByChapter ? '\n⚠️ 本次僅需創作第1章，後續�
           const needsEpilogue = targetChapters > 0
             && getRemainingChapterCount(latestStory, targetChapters) <= 0
             && !isActiveStoryComplete(targetChapters);
-          if (isStoryOverWordBudget(plan, latestStory) && !needsEpilogue) break;
+          // 字數目標不能把半句當成完成；仍受接續次數上限保護。
+          if (isStoryOverWordBudget(plan, latestStory) && !needsEpilogue && !result.cutOff) break;
+          const resumeStory = latestStory;
           await sleep(600);
+          if (userAborted || seriesAborted || latestStory !== resumeStory) return { ok: false, aborted: true };
           result = await doContinueGeneration({
             auto: true,
             truncatedResume: true
           });
           if (result.aborted || !result.ok) break;
         }
+        if (result.aborted || !result.ok) return result;
         if (result.truncated || isCurrentChapterUnderTarget(plan, latestStory)) {
-          showStatus('warning', '⚠️ 已自動接續多次仍不足，可再點「繼續生成」完成本章');
+          result.incomplete = true;
+          setGenerationStage('incomplete');
+          showStatus('warning', '⚠️ 本章尚未完成，已達自動接續或篇幅限制；正文已保留，可點「繼續生成」接續本章');
         }
         return result;
       }
@@ -7596,7 +7617,7 @@ ${shouldGenerateChapterByChapter ? '\n⚠️ 本次僅需創作第1章，後續�
           const currentChapters = countChapters(latestStory);
           // 番外預告且尚未寫番外篇時，續寫是用來補番外，不必跳「超過章數」確認
           const needOmakeNext = endingNeedsOmake(endingSelect.value.trim()) && !OMAKE_RE.test(latestStory);
-          if (currentChapters >= targetChapters && !needOmakeNext) {
+          if (currentChapters >= targetChapters && !needOmakeNext && !truncatedResume) {
             const confirmContinue = confirm(`目前已有 ${currentChapters} 章，已達到設定的 ${targetChapters} 章上限。\n\n確定要繼續生成更多章節嗎？`);
             if (!confirmContinue) {
               return { ok: false, reason: 'cancelled' };
@@ -7617,9 +7638,9 @@ ${shouldGenerateChapterByChapter ? '\n⚠️ 本次僅需創作第1章，後續�
           : '';
 
         if (targetChapters > 0) {
-          const chState = getContinuationChapterState(latestStory, targetChapters);
+          const chState = getContinuationChapterState(latestStory, targetChapters, { forceResume: truncatedResume });
           const currentChapters = chState.written;
-          const remaining = getRemainingChapterCount(latestStory, targetChapters);
+          const remaining = getRemainingChapterCount(latestStory, targetChapters, { forceResume: truncatedResume });
 
           if (remaining <= 0) {
             // 已達到或超過目標章節數
@@ -7783,13 +7804,13 @@ ${shouldGenerateChapterByChapter ? '\n⚠️ 本次僅需創作第1章，後續�
 
         let truncatedResumeHint = '';
         if (truncatedResume) {
-          const chState = getContinuationChapterState(latestStory, targetChapters);
+          const chState = getContinuationChapterState(latestStory, targetChapters, { forceResume: true });
           const chNow = chState.inProgress ? chState.inProgressChapter : Math.max(1, chState.written || 1);
           truncatedResumeHint = `
-• ⚠️【截斷接續】上一段因輸出長度上限被截斷，請從上文最末處直接接續
+• ⚠️【截斷接續】上一段尚未完成（可能是長度上限或串流中斷），請從上文最末字直接接續，先補完未結束的句子與引號
 • 禁止重複已寫過的句子或段落，不要重述上一段結尾
 • 禁止在文中段插入「第N章」標題；若第 ${chNow} 章尚未寫完，先接續完成本章`;
-          if (chState.inProgress) {
+          if (chState.inProgress && chState.written === 0) {
             truncatedResumeHint += `
 • 上文已寫入正文但可能缺章節標題：請直接接續劇情，勿重開場、勿重寫開頭`;
           }
@@ -7855,7 +7876,7 @@ ${continueWordReq}
         // 顯示生成進度並開始模擬進度條
         showGenerationProgress();
         const currentChapters = countChapters(latestStory);
-        const nextChapter = currentChapters + 1;
+        const nextChapter = continuationChapterNumber || (truncatedResume ? Math.max(1, currentChapters) : currentChapters + 1);
         const totalChaptersForContinue = targetChapters > 0 ? targetChapters : (currentChapters + 3); // 預估還會有3章
         
         document.getElementById('progressChapter').textContent = `正在生成第${nextChapter}章...`;
@@ -7868,6 +7889,7 @@ ${continueWordReq}
 
         const signal = beginGeneration();
         const baseStory = latestStory;
+        const separator = truncatedResume && isLikelyTruncated(getLastChapterText(baseStory)) ? '' : '\n\n';
         const generationRevision = storyStateRevision;
         let contTruncated = false;
         let contFinishReason = null;
@@ -7877,13 +7899,13 @@ ${continueWordReq}
             taskType: 'continuation',
             diversityMode: getDiversityMode(),
             maxTokens: tokensForChapterWords(lengthPlan.wordsPerChapter),
-            onChunk: (full) => { setResultStreaming(baseStory + '\n\n' + full); },
+            onChunk: (full) => { setResultStreaming(baseStory + separator + full); },
             onComplete: ({ finishReason }) => { contFinishReason = finishReason; }
           })).trim();
           
           if (continuation) {
               const cleaned = stripDuplicateBookTitleLines(baseStory, continuation);
-              latestStory = baseStory + '\n\n' + cleaned;
+              latestStory = baseStory + separator + cleaned;
               resultDiv.textContent = latestStory;
               persistStory(latestStory);
               
@@ -7906,13 +7928,18 @@ ${continueWordReq}
               }
               
               // 檢查故事（或本集）是否已完結
-              const isCompleted = isActiveStoryComplete(targetChapters);
+              contTruncated = shouldAutoResumeSegment(contFinishReason, latestStory, lengthPlan, { isAlreadyComplete });
+              setStoryResumePending(latestStory, contTruncated);
+              const isCompleted = !contTruncated && isActiveStoryComplete(targetChapters);
               const isMidSeriesVol = isSeriesVol && !isFinalVol;
               const volLabelNow = isSeriesVol ? getVolumeLabel(seriesActiveIdx, storySeries.totalVolumes) : '';
 
               // 檢查是否已達到目標章節數
               let storyCompleted = false;
-              if (isMidSeriesVol) {
+              if (contTruncated) {
+                setGenerationStage('incomplete');
+                showStatus('loading', '本章尚未完成，正在準備接續…');
+              } else if (isMidSeriesVol) {
                 // 系列非最終集：本集完成不代表整部完結
                 if (isCompleted) {
                   showStatus('success', `✅ ${volLabelNow}完成（共 ${currentChapters} 章）`);
@@ -7952,11 +7979,11 @@ ${continueWordReq}
               }
               
               const chaptersBefore = countChapters(baseStory);
-              contTruncated = shouldAutoResumeSegment(contFinishReason, latestStory, lengthPlan, { isAlreadyComplete });
               genResult = {
                 ok: true,
                 chaptersAdded: currentChapters - chaptersBefore,
                 truncated: contTruncated,
+                cutOff: isLikelyTruncated(getLastChapterText(latestStory), contFinishReason),
                 wordAdded: latestStory.length - baseStory.length
               };
               
@@ -7982,6 +8009,7 @@ ${continueWordReq}
             const partial = resultDiv.textContent.trim();
             if (partial && partial.length > baseStory.length) {
               latestStory = partial;
+              if (!genResult.ok) setStoryResumePending(latestStory, true);
               persistStory(latestStory);
               updateWordCount(latestStory);
               parseAndShowChapters(latestStory);
@@ -8000,6 +8028,8 @@ ${continueWordReq}
             const partialAdded = partial && partial.length > baseStory.length;
             if (partialAdded) {
               latestStory = partial;
+              setStoryResumePending(latestStory, true);
+              setGenerationStage('incomplete');
               persistStory(latestStory);
               updateWordCount(latestStory);
               parseAndShowChapters(latestStory);
@@ -8017,7 +8047,8 @@ ${continueWordReq}
             }
             hideGenerationProgress();
             genResult = {
-              ok: partialAdded,
+              ok: false,
+              incomplete: !!partialAdded || truncatedResume,
               reason: partialAdded ? 'partial' : 'error',
               error: errorMsg,
               wordAdded: partialAdded ? partial.length - baseStory.length : 0
@@ -8027,7 +8058,7 @@ ${continueWordReq}
           if (generationRevision === storyStateRevision) {
             endGeneration();
             // 如果故事未完結（或為系列非最終集）才重新啟用按鈕
-            const finalDone = isActiveStoryComplete(targetChapters) && isFinalVol;
+            const finalDone = !contTruncated && isActiveStoryComplete(targetChapters) && isFinalVol;
             if (!finalDone) {
               continueBtn.disabled = false;
             }
@@ -8060,6 +8091,7 @@ ${continueWordReq}
           const res = await doContinueGenerationWithAutoResume({ auto: true });
           if (userAborted || seriesAborted) return { ok: false, aborted: true };
           if (res.aborted) return res;
+          if (res.incomplete) return res;
           const afterCh = countChapters(latestStory);
           const wordAdded = latestStory.length - beforeLen;
           const progressed = res.ok || afterCh > beforeCh || wordAdded > 150 || res.truncated;
@@ -8081,6 +8113,7 @@ ${continueWordReq}
 
       // 作用中故事（或系列分集）是否已完成（series 非最終集用 isVolumeComplete，見錯誤3/5）
       function isActiveStoryComplete(targetCount) {
+        if (isStoryResumePending(latestStory) || isLikelyTruncated(getLastChapterText(latestStory))) return false;
         const seriesVol = !!(storySeries && storySeries.totalVolumes > 1);
         const finalVol = !seriesVol || (storySeries.activeVolumeIndex >= storySeries.totalVolumes - 1);
         const ending = endingSelect ? endingSelect.value.trim() : '';
@@ -8112,6 +8145,7 @@ ${continueWordReq}
             const result = await autoContinueOneChapter();
             if (userAborted || seriesAborted) break;
             if (result.aborted) break;
+            if (result.incomplete) return result;
             if (result.ok) {
               failStreak = 0;
               if (result.truncated) continue;
@@ -8144,6 +8178,7 @@ ${continueWordReq}
             await sleep(AUTO_CHAPTER_DELAY_MS);
             const result = await autoContinueOneChapter();
             if (result.aborted) break;
+            if (result.incomplete) return result;
             if (result.ok) epiFails = 0;
             else {
               epiFails++;
@@ -8157,7 +8192,7 @@ ${continueWordReq}
             if (isActiveStoryComplete(targetCount)) {
               showStatus('success', `🎉 自動生成完成，共 ${total} 章${gap ? ' ' + gap : ''}`);
             } else {
-              showStatus('success', `✅ 自動生成結束，共 ${total} 章${gap ? ' ' + gap : ''}（可手動繼續生成補完）`);
+              showStatus('warning', `自動生成已暫停，故事尚未完結，共 ${total} 章${gap ? ' ' + gap : ''}（可手動繼續生成補完）`);
             }
           }
         } finally {
@@ -8219,9 +8254,15 @@ ${continueWordReq}
             // 1~2 章為一次性生成，多半進來就已完成，isActiveStoryComplete 會直接通過（錯誤9）
             if (!isActiveStoryComplete(targetCount)) {
               showStatus('loading', `📖 自動生成${label}中...`);
-              await runAutoContinue(targetCount, { silentFinish: true });
+              const result = await runAutoContinue(targetCount, { silentFinish: true });
+              if (result?.incomplete) break;
             }
             if (seriesAborted) break;
+            if (!isActiveStoryComplete(targetCount)) {
+              setGenerationStage('incomplete');
+              showStatus('warning', `${label}尚未完成，已暫停系列生成；請先接續本集。`);
+              break;
+            }
             // 標記本集完成
             if (storySeries.volumes[idx]) {
               storySeries.volumes[idx].complete = true;
@@ -11410,6 +11451,21 @@ ${continueWordReq}
         return { charactersInfo, characterNames, characterCount, mainNames, secondaryNames };
       }
 
+      // 只儲存正文指紋，不儲存或改寫正文；換書或內容改變時舊記號不適用。
+      function isStoryResumePending(story) {
+        try {
+          const pending = JSON.parse(localStorage.getItem('novelStoryResume') || 'null');
+          return !!pending && pending.fingerprint === globalThis.NovelGenerationPlanning.createStoryFingerprint(story);
+        } catch (_) { return false; }
+      }
+
+      function setStoryResumePending(story, pending) {
+        try {
+          if (pending) localStorage.setItem('novelStoryResume', JSON.stringify({ fingerprint: globalThis.NovelGenerationPlanning.createStoryFingerprint(story) }));
+          else localStorage.removeItem('novelStoryResume');
+        } catch (_) { /* 儲存不可用時仍保留正文與本次接續結果。 */ }
+      }
+
       function countChapters(text) {
         if (!text) return 0;
         const re = /^\s*#{0,4}\s*(?:第\s*[一二三四五六七八九十百千萬零壹貳參肆伍陸柒捌玖拾佰仟\d]+\s*[章節回卷部集篇]|Chapter\s*\d+)/gim;
@@ -11417,8 +11473,11 @@ ${continueWordReq}
       }
 
       /** 續寫時判斷章節進度（含「正文已寫但缺章節標題」的進行中狀態） */
-      function getContinuationChapterState(story, targetChapters) {
+      function getContinuationChapterState(story, targetChapters, { forceResume = false } = {}) {
         const written = countChapters(story);
+        if (written > 0 && (forceResume || isStoryResumePending(story) || isLikelyTruncated(getLastChapterText(story)))) {
+          return { written, inProgress: true, inProgressChapter: written };
+        }
         if (written > 0) return { written, inProgress: false, inProgressChapter: 0 };
         if (targetChapters > 0 && countStoryWords(story) > 200) {
           return { written: 0, inProgress: true, inProgressChapter: 1 };
@@ -11426,9 +11485,9 @@ ${continueWordReq}
         return { written: 0, inProgress: false, inProgressChapter: 0 };
       }
 
-      function getRemainingChapterCount(story, targetChapters) {
+      function getRemainingChapterCount(story, targetChapters, options) {
         if (targetChapters <= 0) return 0;
-        const state = getContinuationChapterState(story, targetChapters);
+        const state = getContinuationChapterState(story, targetChapters, options);
         if (state.inProgress) return Math.max(1, targetChapters - state.inProgressChapter + 1);
         return Math.max(0, targetChapters - state.written);
       }
@@ -11475,13 +11534,12 @@ ${continueWordReq}
 
       /** 文本是否在句中被截斷（finish_reason 遺失時的備援） */
       function isLikelyTruncated(text, finishReason) {
-        if (finishReason === 'length') return true;
-        const t = (text || '').trim();
-        if (t.length < 1200) return false;
-        if (/（全文完）|（完）|（全文完結）/.test(t.slice(-30))) return false;
-        const tail = t.slice(-120);
-        if (/[。！？…」』」\n]$/.test(tail.trimEnd())) return false;
-        return !/[。！？…」』」]/.test(tail.slice(-60));
+        if (finishReason === 'length' || finishReason === 'interrupted') return true;
+        const t = (text || '').trim().replace(/[*_`]+$/, '').trimEnd();
+        if (!t) return false;
+        if (/(?:[（(](?:全文完(?:結)?|完|完結|全書完|終|The End|END|[上中下本]集完|第[^\n（）()]{1,20}[卷集部]完)[）)]|【完】|—完—|～完～|─\s*完\s*─)$/i.test(t)) return false;
+        // 只看真正末句的結尾，不讓前一句的句號掩蓋後面的半句。
+        return !/[。！？.!?…][」』”’"'）)\]]*$/.test(t);
       }
 
       /** 本章是否尚未寫足（用於分段自動接續） */

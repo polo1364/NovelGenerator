@@ -41,7 +41,7 @@ with sync_playwright() as p:
                         chunks = [{'choices': [{'delta': {'content': content}, 'finish_reason': None}]}, {'choices': [{'delta': {}, 'finish_reason': 'stop'}]}]
                         route.fulfill(status=200, content_type='text/event-stream', body=''.join('data: '+json.dumps(chunk)+'\n\n' for chunk in chunks)+'data: [DONE]\n\n')
                         return
-                    data = PLAN if body.get('max_tokens') == 1600 else {'recentOutcome': '林晴救人', 'characterConflicts': [{'character': '林晴', 'issue': '未建立突破能力限制的原因', 'evidence': '林晴突然忘記所有限制'}]}
+                    data = PLAN if body.get('max_tokens') == 1600 else {'recentOutcome': '林晴救人', 'characterConflicts': [{'character': '林晴', 'conflictType': 'ability_limit', 'constraint': '手動指定能力', 'issue': '未建立突破能力限制的原因', 'evidence': '林晴突然忘記所有限制'}]}
                 route.fulfill(status=200, content_type='application/json', body=json.dumps({'choices': [{'message': {'content': json.dumps(data)}, 'finish_reason': 'stop'}]}))
 
             def route_request(route):

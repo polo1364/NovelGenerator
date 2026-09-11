@@ -239,7 +239,7 @@ async function run() {
       assert.equal(exported.length,202);
       assert.deepEqual(exported.find(b=>b.id===fixture[0].id),fixture[0]);
       assert.ok(exported.every(b=>!('design' in b) && !('appearance' in b)));
-      await poll('offline shell cached',()=>client.evaluate(`caches.open('novel-workshop-v102').then(async c => !!(await c.match('./js/book-design.js')) && !!(await c.match('./css/bookshelf-atelier.css')) && !!(await c.match('./css/reader-modes.css')) && !!(await c.match('./assets/sakura.webp')) && !!(await c.match('./js/manuscript-workspace.js')) && !!(await c.match('./css/manuscript-workspace.css')) && !!(await c.match('./css/mobile-touch.css')))`));
+      await poll('offline shell cached',()=>client.evaluate(`caches.open('novel-workshop-v103').then(async c => !!(await c.match('./js/book-design.js')) && !!(await c.match('./css/bookshelf-atelier.css')) && !!(await c.match('./css/reader-modes.css')) && !!(await c.match('./assets/sakura.webp')) && !!(await c.match('./js/manuscript-workspace.js')) && !!(await c.match('./css/manuscript-workspace.css')) && !!(await c.match('./css/mobile-touch.css')))`));
       await client.send('Network.emulateNetworkConditions',{offline:true,latency:0,downloadThroughput:0,uploadThroughput:0});
       await client.evaluate('window.__qaReloading=true');
       await client.send('Page.reload');

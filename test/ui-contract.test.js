@@ -193,7 +193,7 @@ test('workspace modals retain dialog semantics', () => {
   assert.match(css, /\.editorial-modal \*\s*\{\s*scroll-behavior:\s*auto !important;/);
 });
 
-test('service worker installs the parsed v102 application shell with pricing and generation planning before app.js', async () => {
+test('service worker installs the parsed v103 application shell with pricing and generation planning before app.js', async () => {
   const appShell = parseAppShell();
   const polishIndex = appShell.indexOf('./css/layout-polish.css');
   const pricingIndex = appShell.indexOf('./js/deepseek-pricing.js');
@@ -205,7 +205,7 @@ test('service worker installs the parsed v102 application shell with pricing and
   assert.equal(appShell[planningIndex + 1], './js/character-design.js');
   assert.equal(appShell[planningIndex + 2], './js/app.js');
   assert.match(html, /<script defer src="js\/deepseek-pricing\.js"><\/script>[\s\S]*?<script defer src="js\/generation-planning\.js"><\/script>[\s\S]*?<script defer src="js\/app\.js"><\/script>/);
-  assert.match(sw, /const CACHE_VERSION\s*=\s*'v102';/);
+  assert.match(sw, /const CACHE_VERSION\s*=\s*'v103';/);
   for (const asset of ['./css/manuscript-workspace.css', './js/manuscript-workspace.js', './css/mobile-touch.css']) {
     assert.ok(appShell.includes(asset));
     assert.ok(fs.existsSync(path.join(__dirname, '..', 'public', asset)));

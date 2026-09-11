@@ -66,7 +66,7 @@
       characterStates: sanitizeStateList(value.characterStates),
       unresolvedThreads: sanitizeStateList(value.unresolvedThreads),
       timeline: sanitizeStateList(value.timeline),
-      characterConflicts: sanitizeRecords(value.characterConflicts, ['character', 'issue', 'evidence']).slice(0, 3),
+      characterConflicts: sanitizeRecords(value.characterConflicts, ['character', 'conflictType', 'constraint', 'issue', 'evidence']).slice(0, 3),
       ...Object.fromEntries(Object.entries(RECORD_FIELDS).map(([key, fields]) => [key, sanitizeRecords(value[key], fields)])),
       recentOutcome: typeof value.recentOutcome === 'string'
         ? value.recentOutcome.trim().slice(0, 500)
@@ -113,7 +113,9 @@
 • evidence 必須逐字引用提供的正文（4～40字）；舊紀錄可沿用。位置、持有人、生死改變時，transitionEvidence 必須逐字引用本次新增正文中造成轉變的事件，不能只重複結果。
 • 不確定時用空字串或 unknown；不要猜測。新揭密不等於矛盾，但不能推翻已確認事實。
 • 對照人物設定檢查能力代價、信念底線與漸進成長；設定是約束，不代表轉變已發生。characterStates 摘要目前傷勢、關係、成長進度，不覆寫初始設定。
-• 另以 characterConflicts 陣列列出本次最近正文中有依據的疑似偏離，最多 3 項，每項 {"character":"人物","issue":"疑似偏離原因","evidence":"4～40字逐字正文"}；有合理建立過程不算偏離，不確定則不報。仍須遵守整份 JSON 字數預算。
+• characterConflicts 最多 3 項，每項 {"character":"設定中的人物名","conflictType":"hard_boundary / ability_limit / unearned_change 三選一","constraint":"逐字引用該人物設定中的具體限制，4～40字","issue":"具體行動如何違反限制","evidence":"4～40字逐字正文，必須呈現違反限制的行動"}。分別只用於明確底線、能力限制、無合理建立的能力或立場轉變；不確定則不報，仍遵守 JSON 預算。
+• 外觀變色、受傷、情緒動搖、恐懼或受到精神影響，不等於性格偏離；冷靜或殘暴不代表不能猶豫。成長方向不是每次行動必須滿足的終點，不得僅因「有張力」報警。
+• 報告前核對行動者、受害者身分、主動性及已知動機；例：殺人不必然違反「不主動傷害轉世者」，須有對方為轉世者且主動傷害的依據。有合理建立過程不算偏離；只看到最近片段，不能斷言前文缺少鋪陳，缺少關鍵情境就不報。
 • 只輸出 JSON 物件，不要 Markdown、code fence 或說明文字。
 
 JSON 格式：
@@ -179,15 +181,20 @@ ${writingPrompt}`;
     } catch (_) { return null; }
   }
 
-  function checkStoryContinuity(previousValue, nextValue, storyText, addedText = storyText) {
+  function checkStoryContinuity(previousValue, nextValue, storyText, addedText = storyText, characterCanon = '') {
     const previous = sanitizeStoryState(previousValue);
     const state = sanitizeStoryState(nextValue);
     if (!state) return { state: previous, warnings: ['狀態表格式無效，保留上一版。'] };
     const warnings = [];
     const hasQuote = (text, quote) => quote.length >= 4 && String(text || '').includes(quote);
     // 人物偏離是本次分析範圍的檢查，不是狀態轉移；同文重查也須驗證引句。
-    state.characterConflicts = state.characterConflicts.filter(item => item.issue && hasQuote(String(storyText || '').slice(-MAX_STATE_SOURCE_LENGTH), item.evidence));
-    state.characterConflicts.forEach(item => warnings.push(`${item.character}：疑似人物設定偏離 — ${item.issue}（原文：${item.evidence}）`));
+    state.characterConflicts = state.characterConflicts.filter(item => {
+      const ownCanon = String(characterCanon).split('\n').find(line => /^角色\d+：\s*【([^】]+)】/.exec(line)?.[1] === item.character) || '';
+      return ['hard_boundary', 'ability_limit', 'unearned_change'].includes(item.conflictType)
+        && item.issue && hasQuote(ownCanon, item.constraint)
+        && hasQuote(String(storyText || '').slice(-MAX_STATE_SOURCE_LENGTH), item.evidence);
+    });
+    state.characterConflicts.forEach(item => warnings.push(`${item.character}：疑似人物設定偏離 — ${item.issue}（設定：${item.constraint}；原文：${item.evidence}）`));
     for (const [key, fields] of Object.entries(RECORD_FIELDS)) {
       const oldRecords = previous ? previous[key] : [];
       const identity = item => key === 'characterKnowledge' ? `${item.character}:${item.fact}` : item[fields[0]];

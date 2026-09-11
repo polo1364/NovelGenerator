@@ -305,6 +305,8 @@ function continuationHarness(request) {
     tokensForChapterWords: () => 4096, stripDuplicateBookTitleLines: (base, added) => added,
     progressInterval: null, isActiveStoryComplete: () => false,
     shouldAutoResumeSegment: () => false, isCurrentChapterUnderTarget: () => false,
+    isLikelyTruncated: () => false, getLastChapterText: text => text,
+    isStoryResumePending: () => false, setStoryResumePending: () => {},
     userAborted: false, seriesAborted: false, AUTO_TRUNCATE_RESUME_MAX: 3
   });
   vm.runInContext(between('async function doContinueGenerationWithAutoResume(', 'function isAutoContinueEnabled('), c);
@@ -317,6 +319,58 @@ test('ordinary completed continuation updates state before ending the generation
   const result = await c.doContinueGenerationWithAutoResume({ auto: true });
   assert.equal(result.ok, true);
   assert.deepEqual(h.calls.map(call => call[3].taskType), ['continuation', 'state']);
+});
+
+test('manual continuation resumes the cut chapter with no next-chapter prompt or paragraph inside a word', async () => {
+  const h = continuationHarness((prompt, key, model, options) => options.taskType === 'state'
+    ? '{"recentOutcome":"第二章取得鑰匙"}' : '恩還活著。」' + '他們停下腳步。'.repeat(300));
+  const c = h.ctx;
+  vm.runInContext(between('function isStoryResumePending(', 'function formatChapterWordRequirement('), c);
+  Object.assign(c, { chaptersInput: { value: '3' }, lengthInput: { value: '6000' },
+    endingNeedsOmake: () => false, OMAKE_RE: /番外/, currentBookTitle: '',
+    updateGenerationProgress: () => {}, endGeneration: () => {} });
+  c.latestStory = '## 第1章 城門\n' + '他們走進城裡。'.repeat(260) + '他說：「萊';
+  const before = c.latestStory;
+  const result = await c.doContinueGenerationWithAutoResume();
+  assert.equal(result.ok, true);
+  const prompt = h.calls.find(call => call[3].taskType === 'continuation')[0];
+  assert.match(prompt, /接續完成【第 1 章】/);
+  assert.doesNotMatch(prompt, /撰寫【第 2 章】/);
+  assert.ok(c.latestStory.startsWith(before + '恩還活著。」'));
+  assert.equal(c.countChapters(c.latestStory), 1);
+});
+
+test('partial network failure is preserved but never returned as successful completion', async () => {
+  let c;
+  const h = continuationHarness((prompt, key, model, options) => {
+    c.resultDiv.textContent = c.latestStory + '他們走出城門。'.repeat(200);
+    throw new TypeError('NetworkError');
+  });
+  c = h.ctx;
+  c.endGeneration = () => {};
+  c.getContinuationChapterState = () => ({ written: 0, inProgress: true, inProgressChapter: 1 });
+  vm.runInContext(between('function isStoryResumePending(', 'function countChapters('), c);
+  const original = c.latestStory;
+  const result = await c.doContinueGenerationWithAutoResume({ truncatedResume: true });
+  assert.equal(result.ok, false);
+  assert.equal(result.incomplete, true);
+  assert.ok(c.latestStory.startsWith(original));
+  assert.ok(c.latestStory.length > original.length);
+  assert.equal(h.calls.length, 1);
+  assert.equal(c.isStoryResumePending(c.latestStory), true);
+});
+
+test('canceling only state analysis does not mark already received prose as pending', async () => {
+  const h = continuationHarness((prompt, key, model, options) => {
+    if (options.taskType === 'state') throw new DOMException('cancel state only', 'AbortError');
+    return '他們終於走出城門。'.repeat(200);
+  });
+  const c = h.ctx;
+  c.endGeneration = () => {};
+  vm.runInContext(between('function isStoryResumePending(', 'function countChapters('), c);
+  const result = await c.doContinueGenerationWithAutoResume();
+  assert.equal(result.aborted, true);
+  assert.equal(c.isStoryResumePending(c.latestStory), false);
 });
 
 for (const [replacement, newerGeneration] of [['', false], ['短篇新書', false], ['短篇新書', true]]) {
