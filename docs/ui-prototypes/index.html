@@ -1,0 +1,944 @@
+<title>小說工坊介面提案</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta charset="utf-8">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;500;700&family=Noto+Serif+TC:wght@500;700;900&family=JetBrains+Mono:wght@400;500&display=swap">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..24,300..500,0,0&display=swap">
+<style>
+/* Layout: three arrangements of the SAME workshop logic (設定→角色→大綱→撰寫→閱讀, modules ①–④, 創作控制台, 手稿, 書櫃, 朗讀, 模型與用量). One visual system so only the arrangement differs. */
+:root{
+  --bg:#F4F3EF; --sf:#FFFFFF; --sf2:#ECEBE5; --ink:#1D201F; --mut:#626864; --faint:#8E938F; --line:#DCDBD3;
+  --ac:#244F63; --acs:#E1EBEF; --acink:#FFFFFF; --ok:#2E7351; --oks:#E1F0E7; --warn:#97640E; --warns:#F8EDD7; --dan:#A8322B;
+  --sw:#16181B; --swfg:#ECEDEF; --swmut:#959AA3; --swline:#2B2E34; --swac:#F0C46A;
+  --sans:"Noto Sans TC","PingFang TC","Microsoft JhengHei",system-ui,sans-serif;
+  --serif:"Noto Serif TC","Songti TC","PMingLiU",serif;
+  --mono:"JetBrains Mono",ui-monospace,Consolas,monospace;
+}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#141617;--sf:#1C1F20;--sf2:#25292A;--ink:#E6E8E6;--mut:#9CA3A0;--faint:#737A77;--line:#30353A;--ac:#8EC1D6;--acs:#1E3039;--acink:#0F1A1F;--ok:#86C9A5;--oks:#1D3127;--warn:#E3B15A;--warns:#352B18;--dan:#E9877F;color-scheme:dark}}
+:root[data-theme="dark"]{--bg:#141617;--sf:#1C1F20;--sf2:#25292A;--ink:#E6E8E6;--mut:#9CA3A0;--faint:#737A77;--line:#30353A;--ac:#8EC1D6;--acs:#1E3039;--acink:#0F1A1F;--ok:#86C9A5;--oks:#1D3127;--warn:#E3B15A;--warns:#352B18;--dan:#E9877F;color-scheme:dark}
+[hidden]{display:none!important}
+html,body{min-height:100%}
+body{background:var(--bg);color:var(--ink);font-family:var(--sans);font-size:14px;line-height:1.6}
+button{font:inherit;color:inherit;cursor:pointer}
+:focus-visible{outline:2px solid var(--ac);outline-offset:2px}
+.ms{font-family:"Material Symbols Outlined";font-weight:400;font-style:normal;font-size:19px;line-height:1;letter-spacing:normal;white-space:nowrap;direction:ltr;display:inline-block;width:1em;overflow:hidden;flex:none;-webkit-font-smoothing:antialiased;vertical-align:middle}
+.gut{padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px))}
+@keyframes bl{50%{opacity:0}}
+@keyframes sp{to{transform:rotate(360deg)}}
+@keyframes fl{from{background:var(--acs)}to{background:transparent}}
+.caret{display:inline-block;width:2px;height:1.05em;background:var(--ac);vertical-align:-.15em;animation:bl 1s steps(2) infinite}
+.spin{display:inline-block;width:14px;height:14px;border-radius:50%;border:2px solid var(--line);border-top-color:var(--ac);animation:sp .9s linear infinite;vertical-align:-2px}
+.flash{animation:fl .7s ease}
+
+/* switcher */
+.sw{display:flex;gap:14px;align-items:center;flex-wrap:wrap;padding-block:9px;background:var(--sw);color:var(--swfg)}
+.sw-l{font-size:12px;letter-spacing:.12em;color:var(--swmut)}
+.sw-tabs{display:flex;gap:4px;flex-wrap:wrap}
+.sw-tab{border:1px solid var(--swline);background:transparent;border-radius:999px;padding:5px 13px;font-size:13px;color:var(--swmut)}
+.sw-tab b{font-weight:500;color:var(--swfg);margin-right:4px}
+.sw-tab[aria-selected="true"]{border-color:var(--swac);color:var(--swac)}
+.sw-tab[aria-selected="true"] b{color:var(--swac)}
+.sw-d{font-size:13px;color:var(--swmut);flex:1 1 260px;min-width:0;margin:0}
+
+/* shared controls */
+.btn{display:inline-flex;align-items:center;gap:6px;border:1px solid var(--line);background:var(--sf);border-radius:8px;padding:7px 13px;font-size:13.5px;white-space:nowrap}
+.btn:hover{border-color:var(--faint)}
+.btn.pri{background:var(--ac);border-color:var(--ac);color:var(--acink);font-weight:500}
+.btn.ghost{background:transparent;border-color:transparent;color:var(--mut)}
+.btn.ghost:hover{background:var(--sf2);color:var(--ink)}
+.btn.sm{padding:4px 10px;font-size:12.5px}
+.btn.lg{padding:10px 20px;font-size:15px}
+.btn.dan{color:var(--dan)}
+.btn[disabled]{opacity:.5;cursor:default}
+.btn .ms{font-size:17px}
+.f{display:grid;gap:5px;min-width:0}
+.f>span{font-size:12.5px;color:var(--mut)}
+.f select,.f input,.f textarea{border:1px solid var(--line);background:var(--bg);color:var(--ink);border-radius:8px;padding:8px 10px;font:inherit;font-size:14px;min-width:0;width:100%;box-sizing:border-box}
+.f textarea{resize:vertical;min-height:72px;line-height:1.7}
+.f select.unset{color:var(--faint)}
+.f small{font-size:12px;color:var(--faint);line-height:1.5}
+.fg{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:14px}
+.fg.c2{grid-template-columns:repeat(2,minmax(0,1fr))}
+.fg.c4{grid-template-columns:repeat(4,minmax(0,1fr))}
+.chk{display:flex;gap:8px;align-items:flex-start;font-size:13.5px;line-height:1.55;cursor:pointer}
+.chk input{accent-color:var(--ac);width:16px;height:16px;margin-top:2px;flex:none}
+.seg{display:inline-flex;border:1px solid var(--line);border-radius:8px;overflow:hidden;background:var(--bg)}
+.seg button{border:0;background:transparent;padding:7px 12px;font-size:13px;color:var(--mut)}
+.seg button[aria-pressed="true"]{background:var(--ac);color:var(--acink)}
+.chip{border:1px solid var(--line);background:transparent;border-radius:999px;padding:4px 11px;font-size:12.5px;color:var(--mut)}
+.chip[aria-pressed="true"]{background:var(--acs);border-color:var(--ac);color:var(--ac);font-weight:500}
+.chips{display:flex;flex-wrap:wrap;gap:6px}
+.mh{display:flex;align-items:center;gap:10px;margin-bottom:16px;flex-wrap:wrap}
+.mh h3{margin:0;font-size:16px;font-weight:500;display:flex;align-items:center;gap:8px}
+.mh h3 .no{font-family:var(--serif);font-weight:900;color:var(--ac)}
+.mh .sp{flex:1}
+.mh .meta{font-size:12.5px;color:var(--mut)}
+.sub-h{font-size:12.5px;color:var(--mut);margin:18px 0 8px;display:flex;align-items:center;gap:8px}
+.sub-h:first-child{margin-top:0}
+.cat{margin-bottom:12px}
+.cat b{display:block;font-size:12.5px;font-weight:500;color:var(--ink);margin-bottom:6px}
+.ctabs{display:flex;gap:4px;flex-wrap:wrap;border-bottom:1px solid var(--line);margin-bottom:14px}
+.ctab{border:0;background:transparent;padding:7px 12px;border-bottom:2px solid transparent;margin-bottom:-1px;color:var(--mut);font-size:13.5px}
+.ctab[aria-selected="true"]{color:var(--ink);border-bottom-color:var(--ac);font-weight:500}
+details.deep{margin-top:14px;border-top:1px dashed var(--line);padding-top:12px}
+details.deep summary{cursor:pointer;font-size:13px;color:var(--ac)}
+.empty{border:1.5px dashed var(--line);border-radius:10px;padding:22px;text-align:center;color:var(--mut);font-size:13.5px;line-height:1.7}
+.ol{list-style:none;margin:0;padding:0}
+.ol li{display:grid;grid-template-columns:64px minmax(0,1fr);gap:10px;padding:9px 0;border-top:1px solid var(--line);font-size:14px}
+.ol li:first-child{border-top:0}
+.ol li>span:first-child{color:var(--mut);font-size:12.5px;font-family:var(--mono)}
+.ol b{font-weight:500}
+.ol .s{color:var(--mut);font-size:13px;display:block}
+[contenteditable="true"]{outline:none;border-radius:4px}
+[contenteditable="true"]:hover{background:var(--sf2)}
+.cons{display:grid;gap:14px}
+.cons-row{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+.cons-row .sp{flex:1}
+.stat{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px}
+.stat div{background:var(--bg);border-radius:8px;padding:9px 12px}
+.stat span{display:block;font-size:11.5px;color:var(--mut)}
+.stat b{font-family:var(--mono);font-weight:500;font-size:16px;font-variant-numeric:tabular-nums}
+.bar{height:5px;border-radius:3px;background:var(--sf2);overflow:hidden}
+.bar i{display:block;height:100%;background:var(--ac);transition:width .4s}
+.note{font-size:12.5px;color:var(--mut);display:flex;gap:6px;align-items:center;flex-wrap:wrap}
+.live{display:inline-flex;gap:6px;align-items:center;font-size:12.5px;color:var(--ok)}
+.live i{width:7px;height:7px;border-radius:50%;background:var(--ok)}
+.ms-wrap{display:grid;grid-template-columns:180px minmax(0,1fr);gap:24px}
+.ms-idx{display:grid;gap:1px;align-content:start}
+.ms-idx .lbl{font-size:11.5px;letter-spacing:.14em;color:var(--mut);margin-bottom:6px}
+.ms-idx button{border:0;background:transparent;text-align:left;padding:5px 8px;border-radius:6px;font-size:13px;color:var(--mut);display:flex;gap:6px}
+.ms-idx button .n{font-family:var(--mono);font-size:11.5px;width:20px;flex:none;padding-top:1px}
+.ms-idx button.on{background:var(--acs);color:var(--ac);font-weight:500}
+.ms-text{font-family:var(--serif);line-height:2.05;min-height:260px;min-width:0}
+.ms-text h4{font-family:var(--serif);font-size:22px;margin:0 0 14px}
+.ms-text p{margin:0 0 1em;text-indent:2em}
+.ms-text.v{writing-mode:vertical-rl;height:430px;overflow-x:auto;overflow-y:hidden;line-height:2.1}
+.ms-text.v h4{margin:0 0 0 18px}
+.ms-text .ph{text-indent:0;color:var(--mut);font-family:var(--sans);font-size:14px}
+.log{margin-top:18px;border-top:1px solid var(--line);padding-top:12px}
+.log summary{cursor:pointer;font-size:13px;color:var(--mut)}
+.log ul{margin:10px 0 0;padding:0;list-style:none;display:grid;gap:6px}
+.log li{font-size:12.5px;line-height:1.6;padding:7px 10px;border-radius:6px;background:var(--bg);display:grid;grid-template-columns:auto minmax(0,1fr);gap:8px}
+.log li .k{color:var(--ac);font-weight:500}
+.log li.w .k{color:var(--warn)}
+.shelf{display:grid;gap:10px}
+.bk{display:flex;gap:14px;align-items:center;padding:12px;border:1px solid var(--line);border-radius:10px;background:var(--sf);flex-wrap:wrap}
+.bk .cv{width:42px;height:60px;border-radius:3px 5px 5px 3px;flex:none;box-shadow:inset 4px 0 0 rgba(0,0,0,.18)}
+.bk .nm{flex:1;min-width:140px}
+.bk .nm b{font-family:var(--serif);font-size:16px;display:block}
+.bk .nm span{font-size:12.5px;color:var(--mut)}
+.reader{background:var(--sf);border:1px solid var(--line);border-radius:12px;padding:28px 34px;font-family:var(--serif);font-size:18px;line-height:2.1;min-height:300px}
+.reader p{margin:0 0 1em;text-indent:2em}
+.rd-nav{display:flex;justify-content:space-between;align-items:center;margin-top:12px;font-size:13px;color:var(--mut)}
+
+/* drawer */
+.drawer{position:fixed;inset:0;z-index:50;display:flex;justify-content:flex-end;background:rgba(10,12,14,.35)}
+.dr-in{width:min(560px,100%);height:100%;background:var(--sf);display:flex;flex-direction:column;box-shadow:-20px 0 40px -20px rgba(0,0,0,.4);animation:dr .25s ease}
+@keyframes dr{from{transform:translateX(30px);opacity:0}to{transform:none;opacity:1}}
+.dr-h{display:flex;align-items:center;gap:10px;padding:16px 20px;border-bottom:1px solid var(--line);padding-top:calc(16px + env(safe-area-inset-top,0px))}
+.dr-h h3{margin:0;font-size:16px;font-weight:500;flex:1}
+.dr-b{flex:1;overflow:auto;padding:20px}
+.dr-f{padding:12px 20px calc(12px + env(safe-area-inset-bottom,0px));border-top:1px solid var(--line);display:flex;justify-content:flex-end;gap:8px}
+
+
+/* 原稿紙 */
+.paper{--grid:#D9958A;--paperbg:#FFFDF6;background:var(--paperbg);border:1px solid var(--grid);padding:14px 16px 10px;border-radius:2px;min-width:0;box-shadow:0 1px 0 var(--line)}
+.paper-hd,.paper-ft{display:flex;justify-content:space-between;gap:10px;font-size:11.5px;color:var(--grid);letter-spacing:.08em;font-family:var(--serif)}
+.paper-hd{margin-bottom:8px;padding-bottom:6px;border-bottom:2px solid var(--grid)}
+.paper-ft{margin-top:8px;padding-top:6px;border-top:2px solid var(--grid);font-family:var(--mono);font-size:11px}
+.gaoji{display:grid;grid-template-columns:repeat(var(--per),var(--cs));grid-auto-rows:var(--cs);row-gap:7px;justify-content:center;font-family:var(--serif);color:var(--ink);padding:1px}
+.gaoji span{display:grid;place-items:center;outline:1px solid var(--grid);outline-offset:-.5px;line-height:1}
+.gaoji span.g{color:var(--faint)}
+.gaoji span.k::after{content:"";width:2px;height:70%;background:var(--ac);animation:bl 1s steps(2) infinite}
+.paper.v .gaoji{writing-mode:vertical-rl;height:calc(var(--cs) * 20 + 2px);overflow-x:auto;overflow-y:hidden;justify-content:start}
+.paper.v .gaoji span.k::after{width:70%;height:2px}
+.paper.v .paper-hd,.paper.v .paper-ft{writing-mode:horizontal-tb}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]) .paper{--grid:#8A4C45;--paperbg:#1E1C19}}
+:root[data-theme="dark"] .paper{--grid:#8A4C45;--paperbg:#1E1C19}
+
+/* ===== V1 流程側欄 ===== */
+.v1{display:grid;grid-template-columns:230px minmax(0,1fr);min-height:calc(100vh - 50px)}
+.v1 .side{background:var(--sf);border-right:1px solid var(--line);display:flex;flex-direction:column;padding:18px 12px;gap:18px;position:sticky;top:0;height:calc(100vh - 50px);box-sizing:border-box}
+.brand{font-family:var(--serif);font-weight:900;font-size:18px;padding:0 8px;display:flex;align-items:center;gap:8px}
+.brand i{font-style:normal;width:28px;height:28px;border-radius:7px;background:var(--ac);color:var(--acink);display:grid;place-items:center;font-size:14px}
+.v1 .lbl{font-size:11.5px;letter-spacing:.14em;color:var(--faint);padding:0 10px;margin-bottom:-10px}
+.pnav{display:grid;gap:2px}
+.pnav button{border:0;background:transparent;border-radius:9px;padding:9px 10px;display:grid;grid-template-columns:26px minmax(0,1fr);gap:2px 10px;text-align:left;align-items:center}
+.pnav button .d{grid-row:span 2;width:26px;height:26px;border-radius:50%;border:1.5px solid var(--line);display:grid;place-items:center;font-size:12px;font-family:var(--mono);color:var(--mut);background:var(--bg)}
+.pnav button.ok .d{background:var(--oks);border-color:var(--ok);color:var(--ok)}
+.pnav button .t{font-size:14px}
+.pnav button .s{font-size:12px;color:var(--faint);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.pnav button[aria-current="page"]{background:var(--acs)}
+.pnav button[aria-current="page"] .t{color:var(--ac);font-weight:500}
+.pnav button[aria-current="page"] .d{background:var(--ac);border-color:var(--ac);color:var(--acink)}
+.v1 .tools{margin-top:auto;display:grid;gap:2px}
+.v1 .tools button{justify-content:flex-start;width:100%}
+.v1 main{min-width:0}
+.v1 .top{display:flex;align-items:center;gap:10px;padding-block:14px;border-bottom:1px solid var(--line);background:var(--bg);position:sticky;top:0;z-index:5;flex-wrap:wrap}
+.v1 .top h2{margin:0;font-family:var(--serif);font-weight:900;font-size:22px}
+.v1 .top .sp{flex:1}
+.v1 .page{max-width:980px;margin:0 auto;padding-block:24px 60px;display:grid;gap:18px}
+.card{background:var(--sf);border:1px solid var(--line);border-radius:12px;padding:20px 22px;min-width:0}
+.next{display:flex;justify-content:flex-end;gap:8px}
+
+/* ===== V2 單頁儀表板 ===== */
+.v2{min-height:calc(100vh - 50px)}
+.v2 .hdr{position:sticky;top:0;z-index:6;background:var(--bg);border-bottom:1px solid var(--line)}
+.v2 .hdr-in{max-width:1120px;margin:0 auto;display:flex;align-items:center;gap:16px;padding-block:12px;flex-wrap:wrap}
+.pipe{display:flex;align-items:center;gap:0;flex:1;min-width:0;overflow-x:auto}
+.pipe button{border:0;background:transparent;display:flex;gap:8px;align-items:center;padding:6px 8px;border-radius:8px;white-space:nowrap}
+.pipe button:hover{background:var(--sf2)}
+.pipe .d{width:22px;height:22px;border-radius:50%;border:1.5px solid var(--line);display:grid;place-items:center;font-size:11px;font-family:var(--mono);color:var(--mut);background:var(--sf)}
+.pipe button.ok .d{background:var(--ok);border-color:var(--ok);color:#fff}
+.pipe .t{font-size:13.5px;font-weight:500}
+.pipe .s{font-size:12px;color:var(--mut)}
+.pipe .ln{flex:1;min-width:14px;height:1.5px;background:var(--line)}
+.v2 .col{max-width:1120px;margin:0 auto;padding-block:24px 70px;display:grid;gap:18px;padding-right:max(76px,env(safe-area-inset-right,0px))}
+.sumgrid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px}
+.sum{background:var(--sf);border:1px solid var(--line);border-radius:12px;padding:14px 16px;text-align:left;display:grid;gap:6px;align-content:start;transition:border-color .15s,transform .15s}
+.sum:hover{border-color:var(--ac);transform:translateY(-2px)}
+.sum .h{display:flex;justify-content:space-between;align-items:center;font-size:13.5px;font-weight:500}
+.sum .h .no{font-family:var(--serif);font-weight:900;color:var(--ac);margin-right:6px}
+.sum .h .ms{color:var(--faint);font-size:17px}
+.sum .v{font-size:13px;color:var(--mut);line-height:1.6;min-height:3.2em}
+.sum .v b{color:var(--ink);font-weight:500}
+.sum.ok .st{color:var(--ok)}
+.sum .st{font-size:12px;color:var(--warn)}
+.v2 .two{display:grid;grid-template-columns:minmax(0,1fr) 360px;gap:18px;align-items:start}
+.rail{position:fixed;right:max(14px,env(safe-area-inset-right,0px));top:50%;transform:translateY(-30%);display:grid;gap:4px;background:var(--sf);border:1px solid var(--line);border-radius:14px;padding:6px;z-index:7}
+.rail button{border:0;background:transparent;border-radius:10px;width:46px;height:46px;display:grid;place-items:center;color:var(--mut);position:relative}
+.rail button:hover{background:var(--sf2);color:var(--ink)}
+.rail button span.tt{position:absolute;right:54px;top:50%;transform:translateY(-50%);background:var(--ink);color:var(--bg);font-size:12px;padding:3px 8px;border-radius:6px;white-space:nowrap;opacity:0;pointer-events:none;transition:opacity .15s}
+.rail button:hover span.tt{opacity:1}
+
+/* ===== V2 color system: each workflow stage owns a hue ===== */
+#v2{--m1:#2F6FB5;--m1s:#E6EFFA;--m2:#7550B5;--m2s:#F0EAF9;--m3:#B8720F;--m3s:#FBF0DC;--m4:#C0436A;--m4s:#FBE7EE;--m5:#22806A;--m5s:#DFF2EB;--on:#FFFFFF;--hb:#1D3343;--hbfg:#EEF3F6;--hbmut:#9FB3C0;--paper:#FFFDF7;--c:var(--ac);--cs:var(--acs)}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]) #v2{--m1:#86B5EC;--m1s:#1C2A3B;--m2:#BBA0E8;--m2s:#2A2338;--m3:#E9B663;--m3s:#33291A;--m4:#EF97B2;--m4s:#38222B;--m5:#80D1B5;--m5s:#1A3029;--on:#11161A;--hb:#0F1B23;--paper:#1F2220}}
+:root[data-theme="dark"] #v2{--m1:#86B5EC;--m1s:#1C2A3B;--m2:#BBA0E8;--m2s:#2A2338;--m3:#E9B663;--m3s:#33291A;--m4:#EF97B2;--m4s:#38222B;--m5:#80D1B5;--m5s:#1A3029;--on:#11161A;--hb:#0F1B23;--paper:#1F2220}
+#v2 .k-story,#v2 .p-setup,#v2 [data-k="story"]{--c:var(--m1);--cs:var(--m1s)}
+#v2 .k-adv,#v2 .p-read,#v2 [data-k="adv"]{--c:var(--m2);--cs:var(--m2s)}
+#v2 .k-special,#v2 .k-outline,#v2 .p-outline,#v2 [data-k="special"],#v2 [data-k="outline"]{--c:var(--m3);--cs:var(--m3s)}
+#v2 .k-chars,#v2 .p-cast,#v2 [data-k="chars"]{--c:var(--m4);--cs:var(--m4s)}
+#v2 .k-console,#v2 .p-write{--c:var(--m5);--cs:var(--m5s)}
+#v2 .hdr{background:var(--hb);color:var(--hbfg);border-bottom:0}
+#v2 .hdr .brand i{background:#F0C46A;color:#1D3343}
+#v2 .pipe button:hover{background:rgba(255,255,255,.08)}
+#v2 .pipe .d{background:transparent;border-color:var(--c);color:var(--hbfg)}
+#v2 .pipe button.ok .d{background:var(--c);border-color:var(--c);color:var(--on)}
+#v2 .pipe .s{color:var(--hbmut)}
+#v2 .pipe .ln{background:rgba(255,255,255,.16)}
+#v2 .sum{background:var(--cs);border-color:transparent}
+#v2 .sum:hover{border-color:var(--c)}
+#v2 .sum .h .no{color:var(--c)}
+#v2 .sum .ic{width:30px;height:30px;border-radius:8px;background:var(--c);color:var(--on);display:grid;place-items:center}
+#v2 .sum .ic .ms{color:inherit;font-size:18px}
+#v2 .sum .hl{display:flex;gap:10px;align-items:center}
+#v2 .sum.ok .st{color:var(--c);font-weight:500}
+#v2 .card .mh h3 .ms,#v2 .card .mh h3 .no,#v2 [data-k] .mh h3 .no{color:var(--c)}
+#v2 .k-console{background:linear-gradient(180deg,var(--m5s),var(--sf) 140px)}
+#v2 .k-console .btn.pri{background:var(--m5);border-color:var(--m5);color:var(--on)}
+#v2 .k-console .stat div:nth-child(1){background:var(--m1s)}#v2 .k-console .stat div:nth-child(1) b{color:var(--m1)}
+#v2 .k-console .stat div:nth-child(2){background:var(--m5s)}#v2 .k-console .stat div:nth-child(2) b{color:var(--m5)}
+#v2 .k-console .stat div:nth-child(3){background:var(--m2s)}#v2 .k-console .stat div:nth-child(3) b{color:var(--m2)}
+#v2 .k-console .stat div:nth-child(4){background:var(--m3s)}#v2 .k-console .stat div:nth-child(4) b{color:var(--m3)}
+#v2 .k-console .bar i{background:linear-gradient(90deg,var(--m1),var(--m5))}
+#v2 .k-outline{background:linear-gradient(180deg,var(--m3s),var(--sf) 120px)}
+#v2 .k-outline .btn.pri{background:var(--m3);border-color:var(--m3);color:var(--on)}
+#v2 .k-outline .ol li>span:first-child{color:var(--m3)}
+#v2 .k-manuscript{background:var(--paper)}
+#v2 .k-manuscript .ms-idx button.on{background:var(--m1s);color:var(--m1)}
+#v2 .k-manuscript .seg button[aria-pressed="true"]{background:var(--m1);color:var(--on)}
+#v2 .k-manuscript .log li .k{color:var(--m5)}
+#v2 .k-manuscript .log li.w .k{color:var(--m4)}
+#v2 .k-manuscript .ms-text h4{color:var(--m1)}
+#v2 .rail{background:var(--hb);border-color:var(--hb)}
+#v2 .rail button{color:var(--hbmut)}
+#v2 .rail button:hover{background:rgba(255,255,255,.1);color:#fff}
+#v2 .rail button:nth-child(1) .ms{color:#86B5EC}#v2 .rail button:nth-child(2) .ms{color:#BBA0E8}#v2 .rail button:nth-child(3) .ms{color:#80D1B5}#v2 .rail button:nth-child(4) .ms{color:#E9B663}#v2 .rail button:nth-child(5) .ms{color:#EF97B2}#v2 .rail button:nth-child(6) .ms{color:#F0C46A}
+#v2 .dr-in[data-k] .dr-h{background:var(--cs)}
+#v2 .dr-in[data-k] .dr-h h3{color:var(--c)}
+#v2 .dr-in[data-k] .chip[aria-pressed="true"]{background:var(--cs);border-color:var(--c);color:var(--c)}
+#v2 .dr-in[data-k] .ctab[aria-selected="true"]{border-bottom-color:var(--c);color:var(--c)}
+#v2 .dr-in[data-k] .seg button[aria-pressed="true"],#v2 .dr-in[data-k] .btn.pri{background:var(--c);border-color:var(--c);color:var(--on)}
+#v2 .dr-in[data-k] .f select:focus,#v2 .dr-in[data-k] .f input:focus,#v2 .dr-in[data-k] .f textarea:focus{border-color:var(--c);outline:none;box-shadow:0 0 0 3px var(--cs)}
+#v2 .dr-in[data-k] .chk input{accent-color:var(--c)}
+
+/* ===== B bookshelf (full screen) ===== */
+.shx{position:fixed;inset:0;z-index:60;background:var(--bg);display:flex;flex-direction:column;animation:dr .25s ease}
+.shx-h{background:var(--hb,#1D3343);color:var(--hbfg,#EEF3F6);padding-block:16px 0;padding-top:calc(16px + env(safe-area-inset-top,0px))}
+.shx-hi{max-width:1240px;margin:0 auto;display:flex;align-items:flex-end;gap:16px;flex-wrap:wrap}
+.shx-t{display:grid;gap:2px}
+.shx-t small{font-size:11px;letter-spacing:.24em;color:var(--hbmut,#9FB3C0)}
+.shx-t h2{margin:0;font-family:var(--serif);font-weight:900;font-size:28px}
+.shx-stats{display:flex;gap:18px;margin-left:12px;padding-bottom:4px;flex-wrap:wrap}
+.shx-stats div{display:grid}
+.shx-stats b{font-family:var(--mono);font-weight:500;font-size:18px;color:#F0C46A}
+.shx-stats span{font-size:11.5px;color:var(--hbmut,#9FB3C0)}
+.shx-hi .sp{flex:1}
+.shx-x{border:0;background:rgba(255,255,255,.08);color:inherit;border-radius:10px;width:40px;height:40px;display:grid;place-items:center}
+.shx-bar{max-width:1240px;margin:14px auto 0;display:flex;gap:10px;align-items:center;flex-wrap:wrap;padding-bottom:14px}
+.shx-search{flex:1 1 200px;min-width:0;display:flex;align-items:center;gap:8px;background:rgba(255,255,255,.1);border-radius:10px;padding:0 12px}
+.shx-search input{flex:1;min-width:0;border:0;background:transparent;color:inherit;font:inherit;padding:10px 0}
+.shx-search input::placeholder{color:var(--hbmut,#9FB3C0)}
+.shx-search input:focus{outline:none}
+.shx-sel{border:0;background:rgba(255,255,255,.1);color:inherit;border-radius:10px;padding:10px 12px;font:inherit;font-size:13.5px}
+.shx-sel option{color:#1D201F}
+.shx-view{display:inline-flex;background:rgba(255,255,255,.1);border-radius:10px;padding:3px}
+.shx-view button{border:0;background:transparent;color:var(--hbmut,#9FB3C0);border-radius:8px;padding:7px 11px;font-size:13px;display:flex;gap:6px;align-items:center}
+.shx-view button[aria-pressed="true"]{background:#F0C46A;color:#1D3343;font-weight:500}
+.shx-cases{display:flex;gap:6px;align-items:center;background:rgba(255,255,255,.1);border-radius:10px;padding:5px 8px}
+.shx-cases span{font-size:12px;color:var(--hbmut,#9FB3C0);margin-right:2px}
+.shx-cases button{width:26px;height:26px;border-radius:7px;border:2px solid transparent;padding:0;position:relative}
+.shx-cases button[aria-pressed="true"]{border-color:#F0C46A}
+.shx-act{border:0;background:rgba(255,255,255,.1);color:inherit;border-radius:10px;padding:9px 12px;font-size:13px;display:flex;gap:6px;align-items:center}
+.shx-act:hover,.shx-x:hover{background:rgba(255,255,255,.18)}
+.shx-act.pri{background:#F0C46A;color:#1D3343;font-weight:500}
+.shx-body{flex:1;overflow:auto}
+.shx-in{max-width:1240px;margin:0 auto;padding-block:26px 60px}
+
+/* ---- bookcase: one look per data-case ---- */
+.case{--back:#2B1D15;--grain:rgba(255,255,255,.03);--plank:linear-gradient(#80583A,#5A3A24);--edge:#3D2716;--frame:#3E2A1D;--lbl:#E9D7A8;--lblink:#3D2716;--plate:#C9A65D;--plateink:#2B1D15;--gap:46px;
+  position:relative;background:var(--back);background-image:repeating-linear-gradient(90deg,var(--grain) 0 2px,transparent 2px 38px);border:14px solid var(--frame);border-top-width:22px;border-radius:6px;padding:26px 22px 4px;box-shadow:0 26px 40px -24px rgba(0,0,0,.55),inset 0 0 60px rgba(0,0,0,.35)}
+.case+.case{margin-top:28px}
+.case[data-case="oak"]{--back:#EFE6D4;--grain:rgba(120,80,30,.05);--plank:linear-gradient(#DDBE8F,#C29862);--edge:#A97E48;--frame:#D2B07F;--lbl:#FFFDF5;--lblink:#6B4A22;--plate:#6B4A22;--plateink:#FFF7E6;box-shadow:0 26px 40px -24px rgba(80,50,10,.35),inset 0 0 50px rgba(120,80,30,.12)}
+.case[data-case="iron"]{--back:#3B3C3F;--grain:transparent;--plank:linear-gradient(#2A2B2E,#141517);--edge:#09090A;--frame:#111214;--lbl:#E8C547;--lblink:#111214;--plate:#E8C547;--plateink:#111214;border-width:8px;border-top-width:8px;border-radius:2px;
+  background-image:linear-gradient(rgba(255,255,255,.035) 1px,transparent 1px),linear-gradient(90deg,rgba(255,255,255,.035) 1px,transparent 1px);background-size:64px 26px,64px 52px}
+.case[data-case="classic"]{--back:#1F3A2F;--grain:rgba(255,255,255,.025);--plank:linear-gradient(#7A3220,#4B1B10);--edge:#2E0F08;--frame:#5A2617;--lbl:#E9C98A;--lblink:#4B1B10;--plate:#C9A65D;--plateink:#2E0F08;border-top-width:34px;
+  background-image:radial-gradient(circle at 50% 50%,rgba(233,201,138,.06) 0 6px,transparent 7px);background-size:40px 40px}
+.case[data-case="classic"]::before{content:"";position:absolute;left:-20px;right:-20px;top:-46px;height:14px;background:#6B2E1C;border-radius:3px 3px 0 0;box-shadow:0 4px 0 #4B1B10}
+.case[data-case="white"]{--back:transparent;--grain:transparent;--plank:linear-gradient(#FFFFFF,#ECEBE6);--edge:#D8D6CE;--frame:transparent;--lbl:transparent;--lblink:var(--mut);--plate:var(--ink);--plateink:var(--bg);border:0;box-shadow:none;padding:10px 0 0}
+.case-plate{position:absolute;top:-17px;left:50%;transform:translateX(-50%);background:var(--plate);color:var(--plateink);font-size:12px;letter-spacing:.14em;padding:2px 14px;border-radius:3px;white-space:nowrap;box-shadow:0 2px 0 rgba(0,0,0,.25);z-index:2}
+.case[data-case="white"] .case-plate{position:static;transform:none;display:inline-block;margin:0 0 18px}
+.case[data-case="classic"] .case-plate{top:-28px}
+.row{position:relative;display:flex;align-items:flex-end;gap:3px;padding:0 6px;margin-bottom:var(--gap);min-height:190px}
+.row::after{content:"";position:absolute;left:-22px;right:-22px;bottom:-18px;height:18px;background:var(--plank);border-bottom:4px solid var(--edge);box-shadow:0 10px 12px -6px rgba(0,0,0,.45)}
+.case[data-case="white"] .row::after{left:0;right:0;border-radius:2px;box-shadow:0 14px 16px -10px rgba(0,0,0,.25)}
+.case[data-case="iron"] .row::after{height:10px;bottom:-10px;border-bottom-width:2px}
+/* face-out cover on the shelf */
+.slot{position:relative;display:flex;flex-direction:column;align-items:center;width:124px;flex:none;margin:0 6px;border:0;background:none;padding:0;color:inherit}
+.slot .cvr-wrap{width:124px;transition:transform .2s ease}
+.slot:hover .cvr-wrap{transform:translateY(-8px) rotate(-1.5deg)}
+.slot.lean .cvr-wrap{transform:rotate(-4deg);transform-origin:bottom left}
+.slot.lean:hover .cvr-wrap{transform:rotate(-2deg) translateY(-6px)}
+.slot .lb{position:absolute;bottom:-17px;left:50%;transform:translateX(-50%);max-width:118px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-size:10.5px;line-height:14px;padding:0 6px;background:var(--lbl);color:var(--lblink);border-radius:2px;z-index:3}
+.case[data-case="white"] .slot .lb{bottom:-36px;background:transparent;font-size:12px;max-width:124px}
+.case[data-case="white"] .row{margin-bottom:62px}
+.bkc.series .cvr-wrap,.slot.series .cvr-wrap{position:relative}
+.slot.series .cvr-wrap::before,.slot.series .cvr-wrap::after{content:"";position:absolute;inset:0;border-radius:3px 7px 7px 3px;background:rgba(0,0,0,.35)}
+.slot.series .cvr-wrap::before{transform:translate(9px,-5px)}
+.slot.series .cvr-wrap::after{transform:translate(4.5px,-2.5px);background:rgba(0,0,0,.22)}
+.slot .cvr-wrap .cvr{position:relative;z-index:1}
+/* spine */
+.spn{border:0;padding:10px 0 8px;border-radius:3px 3px 1px 1px;display:flex;flex-direction:column;align-items:center;gap:6px;transition:transform .2s ease;box-shadow:inset -3px 0 0 rgba(0,0,0,.2),inset 2px 0 0 rgba(255,255,255,.14),2px 0 3px rgba(0,0,0,.28);position:relative;flex:none;box-sizing:border-box}
+.spn:hover{transform:translateY(-16px)}
+.spn .st{writing-mode:vertical-rl;font-family:var(--serif);font-weight:700;font-size:14px;letter-spacing:.1em;flex:1 1 auto;min-height:0;overflow:hidden;white-space:nowrap;text-overflow:ellipsis;line-height:1.15}
+.spn .sv{font-size:10px;writing-mode:vertical-rl;opacity:.85;flex:none}
+.spn .mk{font-size:14px;opacity:.9;flex:none}
+.spn .rib{position:absolute;top:-13px;width:7px;height:16px;background:#B5383A;clip-path:polygon(0 0,100% 0,100% 100%,50% 76%,0 100%)}
+.spn.tilt{transform:rotate(-7deg);transform-origin:bottom left;margin-right:12px}
+.spn.tilt:hover{transform:rotate(-7deg) translateY(-10px)}
+.spn.out{transform:scale(1.04);box-shadow:inset -3px 0 0 rgba(0,0,0,.2),inset 2px 0 0 rgba(255,255,255,.14),6px 6px 12px rgba(0,0,0,.45);z-index:2}
+.spn.out:hover{transform:scale(1.04) translateY(-14px)}
+/* spine designs */
+.s-label::before,.s-label::after{content:"";position:absolute;left:0;right:0;height:3px;background:var(--fg);opacity:.55}
+.s-label::before{top:7px}.s-label::after{bottom:27px}
+.s-label .st{flex:0 1 auto;background:#F4EEDC;color:#2A2420;padding:7px 1px;border-radius:2px;box-shadow:inset 0 0 0 1px rgba(0,0,0,.25);margin-top:10px}
+.s-label .mk{margin-top:auto}
+.s-gilt{background-image:linear-gradient(90deg,rgba(0,0,0,.28),transparent 30%,transparent 70%,rgba(0,0,0,.32))!important}
+.s-gilt::before,.s-gilt::after{content:"";position:absolute;left:0;right:0;height:14px;background:linear-gradient(var(--fg),var(--fg)) 0 0/100% 2px no-repeat,linear-gradient(var(--fg),var(--fg)) 0 6px/100% 1px no-repeat,linear-gradient(var(--fg),var(--fg)) 0 12px/100% 2px no-repeat;opacity:.85}
+.s-gilt::before{top:9px}.s-gilt::after{bottom:24px}
+.s-gilt .st{margin-top:22px;margin-bottom:20px}
+.s-cloth{background-image:repeating-linear-gradient(45deg,rgba(255,255,255,.08) 0 1px,transparent 1px 4px),repeating-linear-gradient(-45deg,rgba(0,0,0,.08) 0 1px,transparent 1px 4px)!important}
+.s-cloth .mk{border:1.5px solid currentColor;border-radius:50%;width:20px;height:20px;display:grid;place-items:center;font-size:12px;box-sizing:border-box}
+.s-cloth .st{margin-top:4px}
+.s-modern{padding-top:8px}
+.s-modern .ini{font-family:var(--sans);font-weight:700;font-size:17px;line-height:1;padding-bottom:6px;border-bottom:2px solid currentColor;width:68%;text-align:center;flex:none}
+.s-modern .st{font-family:var(--sans);font-weight:500;letter-spacing:.22em}
+.s-band::before{content:"";position:absolute;left:0;right:0;top:20px;height:14px;background:var(--fg);opacity:.92}
+.s-band .st{margin-top:32px}
+.s-paper{border-radius:2px;background-image:linear-gradient(90deg,rgba(255,255,255,.3),transparent 35%,transparent 72%,rgba(0,0,0,.2))!important}
+.s-paper .mk{background:var(--fg);color:var(--bg);border-radius:3px;font-size:12px;padding:2px}
+.s-paper::before{content:"";position:absolute;left:0;right:0;top:0;height:5px;background:rgba(0,0,0,.18)}
+/* horizontal stack */
+.stack{display:flex;flex-direction:column-reverse;align-items:flex-start;gap:0;flex:none;margin:0 6px}
+.flat{border:0;border-radius:1px 3px 3px 1px;display:flex;align-items:center;gap:8px;padding:0 10px;font-family:var(--serif);font-weight:700;font-size:12.5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;box-shadow:inset 0 -3px 0 rgba(0,0,0,.2),inset 0 2px 0 rgba(255,255,255,.12),0 2px 3px rgba(0,0,0,.2);transition:transform .2s}
+.flat:hover{transform:translateX(8px)}
+.divider{flex:none;width:28px;height:128px;margin:0 6px;border-radius:8px 8px 1px 1px;background:var(--plate);color:var(--plateink);writing-mode:vertical-rl;font-size:12px;letter-spacing:.14em;display:flex;align-items:center;padding-top:10px;box-sizing:border-box;box-shadow:2px 0 3px rgba(0,0,0,.25);white-space:nowrap;overflow:hidden}
+.deco{flex:none;align-self:flex-end;font-size:40px;line-height:1;opacity:.85;margin:0 6px}
+/* covers */
+.cvr{position:relative;aspect-ratio:2/3;max-width:100%;border-radius:3px 7px 7px 3px;overflow:hidden;box-shadow:0 8px 16px -10px rgba(0,0,0,.55),inset 7px 0 0 rgba(0,0,0,.16),inset 8px 0 0 rgba(255,255,255,.12);display:flex;flex-direction:column;padding:12px 10px 10px 16px;box-sizing:border-box}
+.cvr .ct{font-family:var(--serif);font-weight:900;line-height:1.25;position:relative;z-index:1;font-size:17px}
+.cvr .ca{font-size:9px;letter-spacing:.16em;opacity:.8;margin-top:auto;position:relative;z-index:1}
+.cvr .mo{position:absolute;opacity:.9;z-index:0}
+.cvr .ser{position:absolute;top:6px;right:6px;z-index:2;background:rgba(0,0,0,.6);color:#fff;font-size:10px;border-radius:999px;padding:1px 7px}
+.d-ink{background:#F3F0E6;color:#1F2A33}
+.d-ink::before{content:"";position:absolute;left:-10%;right:-10%;bottom:0;height:55%;background:radial-gradient(60% 70% at 25% 100%,#7E8D99 0 40%,transparent 41%),radial-gradient(55% 80% at 70% 100%,#4F606E 0 45%,transparent 46%),radial-gradient(40% 60% at 95% 100%,#A9B4BC 0 50%,transparent 51%)}
+.d-ink .ct{writing-mode:vertical-rl;font-size:19px;letter-spacing:.16em;align-self:flex-end;margin-top:16px}
+.d-ink .seal{position:absolute;right:12px;bottom:44%;width:14px;height:14px;background:#B5383A;z-index:1;border-radius:2px}
+.d-gothic{background:#4A1520;color:#E9C98A}
+.d-gothic::before{content:"";position:absolute;inset:8px 8px 8px 14px;border:1.5px solid #C9A65D;outline:1px solid #C9A65D;outline-offset:-5px;border-radius:40% 40% 2px 2px/22% 22% 2px 2px}
+.d-gothic .ct{text-align:center;margin-top:38%;letter-spacing:.08em}
+.d-gothic .ca{text-align:center}
+.d-floral{background:#FBE9E7;color:#8A2F4A;background-image:radial-gradient(#F3B6C1 3px,transparent 4px),radial-gradient(#F7D2B0 2px,transparent 3px);background-size:22px 22px,16px 16px;background-position:0 0,8px 9px}
+.d-floral .ct{background:#FFF7F4;padding:8px 6px;border-radius:4px;margin-top:30%;text-align:center}
+.d-star{background:#121A3A;color:#EADCB0;background-image:radial-gradient(1px 1px at 20% 30%,#fff,transparent),radial-gradient(1.5px 1.5px at 70% 20%,#fff,transparent),radial-gradient(1px 1px at 40% 70%,#fff,transparent),radial-gradient(1px 1px at 85% 60%,#fff,transparent),radial-gradient(1.5px 1.5px at 15% 85%,#fff,transparent)}
+.d-star::before{content:"";position:absolute;width:62%;aspect-ratio:1;left:24%;top:14%;border:1.5px solid #D8B460;border-radius:50%;box-shadow:inset 0 0 0 9px rgba(216,180,96,.12)}
+.d-star .ct{margin-top:auto;text-align:center}
+.d-star .ca{margin-top:5px;text-align:center}
+.d-noir{background:#22252B;color:#E9E5DA;background-image:repeating-linear-gradient(135deg,transparent 0 12px,rgba(255,255,255,.04) 12px 13px)}
+.d-noir::before{content:"CASE FILE";position:absolute;left:0;right:0;top:38%;background:#E8C547;color:#22252B;font-family:var(--mono);font-size:10px;letter-spacing:.3em;text-align:center;padding:3px 0}
+.d-wood{background:#2F5B46;color:#F1E9D2;background-image:repeating-linear-gradient(0deg,transparent 0 6px,rgba(0,0,0,.12) 6px 7px)}
+.d-wood .ct{writing-mode:vertical-rl;font-size:19px;letter-spacing:.2em;border:1.5px solid #F1E9D2;padding:8px 5px;align-self:center;margin-top:10%}
+.d-botanic{background:#F2EFE2;color:#2F4A2A}
+.d-botanic .mo{right:-6px;bottom:16%;color:#7FA36B;font-size:84px;transform:rotate(-18deg)}
+.d-botanic .ct{font-size:15px;border-bottom:1px solid #2F4A2A;padding-bottom:5px}
+.d-minimal{background:#FAFAF7;color:#111}
+.d-minimal::before{content:"";position:absolute;left:16px;right:10px;top:44%;height:9px;background:#111}
+.d-minimal::after{content:"";position:absolute;right:14px;top:calc(44% + 20px);width:11px;height:11px;border-radius:50%;background:#C8372D}
+.d-minimal .ct{font-size:15px}
+.d-deco{background:#14181F;color:#E4C77E;background-image:repeating-conic-gradient(from -60deg at 50% 108%,rgba(228,199,126,.28) 0 4deg,transparent 4deg 12deg)}
+.d-deco::before{content:"";position:absolute;inset:7px 7px 7px 13px;border:1px solid #E4C77E}
+.d-deco .ct{text-align:center;letter-spacing:.14em;margin-top:14%}
+.d-deco .ca{text-align:center}
+.d-cyber{background:#0B0F1A;color:#5CF2E8;background-image:linear-gradient(transparent 58%,rgba(255,64,170,.16) 58%),linear-gradient(rgba(92,242,232,.22) 1px,transparent 1px),linear-gradient(90deg,rgba(255,64,170,.22) 1px,transparent 1px);background-size:100% 100%,14px 14px,14px 14px}
+.d-cyber .ct{font-family:var(--mono);font-weight:500;font-size:15px;text-shadow:0 0 8px rgba(92,242,232,.6);margin-top:auto;margin-bottom:6px}
+.d-cyber .ca{margin-top:0;color:#FF40AA}
+.d-blue{background:#1E4F8A;color:#EAF2FB;background-image:linear-gradient(rgba(255,255,255,.14) 1px,transparent 1px),linear-gradient(90deg,rgba(255,255,255,.14) 1px,transparent 1px);background-size:12px 12px}
+.d-blue::before{content:"";position:absolute;width:56%;aspect-ratio:1;right:10%;top:34%;border:1.5px dashed #EAF2FB;border-radius:50%}
+.d-blue::after{content:"";position:absolute;left:16px;right:10px;top:34%;border-top:1px solid #EAF2FB}
+.d-blue .ct{font-family:var(--mono);font-weight:500;font-size:14px}
+.d-collage{background:#F2E6D0;color:#2A2420;background-image:linear-gradient(#E07A5F,#E07A5F),linear-gradient(#3D5A80,#3D5A80),linear-gradient(#F2CC8F,#F2CC8F),linear-gradient(#81B29A,#81B29A);background-size:46% 30%,38% 26%,50% 22%,30% 34%;background-position:12% 18%,88% 30%,30% 70%,90% 88%;background-repeat:no-repeat}
+.d-collage .ct{background:#FFFDF8;padding:6px 8px;margin-top:40%;transform:rotate(-3deg);box-shadow:0 2px 4px rgba(0,0,0,.2);font-size:15px}
+.d-bauhaus{background:#F1ECE0;color:#111;background-image:radial-gradient(circle at 70% 30%,#D7372B 0 22%,transparent 22.5%),linear-gradient(#1F4E9C,#1F4E9C),linear-gradient(135deg,transparent 50%,#F2B705 50%);background-size:100% 100%,34% 24%,40% 28%;background-position:0 0,18% 62%,96% 96%;background-repeat:no-repeat}
+.d-bauhaus .ct{font-family:var(--sans);font-weight:700;font-size:15px}
+.d-chart{background:#E8DFC8;color:#1E3A5F;background-image:repeating-conic-gradient(from 0deg at 62% 58%,rgba(30,58,95,.5) 0 1deg,transparent 1deg 22.5deg),radial-gradient(circle at 62% 58%,transparent 0 28%,rgba(30,58,95,.35) 28.5% 29%,transparent 29.5%)}
+.d-chart .ct{font-size:15px;border:1.5px solid #1E3A5F;padding:5px 6px;background:#F2EBD8}
+.d-journal{background:#B98B5E;color:#3A2716;background-image:repeating-linear-gradient(45deg,rgba(0,0,0,.03) 0 2px,transparent 2px 5px)}
+.d-journal::before{content:"";position:absolute;top:0;bottom:0;right:16%;width:7px;background:#3A2716;opacity:.85}
+.d-journal .ct{background:#F4EAD7;padding:8px 7px;margin-top:22%;font-size:14px;border-radius:2px;margin-right:20%}
+.d-city{background:linear-gradient(#2E3D5C,#7A4E6B 55%,#E07A5F)}
+.d-city{color:#FFF3E6}
+.d-city::before{content:"";position:absolute;left:0;right:0;bottom:0;height:38%;background:linear-gradient(#151B2B,#151B2B) 4% 100%/14% 70% no-repeat,linear-gradient(#151B2B,#151B2B) 22% 100%/12% 100% no-repeat,linear-gradient(#151B2B,#151B2B) 38% 100%/16% 55% no-repeat,linear-gradient(#151B2B,#151B2B) 58% 100%/10% 85% no-repeat,linear-gradient(#151B2B,#151B2B) 74% 100%/14% 62% no-repeat,linear-gradient(#151B2B,#151B2B) 94% 100%/14% 90% no-repeat}
+.d-city .ct{font-size:16px}
+.d-city .ca{position:absolute;bottom:8px;left:16px}
+/* detail panel */
+.shx-dt{position:fixed;inset:0;z-index:70;background:rgba(10,12,14,.45);display:flex;justify-content:flex-end}
+.dt-in{width:min(520px,100%);height:100%;background:var(--sf);overflow:auto;animation:dr .25s ease;display:flex;flex-direction:column}
+.dt-top{display:grid;grid-template-columns:150px minmax(0,1fr);gap:20px;padding:26px 24px 20px;padding-top:calc(26px + env(safe-area-inset-top,0px));background:var(--cs,var(--sf2))}
+.dt-top h3{margin:0 0 6px;font-family:var(--serif);font-weight:900;font-size:24px;line-height:1.3}
+.dt-top .cvr .ct{font-size:19px}
+.dt-meta{display:flex;flex-wrap:wrap;gap:6px;margin:8px 0}
+.dt-meta span{font-size:12px;background:var(--sf);border-radius:999px;padding:2px 10px;color:var(--mut)}
+.dt-b{padding:20px 24px;display:grid;gap:16px}
+.dt-b h4{margin:0 0 6px;font-size:12.5px;font-weight:500;color:var(--mut);letter-spacing:.1em}
+.dt-prev{font-family:var(--serif);font-size:15px;line-height:1.95;margin:0;color:var(--ink)}
+.vols{display:grid;gap:6px}
+.vols div{display:flex;gap:10px;align-items:center;font-size:13.5px;padding:8px 10px;border-radius:8px;background:var(--bg)}
+.vols b{font-weight:500}
+.vols span{margin-left:auto;color:var(--mut);font-size:12.5px}
+.vols span:first-child{margin-left:0}
+.vols .ok{color:var(--ok)}
+.dt-acts{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}
+.dt-acts .btn{justify-content:center;padding:10px}
+.dt-acts .btn.pri{grid-column:1/-1;padding:12px;font-size:15px}
+.dt-conf{display:flex;gap:8px;align-items:center;background:var(--dans,#FBE8E6);color:var(--dan);border-radius:10px;padding:10px 12px;font-size:13.5px;flex-wrap:wrap}
+.dt-conf .sp{flex:1}
+.toast{position:fixed;left:50%;bottom:calc(24px + env(safe-area-inset-bottom,0px));transform:translateX(-50%);background:var(--ink);color:var(--bg);padding:10px 16px;border-radius:10px;font-size:13.5px;z-index:90;animation:dr .25s ease}
+@media (max-width:760px){
+  .shx-stats{margin-left:0}
+  .case{border-width:8px;border-top-width:14px;padding:22px 12px 4px}
+  .row::after{left:-12px;right:-12px}
+  .slot,.slot .cvr-wrap{width:96px}
+  .slot .lb{max-width:92px}
+  .dt-top{grid-template-columns:110px minmax(0,1fr);padding:20px 16px}
+  .dt-b{padding:16px}
+  .shx-act .lb{display:none}
+}
+
+/* ===== V3 左設定・右手稿 ===== */
+.v3{display:grid;grid-template-columns:400px minmax(0,1fr);min-height:calc(100vh - 50px)}
+.v3 .left{background:var(--sf);border-right:1px solid var(--line);height:calc(100vh - 50px);position:sticky;top:0;overflow:auto;display:flex;flex-direction:column}
+.v3 .left-h{padding:16px 18px;border-bottom:1px solid var(--line);display:grid;gap:12px;position:sticky;top:0;background:var(--sf);z-index:2}
+.v3 .tpl{display:flex;gap:6px}
+.v3 .tpl select{flex:1;min-width:0;border:1px solid var(--line);background:var(--bg);color:var(--ink);border-radius:8px;padding:7px 9px;font:inherit;font-size:13px}
+.acc{border-bottom:1px solid var(--line)}
+.acc summary{list-style:none;cursor:pointer;padding:14px 18px;display:grid;grid-template-columns:auto minmax(0,1fr) auto;gap:2px 10px;align-items:center}
+.acc summary::-webkit-details-marker{display:none}
+.acc summary .no{font-family:var(--serif);font-weight:900;color:var(--ac);font-size:16px;grid-row:span 2}
+.acc summary .t{font-weight:500;font-size:14px}
+.acc summary .s{font-size:12px;color:var(--mut);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;grid-column:2}
+.acc summary .ms{grid-row:span 2;grid-column:3;color:var(--faint);transition:transform .2s}
+.acc[open] summary .ms{transform:rotate(180deg)}
+.acc[open] summary{background:var(--bg)}
+.acc .acc-b{padding:6px 18px 20px}
+.acc .acc-b .mh{display:none}
+.acc .fg,.acc .fg.c4{grid-template-columns:repeat(2,minmax(0,1fr))}
+.v3 .right{min-width:0;display:flex;flex-direction:column}
+.v3 .rh{display:flex;align-items:center;gap:12px;padding-block:12px;border-bottom:1px solid var(--line);background:var(--bg);position:sticky;top:0;z-index:5;flex-wrap:wrap}
+.v3 .rh .sp{flex:1}
+.pchips{display:flex;gap:6px;flex-wrap:wrap}
+.pchip{display:flex;gap:6px;align-items:center;font-size:12.5px;padding:4px 10px 4px 6px;border-radius:999px;background:var(--sf2);color:var(--mut);border:0}
+.pchip .d{width:16px;height:16px;border-radius:50%;display:grid;place-items:center;font-size:10px;background:var(--line);color:var(--mut);font-family:var(--mono)}
+.pchip.ok{background:var(--oks);color:var(--ok)}
+.pchip.ok .d{background:var(--ok);color:#fff}
+.v3 .rb{padding-block:18px 50px;display:grid;gap:16px;max-width:1000px;width:100%;margin:0 auto;box-sizing:border-box}
+
+@media (max-width:900px){
+  .fg,.fg.c4{grid-template-columns:repeat(2,minmax(0,1fr))}
+  .sumgrid{grid-template-columns:repeat(2,minmax(0,1fr))}
+  .v2 .two{grid-template-columns:minmax(0,1fr)}
+  .stat{grid-template-columns:repeat(2,minmax(0,1fr))}
+}
+@media (max-width:760px){
+  .v1,.v3{grid-template-columns:minmax(0,1fr)}
+  .v1 .side{position:static;height:auto;border-right:0;border-bottom:1px solid var(--line);padding:12px}
+  .v1 .side .lbl,.v1 .tools .t2{display:none}
+  .pnav{display:flex;overflow-x:auto;gap:4px}
+  .pnav button{flex:none;grid-template-columns:22px auto}
+  .pnav button .s{display:none}
+  .pnav button .d{grid-row:auto;width:22px;height:22px}
+  .v1 .tools{display:flex;flex-wrap:wrap;margin-top:0}
+  .v1 .tools button{width:auto}
+  .v1 .top{position:static}
+  .v3 .left{position:static;height:auto;border-right:0;border-bottom:1px solid var(--line)}
+  .v3 .rh{position:static}
+  .rail{top:auto;bottom:calc(12px + env(safe-area-inset-bottom,0px));transform:none;grid-auto-flow:column;right:50%;translate:50% 0}
+  .rail button span.tt{display:none}
+  .v2 .col{padding-right:max(16px,env(safe-area-inset-right,0px));padding-bottom:110px}
+  .ms-wrap{grid-template-columns:minmax(0,1fr)}
+  .ms-idx{display:flex;overflow-x:auto;gap:4px}
+  .ms-idx .lbl{display:none}
+  .ms-idx button{flex:none;white-space:nowrap}
+  .fg,.fg.c2,.fg.c4,.acc .fg{grid-template-columns:minmax(0,1fr)}
+  .reader{padding:20px 18px}
+}
+@media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
+</style>
+
+<header class="sw gut">
+  <span class="sw-l">介面提案・沿用現有流程</span>
+  <div class="sw-tabs" role="tablist" id="swTabs"></div>
+  <p class="sw-d" id="swDesc"></p>
+</header>
+<div id="v1" class="vroot"></div>
+<div id="v2" class="vroot" hidden></div>
+<div id="v3" class="vroot" hidden></div>
+
+<script>
+const $=(s,r=document)=>r.querySelector(s);
+const $$=(s,r=document)=>[...r.querySelectorAll(s)];
+const sleep=ms=>new Promise(r=>setTimeout(r,ms));
+const esc=s=>String(s??"").replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
+const pick=a=>a[Math.floor(Math.random()*a.length)];
+
+/* ---------- options (taken from the current app) ---------- */
+const OPT={
+  theme:["史詩奇幻","黑暗奇幻","都市奇幻","仙俠修真","武俠江湖","懸疑推理","都市言情","古代宮廷","架空歷史","太空歌劇","末日廢土","靈異懸疑"],
+  setting:["唐朝長安・弘文書院","架空王朝","現代都市","修仙宗門","江湖武林","未來星際","末日廢城","民國上海"],
+  style:["古典典雅","輕鬆幽默","黑暗沉重","熱血激昂","細膩抒情","懸疑緊張"],
+  era:["遠古神話時代","先秦時代","秦漢","魏晉南北朝","隋唐盛世","宋元","明清","民國","現代","近未來","遙遠未來","架空"],
+  complexity:["極簡","簡單","中等","複雜"],
+  rating:["全年齡","12+","15+","18+"],
+  narrative:["第一人稱","第三人稱限知","第三人稱全知","第二人稱"],
+  pacing:["慢熱鋪陳","標準節奏","快節奏","極速節奏"],
+  tone:["歡樂輕鬆","溫馨治癒","浪漫甜蜜","熱血燃向","懸疑緊張","黑暗壓抑","悲傷催淚"],
+  ending:["HE 大團圓","BE 悲劇收場","OE 開放結局","TE 真結局","番外預告","續集鋪墊"],
+  creativity:["穩定","豐富","實驗"],
+  gender:["男","女","不明"]
+};
+const SPECIAL=[["系統機制",["金手指/外掛","升級打怪","隨身空間","任務系統","抽卡/召喚"]],["穿越重生",["穿書/穿劇","靈魂互換","回檔重來","記憶覺醒","奪舍附身"]],["懸疑元素",["密室","不可靠敘事者","雙重身分","伏筆回收","時間線詭計"]],["情感關係",["青梅竹馬","宿敵相愛","師徒","破鏡重圓","先婚後愛"]],["世界設定",["魂魄附書","上古遺跡","禁地","宗門大比","秘境"]]];
+const TEMPLATES=[["大唐盛世・繁華長安",{theme:"架空歷史",setting:"唐朝長安・弘文書院",style:"古典典雅"}],["懸疑推理・抽絲剝繭",{theme:"懸疑推理",setting:"現代都市",style:"懸疑緊張"}],["傳統仙俠・修道問心",{theme:"仙俠修真",setting:"修仙宗門",style:"古典典雅"}],["現代言情・都市甜蜜",{theme:"都市言情",setting:"現代都市",style:"輕鬆幽默"}],["末日廢土・生存掙扎",{theme:"末日廢土",setting:"末日廢城",style:"黑暗沉重"}]];
+const DEEP=[["exp","身分與關鍵經歷","例如：前醫師，曾因誤判失去病人"],["power","能力與代價","擅長什麼、能力限制，以及使用的代價"],["belief","信念與底線","相信什麼；即使付出代價也不願做什麼"],["growth","成長方向","從什麼狀態，逐步變成什麼樣的人"],["habit","說話與行為習慣","用詞、反應與習慣；避免每句重複口頭禪"],["camp","陣營與利益牽絆","效忠誰、受誰牽制、想保護誰"]];
+const CHARS0=[
+  {name:"裴清遠",gender:"男",age:"17",role:"主角",personality:"沉靜、固執、記憶過人",goal:"查明父親死於書院的真相",weakness:"太相信文字，不相信人",secret:"聽得見附在書上的魂魄說話",relation:"與蕭若霜互相試探"},
+  {name:"蕭若霜",gender:"女",age:"16",role:"女主",personality:"聰慧、善變、外柔內剛",goal:"找回前朝遺詔",weakness:"習慣說謊，連自己也騙",secret:"化名入院的前朝公主",relation:"與宇文策有家族世仇"},
+  {name:"宇文策",gender:"男",age:"52",role:"反派",personality:"博學、謹慎、滴水不漏",goal:"讓十二祭酒的秘密永遠埋在灰裡",weakness:"害怕被遺忘",secret:"本該死在貞觀二年的大火裡",relation:"清遠的殺父疑兇"}
+];
+const RAND_CHAR=[{name:"老墨",gender:"男",age:"不詳",role:"導師",personality:"懶散、話只說一半",goal:"擺脫被困在書院的契約",weakness:"嗜酒",secret:"活了三百年的墨靈",relation:"看著清遠長大"},{name:"張懷瑾",gender:"男",age:"28",role:"配角",personality:"耿直、重義",goal:"保住夜巡隊長的位子",weakness:"不善言辭",secret:"暗中同情清遠",relation:"宇文策的心腹"}];
+const OUTLINE=[["末名入院","清遠被分去藏經樓，聽見書櫃後有人說「又來一個姓裴的」。"],["看門老墨","看門老人警告他夜裡別碰朱漆書櫃。"],["商賈之女","蕭若霜捐銀入院，打聽藏經樓的舊目錄。"],["朱漆書櫃","清遠打開書櫃，放出怨魂，也找到父親的筆跡。"],["月考風波","同窗設局誣他偷題，若霜出面作證。"],["後山焦石","兩人在後山發現焦黑石基與十二塊無字碑。"],["殘卷夜讀","殘卷記載書院曾遭大火，與祭酒的說法矛盾。"],["換名之人","殘卷顯字：祭酒未死，只是換了名字。"],["書院大比","祭酒當眾點名清遠，試題正是那卷殘書。"],["火起","藏經樓再度起火，清遠必須在救書與救人之間選擇。"]];
+const CHTXT=[
+  ["弘文書院放榜那天，裴清遠的名字排在最後一個，緊貼著榜紙的邊緣，像隨時會被風撕掉。","管事翻了翻名冊，連頭也沒抬：「末名的，去藏經樓。」","藏經樓在書院最北，終年不見日光。清遠推開門的時候，聽見滿樓的書同時嘆了一口氣。","他以為是風。直到最裡面那排朱漆書櫃後頭，有個蒼老的聲音說：「又來一個姓裴的。」"],
+  ["看門的老人姓什麼，沒人說得清，大家只叫他老墨。他整天坐在門口曬太陽，手指上永遠沾著洗不掉的墨漬。","「朱漆那排，夜裡別碰。」老墨說這話時沒看清遠，像在對門外的槐樹說。","清遠想問為什麼，老人已經閉上眼，打起了呼。可他分明看見，老墨的手腕上有一圈像是被火燎過的舊疤。"],
+  ["第三天，藏經樓來了一個不該來的人。","少女穿著揚州時興的藕色襦裙，自稱商賈之女，捐了三百兩銀子，只為進樓旁聽。","「聽說這裡有一份貞觀年間的舊目錄，」她笑著問清遠，「你見過嗎？」清遠搖頭。她的笑容沒有變，眼神卻冷了一瞬。"]
+];
+const GEN=["夜色漸深，書院的燈一盞一盞熄去，只有藏經樓還亮著。","清遠把今天發生的事在心裡過了一遍，越想越覺得，每一件都不是巧合。","他翻開殘卷的下一頁，墨跡在燈下微微發亮，像是剛剛才寫上去。"];
+const LOGS=[["人物","裴清遠進入藏經樓；首次聽見書魂。"],["伏筆","老墨手腕上的燒傷舊疤，尚未解釋。","w"],["身分","蕭若霜對外身分：揚州商賈之女。"],["道具","朱漆書櫃內發現父親筆跡。"],["衝突","月考風波：同窗誣陷，若霜作證。"],["地點","後山焦黑石基，十二塊無字碑。"],["矛盾","祭酒說「從未失火」，與殘卷記載不符。","w"],["揭露","殘卷顯字：祭酒換名。"],["衝突","書院大比，試題為殘書。"],["高潮","藏經樓再度起火。"]];
+
+/* ---------- app factory: one state, three layouts ---------- */
+function makeApp(root,kind){
+  const S={theme:"",setting:"",style:"",chapters:10,words:30000,volumes:1,autoAll:false,
+    adv:{era:"",complexity:"",rating:"",narrative:"",pacing:"",tone:"",ending:"",creativity:"豐富",seed:"48213"},
+    special:new Set(),rules:"",chars:CHARS0.map(c=>({...c})),ac:0,outline:[],obusy:false,
+    gen:{running:false,stop:false,written:[],secs:0},view:0,vertical:false,font:18,page:"setup",panel:null,reader:0,model:"DeepSeek V4.1 Flash — 推薦寫作",usage:{req:0,inT:0,outT:0}};
+  const wordsDone=()=>S.gen.written.reduce((a,c)=>a+c.join("").length*14,0);
+  const cost=()=>(S.usage.inT*0.00000028+S.usage.outT*0.0000011).toFixed(4);
+  const setP=(path,v)=>{const k=path.split(".");if(k.length===2)S[k[0]][k[1]]=v;else S[k[0]]=v;};
+  const getP=path=>{const k=path.split(".");return k.length===2?S[k[0]][k[1]]:S[k[0]];};
+
+  /* -- status for pipeline -- */
+  function pipeline(){return[
+    {id:"setup",t:"設定",en:"SETUP",s:S.theme||"—",ok:!!S.theme},
+    {id:"cast",t:"角色",en:"CAST",s:`${S.chars.length} 位`,ok:S.chars.length>0},
+    {id:"outline",t:"大綱",en:"OUTLINE",s:S.outline.length?`${S.outline.length} 章`:"—",ok:S.outline.length>0},
+    {id:"write",t:"撰寫",en:"DRAFT",s:`${wordsDone().toLocaleString()} 字`,ok:S.gen.written.length>0},
+    {id:"read",t:"閱讀",en:"READ",s:`${S.gen.written.length} 章`,ok:S.gen.written.length>0}];}
+  function sums(){const a=S.adv;return{
+    story:{ok:!!(S.theme&&S.setting&&S.style),v:S.theme?`<b>${esc(S.theme)}</b>・${esc(S.setting||"未選背景")}・${esc(S.style||"未選風格")}<br>${S.chapters} 章／${S.words.toLocaleString()} 字／${S.volumes} 集`:"尚未設定"},
+    adv:{ok:!!(a.era||a.narrative),v:(a.era||a.narrative||a.pacing)?[a.era,a.narrative,a.pacing,a.tone,a.ending].filter(Boolean).map(esc).join("・"):"尚未設定（可交給 AI）"},
+    special:{ok:S.special.size>0||!!S.rules,v:S.special.size||S.rules?`已選 ${S.special.size} 項：${[...S.special].slice(0,3).join("、")}${S.special.size>3?"…":""}${S.rules?"<br>自訂規則 1 條":""}`:"尚未設定"},
+    chars:{ok:S.chars.length>0,v:S.chars.length?S.chars.map(c=>`<b>${esc(c.name||"未命名")}</b>`).join("、")+`<br>${S.chars.length} 位人物`:"尚未設定"},
+    outline:{ok:S.outline.length>0,v:S.outline.length?`${S.outline.length} 章大綱`:"尚未生成"}};}
+
+  /* -- field helpers -- */
+  const sel=(label,path,opts)=>{const v=getP(path);return `<label class="f"><span>${label}</span><select data-bind="${path}" class="${v?"":"unset"}"><option value="">請選擇${label}</option>${opts.map(o=>`<option ${o===v?"selected":""}>${o}</option>`).join("")}</select></label>`;};
+  const num=(label,path,ph,hint)=>`<label class="f"><span>${label}</span><input type="number" data-bind="${path}" data-num value="${getP(path)}" placeholder="${ph}">${hint?`<small>${hint}</small>`:""}</label>`;
+
+  /* -- modules -- */
+  const M={};
+  M.story=()=>`<div class="mh"><h3><span class="no">①</span>故事設定</h3><span class="sp"></span><button class="btn sm" data-act="randStory"><span class="ms">casino</span>隨機填充</button></div>
+    <div class="fg">${sel("主題","theme",OPT.theme)}${sel("背景設定","setting",OPT.setting)}${sel("故事風格","style",OPT.style)}</div>
+    <div class="fg" style="margin-top:14px">${num("章節數","chapters","如：10")}${num("預計總字數","words","如：50000","AI 依「總字數 ÷ 章節數」要求每章篇幅")}${num("預計集數","volumes","1","2 以上＝系列分集")}</div>
+    <label class="chk" style="margin-top:14px"><input type="checkbox" data-bind="autoAll" ${S.autoAll?"checked":""}>自動生成全部章節（逐章自動接續到章節數；分集時一集接一集寫完）</label>`;
+  M.adv=()=>`<div class="mh"><h3><span class="no">②</span>進階設定</h3><span class="sp"></span><button class="btn sm" data-act="randAdv"><span class="ms">casino</span>隨機進階</button></div>
+    <div class="fg c4">${sel("時代設定","adv.era",OPT.era)}${sel("世界觀複雜度","adv.complexity",OPT.complexity)}${sel("內容分級","adv.rating",OPT.rating)}${sel("敘事視角","adv.narrative",OPT.narrative)}${sel("故事節奏","adv.pacing",OPT.pacing)}${sel("情感基調","adv.tone",OPT.tone)}${sel("結局傾向","adv.ending",OPT.ending)}
+    <label class="f"><span>隨機種子</span><span style="display:flex;gap:6px"><input data-bind="adv.seed" value="${S.adv.seed}" style="font-family:var(--mono)"><button class="btn sm" data-act="seed" aria-label="換種子"><span class="ms">refresh</span></button></span></label></div>
+    <div class="sub-h" style="margin-top:16px">創意幅度</div><div class="seg">${OPT.creativity.map(c=>`<button data-seg="adv.creativity" data-v="${c}" aria-pressed="${c===S.adv.creativity}">${c}${c==="穩定"?"・清晰一致":c==="豐富"?"・平衡變化":"・大膽結構"}</button>`).join("")}</div>`;
+  M.special=()=>`<div class="mh"><h3><span class="no">③</span>特殊元素與規則</h3><span class="meta" data-live="spcount">已選 ${S.special.size} 項</span><span class="sp"></span><button class="btn sm ghost" data-act="clearSp">清除</button><button class="btn sm" data-act="drama"><span class="ms">theater_comedy</span>戲劇化</button></div>
+    ${SPECIAL.map(([c,items])=>`<div class="cat"><b>${c}</b><div class="chips">${items.map(i=>`<button class="chip" data-sp="${i}" aria-pressed="${S.special.has(i)}">${i}</button>`).join("")}</div></div>`).join("")}
+    <label class="f" style="margin-top:12px"><span>自訂規則</span><textarea data-bind="rules" placeholder="例如：結局必須是悲劇、禁止穿越設定、全劇不可出現男性角色…">${esc(S.rules)}</textarea><small>補充前兩區沒涵蓋的要求；生成大綱、設計角色與撰寫正文時都會遵守。劇情大綱請在「大綱」管理。</small></label>`;
+  M.chars=()=>{const c=S.chars[S.ac]||{};return `<div class="mh"><h3><span class="no">④</span>人物設計</h3><span class="meta">${S.chars.length} 位</span><span class="sp"></span><button class="btn sm pri" data-act="aiChars"><span class="ms">auto_awesome</span>AI 設計角色群</button><button class="btn sm" data-act="names"><span class="ms">list</span>人名清單</button><button class="btn sm" data-act="randChars"><span class="ms">casino</span>隨機湊組</button><button class="btn sm" data-act="addChar"><span class="ms">add</span>新增人物</button></div>
+    ${S.chars.length?`<div class="ctabs">${S.chars.map((x,i)=>`<button class="ctab" data-ctab="${i}" aria-selected="${i===S.ac}">${esc(x.name||"人物 "+(i+1))}</button>`).join("")}</div>
+    <div class="fg c4"><label class="f"><span>姓名</span><input data-cbind="name" value="${esc(c.name)}"></label><label class="f"><span>性別</span><select data-cbind="gender">${OPT.gender.map(g=>`<option ${g===c.gender?"selected":""}>${g}</option>`).join("")}</select></label><label class="f"><span>年齡</span><input data-cbind="age" value="${esc(c.age)}"></label><label class="f"><span>定位</span><input data-cbind="role" value="${esc(c.role)}"></label></div>
+    <div class="fg c2" style="margin-top:14px">${[["personality","性格"],["goal","目標"],["weakness","弱點"],["secret","秘密"]].map(([k,l])=>`<label class="f"><span>${l}</span><input data-cbind="${k}" value="${esc(c[k])}"></label>`).join("")}</div>
+    <label class="f" style="margin-top:14px"><span>人物關係</span><input data-cbind="relation" value="${esc(c.relation)}"></label>
+    <details class="deep"><summary>深入設計（六項，選填）</summary><div class="fg c2" style="margin-top:12px">${DEEP.map(([k,l,ph])=>`<label class="f"><span>${l}</span><textarea data-cbind="${k}" placeholder="${ph}" style="min-height:60px">${esc(c[k]||"")}</textarea></label>`).join("")}</div></details>
+    <div style="margin-top:14px;display:flex;justify-content:flex-end"><button class="btn sm dan" data-act="delChar"><span class="ms">delete</span>移除此人物</button></div>`:`<div class="empty">還沒有人物。按「AI 設計角色群」依故事條件一次設計好，或「新增人物」自己填。</div>`}`;};
+  M.outline=()=>`<div class="mh"><h3><span class="ms" style="color:var(--ac)">account_tree</span>預覽大綱</h3><span class="meta">先確認方向，再生成正文，節省時間與額度</span><span class="sp"></span>${S.outline.length?`<button class="btn sm" data-act="genOutline"><span class="ms">refresh</span>重新生成</button><button class="btn sm ghost" data-act="clearOutline">清除大綱</button>`:""}</div>
+    ${S.obusy?`<div class="empty"><span class="spin"></span>　正在依故事設定與人物生成 ${S.chapters} 章大綱…</div>`:S.outline.length?`<ol class="ol">${S.outline.map((o,i)=>`<li><span>第 ${String(i+1).padStart(2,"0")} 章</span><span contenteditable="true"><b>${o[0]}</b><span class="s">${o[1]}</span></span></li>`).join("")}</ol>`:`<div class="empty">尚未生成大綱。<br>「預計集數」在故事設定裡調整；2 集以上會依集數分別生成。<br><br><button class="btn pri" data-act="genOutline"><span class="ms">auto_awesome</span>生成大綱</button></div>`}`;
+  M.console=()=>{const g=S.gen,n=g.written.length,tot=S.chapters;return `<div class="mh"><h3><span class="ms" style="color:var(--ac)">edit_square</span>創作控制台</h3><span class="sp"></span>${g.running?`<span class="live"><i></i>LIVE・創作中</span>`:`<span class="note"><span class="ms" style="font-size:16px">cloud_done</span>已自動保存</span>`}</div>
+    <div class="cons"><div class="cons-row">
+      ${g.running?`<button class="btn pri lg" data-act="stop"><span class="ms">stop_circle</span>停止生成</button>`:n===0?`<button class="btn pri lg" data-act="start"><span class="ms">play_arrow</span>開始生成小說</button>`:n<tot?`<button class="btn pri lg" data-act="cont"><span class="ms">fast_forward</span>繼續生成</button>`:`<button class="btn pri lg" data-act="read"><span class="ms">auto_stories</span>進入閱讀</button>`}
+      ${n>0&&!g.running&&n<tot?`<button class="btn" data-act="start" disabled title="已開始">開始生成小說</button>`:""}
+      <label class="chk" style="margin-left:6px"><input type="checkbox" data-bind="autoAll" ${S.autoAll?"checked":""}>自動生成全部章節</label>
+      <span class="sp"></span><button class="btn ghost" data-act="clearGen" ${n&&!g.running?"":"disabled"}><span class="ms">mop</span>清除結果</button></div>
+    <div class="stat"><div><span>狀態</span><b style="font-family:var(--sans);font-size:14px" data-live="state">${g.running?`寫第 ${n+1} 章`:n>=tot?"全部完成":n?"已暫停":"準備生成"}</b></div><div><span>已生成</span><b data-live="words">${wordsDone().toLocaleString()} 字</b></div><div><span>已耗時</span><b data-live="secs">${Math.floor(g.secs/60)}:${String(g.secs%60).padStart(2,"0")}</b></div><div><span>累計費用</span><b data-live="cost">$${cost()}</b></div></div>
+    <div><div class="note" style="justify-content:space-between;margin-bottom:5px"><span>章節進度 ${n}／${tot}</span><span>一段生成參考費用 約 US$0.006・${S.model.split(" — ")[0]}</span></div><div class="bar"><i style="width:${n/tot*100}%"></i></div></div>
+    ${!S.outline.length&&!n?`<div class="note"><span class="ms" style="font-size:16px;color:var(--warn)">info</span>還沒有大綱也能直接生成；先預覽大綱方向更穩。</div>`:""}</div>`;};
+  M.manuscript=()=>{const g=S.gen,i=S.view,txt=g.written[i];const title=S.theme?"隋唐書院祭":"未命名手稿";return `<div class="mh"><h3><span class="ms" style="color:var(--ac)">menu_book</span>創作手稿</h3><span class="meta">${esc(title)}</span><span class="sp"></span>
+      <div class="seg"><button data-act="hz" aria-pressed="${!S.vertical}">橫排</button><button data-act="vt" aria-pressed="${S.vertical}">直排</button></div>
+      <button class="btn sm" data-act="tts"><span class="ms">record_voice_over</span>朗讀</button><button class="btn sm" data-act="shelf"><span class="ms">bookmark_add</span>書櫃收藏</button><button class="btn sm" data-act="download"><span class="ms">download</span>下載</button><button class="btn sm" data-act="read"><span class="ms">auto_stories</span>進入閱讀</button></div>
+    <div class="ms-wrap"><nav class="ms-idx"><span class="lbl">CONTENTS 章節索引</span>${g.written.length||g.running?Array.from({length:Math.max(g.written.length+(g.running?1:0),1)},(_,k)=>`<button data-view="${k}" class="${k===i?"on":""}"><span class="n">${String(k+1).padStart(2,"0")}</span>${(S.outline[k]||OUTLINE[k]||["第"+(k+1)+"章"])[0]}</button>`).join(""):`<span style="font-size:12.5px;color:var(--faint);padding:0 8px">故事開始後，章節會在這裡展開。</span>`}</nav>
+    <div class="paper ${S.vertical?"v":""}"><div class="paper-hd"><span>${esc(title)}</span><span>第 ${i+1} 章　${(OUTLINE[i]||["續章"])[0]}</span></div><div class="gaoji" data-paper></div><div class="paper-ft"><span data-pft></span><span>AI 小說工坊・原稿用紙</span></div></div></div>
+    <details class="log" ${g.written.length?"open":""}><summary>故事連貫性紀錄（${g.written.length?Math.min(g.written.length*1,LOGS.length):0} 條）</summary>${g.written.length?`<ul>${LOGS.slice(0,g.written.length).map(l=>`<li class="${l[2]||""}"><span class="k">${l[0]}</span><span>${l[1]}</span></li>`).join("")}</ul>`:`<p class="note" style="margin:8px 0 0">每完成一章，AI 會整理人物狀態、伏筆與矛盾。</p>`}</details>`;};
+  M.shelfmod=()=>`<div class="mh"><h3><span class="ms" style="color:var(--ac)">shelves</span>我的藏書</h3><span class="sp"></span><select class="btn sm" aria-label="排序"><option>最新優先</option><option>書名排序</option><option>長度排序</option></select><button class="btn sm"><span class="ms">upload</span>匯入</button></div>
+    <div class="shelf">${[["隋唐書院祭","架空歷史・3 卷・連載中","#244F63"],["血月獻祭","黑暗奇幻・2 卷・已完成","#7A2630"],["業火糖心","都市言情・1 卷・已完成","#9A6224"]].map(b=>`<div class="bk"><span class="cv" style="background:${b[2]}"></span><div class="nm"><b>${b[0]}</b><span>${b[1]}</span></div><button class="btn sm" data-act="read">載入閱讀</button><button class="btn sm" data-act="flip">翻書閱讀</button><button class="btn sm">下載</button><button class="btn sm ghost">編輯</button></div>`).join("")}</div>`;
+  M.reader=()=>{const w=S.gen.written;const i=Math.min(S.reader,Math.max(w.length-1,0));const t=w[i]||CHTXT[0];return `<div class="mh"><h3><span class="ms" style="color:var(--ac)">auto_stories</span>翻書閱讀</h3><span class="meta">私人閱覽室</span><span class="sp"></span><button class="btn sm" data-act="tts"><span class="ms">record_voice_over</span>朗讀</button><button class="btn sm" data-act="display"><span class="ms">text_fields</span>顯示設定</button></div>
+    <div class="reader" style="font-size:${S.font}px"><p style="text-indent:0;font-weight:700;font-size:1.2em">第 ${i+1} 章　${(OUTLINE[i]||["續章"])[0]}</p>${t.map(p=>`<p>${p}</p>`).join("")}</div>
+    <div class="rd-nav"><button class="btn sm" data-act="rprev" ${i<=0?"disabled":""}>‹ 上一章</button><span>${w.length?`${i+1}／${w.length}`:"示範頁（尚未生成正文）"}</span><button class="btn sm" data-act="rnext" ${i>=w.length-1?"disabled":""}>下一章 ›</button></div>`;};
+
+  /* -- side panels (tools) -- */
+  const P={
+    model:["模型與用量",()=>`<label class="f"><span>選擇模型</span><select data-bind="model">${["DeepSeek V4.1 Flash — 推薦寫作","DeepSeek V4 Pro — 舊版選項"].map(m=>`<option ${m===S.model?"selected":""}>${m}</option>`).join("")}</select></label>
+      <div class="sub-h" style="margin-top:20px">用量統計<span style="flex:1"></span><button class="btn sm ghost" data-act="resetUsage">重設</button></div>
+      <div class="stat"><div><span>請求次數</span><b>${S.usage.req}</b></div><div><span>輸入 tokens</span><b>${S.usage.inT.toLocaleString()}</b></div><div><span>輸出 tokens</span><b>${S.usage.outT.toLocaleString()}</b></div><div><span>估算費用</span><b>$${cost()}</b></div></div>
+      <p class="note" style="margin-top:10px">依 DeepSeek 尖峰／離峰及快取命中價格估算，僅供參考。</p>
+      <label class="f" style="margin-top:16px"><span>費用上限提醒（USD）</span><input type="number" placeholder="例如：2"></label>`],
+    display:["顯示設定",()=>`<div class="sub-h">主題</div><div class="seg"><button data-act="light" aria-pressed="${document.documentElement.dataset.theme!=="dark"}">淺色</button><button data-act="dark" aria-pressed="${document.documentElement.dataset.theme==="dark"}">深色</button></div>
+      <div class="sub-h" style="margin-top:18px">字體大小 <b data-live="font" style="font-family:var(--mono);font-weight:500">${S.font}px</b></div><input type="range" min="15" max="24" value="${S.font}" data-bind="font" data-num style="width:100%;accent-color:var(--ac)">
+      <div class="sub-h" style="margin-top:18px">排版</div><div class="seg"><button data-act="hz" aria-pressed="${!S.vertical}">橫排</button><button data-act="vt" aria-pressed="${S.vertical}">直排</button></div>
+      <label class="f" style="margin-top:18px"><span>閱讀氛圍</span><select><option>無</option><option>圖書館</option><option>雨夜</option><option>書齋</option><option>竹林</option><option>月夜</option></select></label>`],
+    template:["快速模板",()=>`<p class="note" style="margin:0 0 12px">一鍵填入故事設定，之後仍可逐項修改。</p><div class="shelf">${TEMPLATES.map((t,i)=>`<div class="bk"><div class="nm"><b style="font-size:15px">${t[0]}</b><span>${t[1].theme}・${t[1].setting}・${t[1].style}</span></div><button class="btn sm pri" data-tpl="${i}">套用模板</button></div>`).join("")}</div>`],
+    names:["人名清單",()=>`<p class="note" style="margin:0 0 12px">勾選的名字，AI 設計角色時可以挑選（依性別與定位合理配對）。</p><div class="shelf">${[["沈硯","男"],["柳青棠","女"],["崔夫子","男"],["阿蘅","女"],["韓九","男"]].map(n=>`<label class="bk chk" style="padding:10px 12px"><input type="checkbox" checked>${n[0]}<span style="color:var(--mut);margin-left:auto">${n[1]}</span></label>`).join("")}</div><div style="display:flex;gap:6px;margin-top:12px"><input class="btn" placeholder="新增人名" style="flex:1;min-width:0"><select class="btn"><option>男</option><option>女</option><option>不明</option></select><button class="btn">新增</button></div>`],
+    tts:["朗讀控制",()=>`<label class="f"><span>Edge 語音</span><select><option>曉臻（女聲・台灣）</option><option>雲哲（男聲・台灣）</option><option>曉曉（女聲・普通話）</option></select><small>使用 Microsoft Edge 神經語音，依情緒模式自動切換語調。</small></label>
+      <div class="fg c2" style="margin-top:14px"><label class="f"><span>語速</span><input type="range" min="0.5" max="2" step="0.1" value="1" style="accent-color:var(--ac)"></label><label class="f"><span>音調</span><input type="range" min="0.5" max="1.5" step="0.1" value="1" style="accent-color:var(--ac)"></label></div>
+      <label class="f" style="margin-top:14px"><span>情緒模式</span><select><option>自動偵測</option><option>平穩敘述</option><option>戲劇張力</option><option>溫柔細膩</option><option>神秘懸疑</option></select></label>
+      <label class="chk" style="margin-top:14px"><input type="checkbox">角色語音（DeepSeek 分析旁白／男／女＋情緒起伏）</label>
+      <div class="sub-h" style="margin-top:18px">朗讀範圍</div><div class="fg c2"><label class="f"><span>從第幾段</span><input type="number" value="1"></label><label class="f"><span>到第幾段</span><input type="number" placeholder="全部"></label></div>
+      <div style="display:flex;gap:8px;margin-top:18px;flex-wrap:wrap"><button class="btn pri" data-act="ttsPlay"><span class="ms">${S.tts?"pause":"play_arrow"}</span>${S.tts?"暫停朗讀":"開始朗讀"}</button><button class="btn" data-act="ttsStop"><span class="ms">stop</span>停止</button><span class="note" style="margin-left:auto">${S.tts?`<span class="spin"></span> 正在朗讀第 1 段`:"準備就緒"}</span></div>`],
+    shelf:["我的藏書",()=>M.shelfmod().replace(/<div class="mh">[\s\S]*?<\/div>/,"")],
+    reader:["翻書閱讀",()=>M.reader()],
+    download:["下載小說",()=>`<div class="shelf"><div class="bk"><span class="ms" style="font-size:28px;color:var(--ac)">description</span><div class="nm"><b style="font-size:15px">TXT 純文字檔</b><span>適合備份或匯入其他 App</span></div><button class="btn sm pri">下載</button></div><div class="bk"><span class="ms" style="font-size:28px;color:var(--ac)">smartphone</span><div class="nm"><b style="font-size:15px">HTML 手機閱讀版</b><span>單一檔案，手機直接開</span></div><button class="btn sm pri">下載</button></div></div>`]
+  };
+  ["story","adv","special","chars","outline"].forEach(k=>P["m_"+k]=[{story:"① 故事設定",adv:"② 進階設定",special:"③ 特殊元素與規則",chars:"④ 人物設計",outline:"預覽大綱"}[k],()=>`<div data-mod="${k}"></div>`]);
+
+  /* -- shell per layout -- */
+  const toolBtns=(cls,withLabel)=>[["model","tune","模型與用量"],["template","dashboard_customize","快速模板"],["download","download","下載小說"],["tts","record_voice_over","朗讀文章"],["reader","auto_stories","翻書閱讀"],["shelf","shelves","我的書櫃"],["display","text_fields","顯示設定"]].map(([k,ic,l])=>`<button class="${cls}" data-panel="${k}" aria-label="${l}"><span class="ms">${ic}</span>${withLabel?`<span class="t2">${l}</span>`:`<span class="tt">${l}</span>`}</button>`).join("");
+  function shell(){
+    if(kind===1){root.innerHTML=`<div class="v1"><aside class="side"><div class="brand"><i>筆</i>AI 小說工坊</div><span class="lbl">創作進度</span><nav class="pnav" data-pipe></nav><div class="tools">${toolBtns("btn ghost",true)}</div></aside><main><div class="top gut" data-top></div><div class="page gut" data-page></div></main></div>`;}
+    if(kind===2){root.innerHTML=`<div class="v2"><div class="hdr"><div class="hdr-in gut"><div class="brand"><i>筆</i>AI 小說工坊</div><nav class="pipe" data-pipe></nav></div></div>
+      <main class="col gut"><section class="sumgrid" data-sums></section><section class="two"><div class="card k-console" data-mod="console"></div><div class="card k-outline" data-mod="outline"></div></section><section class="card k-manuscript" data-mod="manuscript"></section></main><nav class="rail">${toolBtns("",false)}</nav></div>`;}
+    if(kind===3){root.innerHTML=`<div class="v3"><aside class="left"><div class="left-h"><div class="brand" style="padding:0"><i>筆</i>AI 小說工坊</div><div class="tpl"><select data-tplsel aria-label="快速模板"><option value="">快速模板：選一個一鍵填入…</option>${TEMPLATES.map((t,i)=>`<option value="${i}">${t[0]}</option>`).join("")}</select><button class="btn sm" data-act="applyTpl">套用</button></div></div>
+      ${[["story","①","故事設定"],["adv","②","進階設定"],["special","③","特殊元素與規則"],["chars","④","人物設計"],["outline","⑤","預覽大綱"]].map(([k,n,t],i)=>`<details class="acc" ${i===0?"open":""}><summary><span class="no">${n}</span><span class="t">${t}</span><span class="s" data-sumline="${k}"></span><span class="ms">expand_more</span></summary><div class="acc-b" data-mod="${k}"></div></details>`).join("")}</aside>
+      <main class="right"><div class="rh gut"><nav class="pchips" data-pipe></nav><span class="sp"></span>${[["model","tune"],["tts","record_voice_over"],["reader","auto_stories"],["shelf","shelves"],["download","download"],["display","text_fields"]].map(([k,ic])=>`<button class="btn sm ghost" data-panel="${k}" title="${P[k][0]}"><span class="ms">${ic}</span></button>`).join("")}</div>
+      <div class="rb gut"><section class="card" data-mod="console"></section><section class="card" data-mod="manuscript"></section></div></main></div>`;}
+    root.insertAdjacentHTML("beforeend",`<div class="drawer" data-drawer hidden><div class="dr-in"><div class="dr-h"><h3 data-drh></h3><button class="btn ghost" data-act="closePanel" aria-label="關閉"><span class="ms">close</span></button></div><div class="dr-b" data-drb></div><div class="dr-f" data-drf></div></div></div>`);
+  }
+  const PAGES={setup:["設定",["story","adv","special"],"cast","下一步：人物設計"],cast:["角色",["chars"],"outline","下一步：預覽大綱"],outline:["大綱",["outline"],"write","下一步：開始撰寫"],write:["撰寫",["console","manuscript"]],read:["閱讀",["reader","shelfmod"]]};
+  function renderPage(){
+    const p=PAGES[S.page];
+    $("[data-top]",root).innerHTML=`<h2>${p[0]}</h2><span class="sp"></span>${S.page==="setup"?`<button class="btn sm" data-panel="template"><span class="ms">dashboard_customize</span>快速模板</button>`:""}<span class="note"><span class="ms" style="font-size:16px">cloud_done</span>已自動保存</span>`;
+    $("[data-page]",root).innerHTML=p[1].map(m=>`<section class="card" data-mod="${m}"></section>`).join("")+(p[2]?`<div class="next"><button class="btn pri lg" data-go="${p[2]}">${p[3]} →</button></div>`:"");
+    rr();
+  }
+
+  /* -- render helpers -- */
+  function rr(name){$$(name?`[data-mod="${name}"]`:"[data-mod]",root).forEach(el=>{const k=el.dataset.mod;if(M[k])el.innerHTML=M[k]();});status();if(!name||name==="manuscript")paintCurrent();}
+  /* 原稿紙：every character, punctuation included, takes one square; paragraphs indent two squares and end the line */
+  const PH="每一個世界，從一句話開始。按「開始生成小說」，正文會逐字寫進這些格子裡。";
+  function paint(ch,paras,caret,ghost){
+    $$("[data-paper]",root).forEach(box=>{
+      const cs=Math.round(S.font*1.6),vert=S.vertical;
+      const per=vert?20:Math.max(10,Math.floor((box.clientWidth-2)/cs));
+      const cells=[];const line=a=>{while(cells.length%per)cells.push(["",""]);};
+      paras.forEach((t,pi)=>{cells.push(["",""],["",""]);[...t].forEach(c=>cells.push([c,ghost?"g":""]));if(pi<paras.length-1||!caret)line();});
+      if(caret)cells.push(["","k"]);
+      line();const minLines=vert?14:12;while(cells.length<per*minLines)cells.push(["",""]);
+      box.style.setProperty("--cs",cs+"px");box.style.setProperty("--per",per);box.style.fontSize=S.font+"px";
+      box.innerHTML=cells.map(c=>`<span class="${c[1]}">${c[0]}</span>`).join("");
+      const ft=box.parentElement.querySelector("[data-pft]");if(ft)ft.textContent=`${per} × ${cells.length/per}＝${cells.length} 字`;
+      if(vert&&caret)box.scrollLeft=-box.scrollWidth;
+    });
+  }
+  function paintCurrent(){const g=S.gen,i=S.view;if(g.running&&i===g.written.length)return;if(g.written[i])paint(i,g.written[i],false);else paint(i,[PH],false,true);}
+  addEventListener("resize",()=>{if(!root.hidden&&!S.gen.running)paintCurrent();});
+  function status(){
+    const pl=pipeline();
+    const pe=$("[data-pipe]",root);
+    if(pe){
+      if(kind===1)pe.innerHTML=pl.map((p,i)=>`<button class="${p.ok?"ok":""}" data-go="${p.id}" ${S.page===p.id?'aria-current="page"':""}><span class="d">${p.ok?"✓":i+1}</span><span class="t">${p.t}</span><span class="s">${p.en} · ${esc(p.s)}</span></button>`).join("");
+      if(kind===2)pe.innerHTML=pl.map((p,i)=>(i?'<span class="ln"></span>':"")+`<button class="${p.ok?"ok":""} p-${p.id}" data-jump="${p.id}"><span class="d">${p.ok?"✓":i+1}</span><span><span class="t">${p.t}</span> <span class="s">${esc(p.s)}</span></span></button>`).join("");
+      if(kind===3)pe.innerHTML=pl.map((p,i)=>`<span class="pchip ${p.ok?"ok":""}"><span class="d">${p.ok?"✓":i+1}</span>${p.t}・${esc(p.s)}</span>`).join("");
+    }
+    const sm=sums();
+    const sg=$("[data-sums]",root);
+    if(sg)sg.innerHTML=[["story","①","故事設定","menu_book"],["adv","②","進階設定","tune"],["special","③","特殊元素與規則","auto_awesome"],["chars","④","人物設計","groups"]].map(([k,n,t,ic])=>`<button class="sum k-${k} ${sm[k].ok?"ok":""}" data-panel="m_${k}"><span class="h"><span class="hl"><span class="ic"><span class="ms">${ic}</span></span><span><span class="no">${n}</span>${t}</span></span><span class="ms">edit</span></span><span class="v">${sm[k].v}</span><span class="st">${sm[k].ok?"✓ 已設定":"尚未設定・點此設定"}</span></button>`).join("");
+    $$("[data-sumline]",root).forEach(el=>{el.innerHTML=sm[el.dataset.sumline].v.replace(/<br>/g,"・").replace(/<[^>]+>/g,"");});
+  }
+  function live(){const g=S.gen;const set=(k,v)=>$$(`[data-live="${k}"]`,root).forEach(e=>e.textContent=v);
+    set("words",wordsDone().toLocaleString()+" 字");set("secs",`${Math.floor(g.secs/60)}:${String(g.secs%60).padStart(2,"0")}`);set("cost","$"+cost());}
+  function openPanel(k){if(kind===2&&k==="shelf"){root._shelf.open();return;}S.panel=k;const [t,f]=P[k];const di=$(".dr-in",root);if(k.startsWith("m_"))di.dataset.k=k.slice(2);else delete di.dataset.k;$("[data-drh]",root).textContent=t;$("[data-drb]",root).innerHTML=f();
+    $("[data-drf]",root).innerHTML=k.startsWith("m_")?`<button class="btn pri" data-act="closePanel">完成</button>`:"";$("[data-drf]",root).hidden=!k.startsWith("m_");
+    $("[data-drawer]",root).hidden=false;rr();}
+  function closePanel(){S.panel=null;$("[data-drawer]",root).hidden=true;status();}
+
+  /* -- generation -- */
+  let timer=null;
+  async function generate(){
+    const g=S.gen;if(g.running)return;g.running=true;g.stop=false;
+    timer=setInterval(()=>{g.secs++;live();},1000);
+    if(kind===1&&S.page!=="write"){S.page="write";renderPage();}
+    do{
+      const i=g.written.length;if(i>=S.chapters)break;S.view=i;rr("console");rr("manuscript");
+      const paras=CHTXT[i]||GEN;const out=[];
+      for(const t of paras){if(g.stop)break;
+        for(let k=0;k<=t.length;k+=2){if(g.stop)break;paint(i,[...out,t.slice(0,k)],true);if(k%10===0){S.usage.outT+=7;live();}await sleep(16);}out.push(t);}
+      S.usage.req+=2;S.usage.inT+=4100;
+      if(g.stop&&out.length<paras.length)break;
+      g.written.push(out);
+    }while(S.autoAll&&!g.stop&&g.written.length<S.chapters);
+    g.running=false;clearInterval(timer);rr();
+  }
+
+  /* -- events -- */
+  root.addEventListener("click",e=>{
+    const t=e.target;
+    const go=t.closest("[data-go]");if(go&&kind===1){S.page=go.dataset.go;renderPage();scrollTo(0,0);return;}
+    const jp=t.closest("[data-jump]");if(jp){const map={setup:"m_story",cast:"m_chars",outline:"outline",write:"console",read:"reader"};const k=map[jp.dataset.jump];if(k.startsWith("m_")||k==="reader")openPanel(k);else $(`[data-mod="${k}"]`,root).scrollIntoView({behavior:"smooth",block:"start"});return;}
+    const pn=t.closest("[data-panel]");if(pn){openPanel(pn.dataset.panel);return;}
+    if(t.matches("[data-drawer]")){closePanel();return;}
+    const sp=t.closest("[data-sp]");if(sp){const v=sp.dataset.sp;S.special.has(v)?S.special.delete(v):S.special.add(v);sp.setAttribute("aria-pressed",S.special.has(v));$$('[data-live="spcount"]',root).forEach(x=>x.textContent=`已選 ${S.special.size} 項`);status();return;}
+    const sg=t.closest("[data-seg]");if(sg){setP(sg.dataset.seg,sg.dataset.v);$$(`[data-seg="${sg.dataset.seg}"]`,root).forEach(b=>b.setAttribute("aria-pressed",b===sg));status();return;}
+    const ct=t.closest("[data-ctab]");if(ct){S.ac=+ct.dataset.ctab;rr("chars");return;}
+    const vw=t.closest("[data-view]");if(vw&&!S.gen.running){S.view=+vw.dataset.view;rr("manuscript");return;}
+    const tp=t.closest("[data-tpl]");if(tp){Object.assign(S,TEMPLATES[+tp.dataset.tpl][1]);closePanel();rr();return;}
+    const a=t.closest("[data-act]");if(!a||a.disabled)return;
+    switch(a.dataset.act){
+      case"randStory":S.theme=pick(OPT.theme);S.setting=pick(OPT.setting);S.style=pick(OPT.style);rr("story");break;
+      case"randAdv":for(const k of["era","complexity","rating","narrative","pacing","tone","ending"])S.adv[k]=pick(OPT[k]);rr("adv");break;
+      case"seed":S.adv.seed=String(10000+Math.floor(Math.random()*89999));rr("adv");break;
+      case"clearSp":S.special.clear();rr("special");break;
+      case"drama":S.special.clear();SPECIAL.forEach(([,it])=>{if(Math.random()<.6)S.special.add(pick(it));});rr("special");break;
+      case"aiChars":(async()=>{a.innerHTML='<span class="spin"></span> 設計中…';await sleep(1100);S.chars=CHARS0.map(c=>({...c,exp:"依故事條件生成的關鍵經歷。"}));S.chars.push({...RAND_CHAR[0]});S.ac=0;rr("chars");})();break;
+      case"randChars":S.chars=[...CHARS0.slice(0,2),...RAND_CHAR].map(c=>({...c}));S.ac=0;rr("chars");break;
+      case"addChar":S.chars.push({name:"",gender:"不明",age:"",role:"",personality:"",goal:"",weakness:"",secret:"",relation:""});S.ac=S.chars.length-1;rr("chars");break;
+      case"delChar":S.chars.splice(S.ac,1);S.ac=Math.max(0,S.ac-1);rr("chars");break;
+      case"names":openPanel("names");break;
+      case"genOutline":(async()=>{S.obusy=true;rr("outline");await sleep(1300);S.obusy=false;S.outline=OUTLINE.slice(0,Math.min(S.chapters,OUTLINE.length));S.usage.req++;S.usage.inT+=2400;S.usage.outT+=1800;rr();})();break;
+      case"clearOutline":S.outline=[];rr();break;
+      case"start":case"cont":generate();break;
+      case"stop":S.gen.stop=true;break;
+      case"clearGen":S.gen.written=[];S.gen.secs=0;S.view=0;rr();break;
+      case"read":if(kind===1){S.page="read";renderPage();scrollTo(0,0);}else openPanel("reader");break;
+      case"flip":S.reader=0;if(kind===1){S.page="read";renderPage();}else openPanel("reader");break;
+      case"rprev":S.reader=Math.max(0,S.reader-1);S.panel?openPanel("reader"):rr("reader");break;
+      case"rnext":S.reader++;S.panel?openPanel("reader"):rr("reader");break;
+      case"hz":S.vertical=false;rr("manuscript");if(S.panel==="display")openPanel("display");else $$('[data-act="hz"],[data-act="vt"]',root).forEach(b=>b.setAttribute("aria-pressed",(b.dataset.act==="vt")===S.vertical));break;
+      case"vt":S.vertical=true;rr("manuscript");if(S.panel==="display")openPanel("display");break;
+      case"tts":openPanel("tts");break;
+      case"ttsPlay":S.tts=!S.tts;openPanel("tts");break;
+      case"ttsStop":S.tts=false;openPanel("tts");break;
+      case"shelf":if(kind===2)root._shelf.open(true);else openPanel("shelf");break;
+      case"download":openPanel("download");break;
+      case"display":openPanel("display");break;
+      case"light":document.documentElement.dataset.theme="light";openPanel("display");break;
+      case"dark":document.documentElement.dataset.theme="dark";openPanel("display");break;
+      case"resetUsage":S.usage={req:0,inT:0,outT:0};openPanel("model");break;
+      case"closePanel":closePanel();break;
+      case"applyTpl":{const v=$("[data-tplsel]",root).value;if(v!==""){Object.assign(S,TEMPLATES[+v][1]);rr();}break;}
+    }
+  });
+  function onInput(e){
+    const t=e.target;
+    if(t.dataset.bind){let v=t.type==="checkbox"?t.checked:t.value;if(t.dataset.num)v=+v||0;setP(t.dataset.bind,v);
+      if(t.tagName==="SELECT")t.classList.toggle("unset",!v);
+      if(t.dataset.bind==="autoAll")$$('[data-bind="autoAll"]',root).forEach(x=>x.checked=S.autoAll);
+      if(t.dataset.bind==="font"){$$(".reader",root).forEach(x=>x.style.fontSize=S.font+"px");if(!S.gen.running)paintCurrent();$$('[data-live="font"]',root).forEach(x=>x.textContent=S.font+"px");}
+      status();}
+    if(t.dataset.cbind){S.chars[S.ac][t.dataset.cbind]=t.value;if(t.dataset.cbind==="name"){const tab=$(`[data-ctab="${S.ac}"]`,root);if(tab)tab.textContent=t.value||"人物 "+(S.ac+1);}status();}
+  }
+  root.addEventListener("input",onInput);root.addEventListener("change",onInput);
+  addEventListener("keydown",e=>{if(e.key==="Escape"&&S.panel&&!root.hidden)closePanel();});
+
+  shell();
+  if(kind===2)root._shelf=makeShelf(root,()=>({title:S.theme?"隋唐書院祭（手稿）":"未命名手稿",genre:S.theme,words:wordsDone(),ch:S.gen.written.length,ex:(S.gen.written[0]||[""])[0]}),()=>{S.reader=0;openPanel("reader");});
+  if(kind===1)renderPage();else rr();
+}
+
+/* ---------- B: upgraded bookshelf ---------- */
+const DESIGNS={ink:["水墨山水","藍灰","#4F606E","#F3F0E6"],gothic:["哥德藏典","紅色","#4A1520","#E9C98A"],floral:["花信書簡","粉橘","#E3A1AF","#5E1F33"],star:["星象秘典","深藍","#121A3A","#EADCB0"],noir:["暗夜檔案","黑白","#22252B","#E8C547"],wood:["木刻版畫","綠色","#2F5B46","#F1E9D2"],botanic:["植物標本","綠色","#B9CBA5","#2F4A2A"],minimal:["極簡文庫","黑白","#EDEBE4","#111111"],deco:["裝飾藝術","黑金","#14181F","#E4C77E"],cyber:["賽博未來","深藍","#0B0F1A","#5CF2E8"],blue:["工程藍圖","藍灰","#1E4F8A","#EAF2FB"],collage:["紙藝拼貼","粉橘","#E07A5F","#FFF6EC"],bauhaus:["包浩斯","紅色","#D7372B","#FFFFFF"],chart:["航海圖誌","藍灰","#C9BC98","#1E3A5F"],journal:["遠行手記","棕色","#9C7148","#F4EAD7"],city:["城市叢書","粉橘","#7A4E6B","#FFF3E6"]};
+const CASES=[["walnut","胡桃木","#6A452B"],["oak","原木北歐","#D2B07F"],["iron","黑鐵工業","#1C1D20"],["classic","古典書房","linear-gradient(135deg,#5A2617 50%,#1F3A2F 50%)"],["white","白色層板","#F4F3EE"]];
+const BOOKS0=[
+  {id:20261014,t:"隋唐書院祭",g:"架空歷史",d:"ink",w:186400,ch:30,tags:["書院","懸疑"],vols:[["上集",64200,1],["中集",61800,1],["下集",60400,0]],note:"第三集還差最後兩章。",ex:"弘文書院放榜那天，裴清遠的名字排在最後一個，緊貼著榜紙的邊緣，像隨時會被風撕掉。"},
+  {id:20261009,t:"霓虹義體",g:"賽博龐克",d:"cyber",w:58400,ch:16,tags:["義體","駭客"],note:"",ex:"她賣掉左眼的那天，城市第一次在她面前顯示出真正的顏色。"},
+  {id:20261002,t:"血月獻祭",g:"黑暗奇幻",d:"gothic",w:142000,ch:24,tags:["獻祭","吸血鬼"],vols:[["上集",70800,1],["下集",71200,1]],note:"",ex:"血月升起的第七夜，修道院的鐘自己響了十三下。"},
+  {id:20260926,t:"金粉年代",g:"民國風雲",d:"deco",w:47200,ch:14,tags:["民國","歌廳"],note:"",ex:"百樂門的燈一亮，整個上海灘都忘了外頭在打仗。"},
+  {id:20260921,t:"業火糖心",g:"都市言情",d:"floral",w:38200,ch:12,tags:["甜寵","甜點"],note:"",ex:"她把第一百個失敗的馬卡龍丟進垃圾桶時，隔壁搬來了一個消防員。"},
+  {id:20260915,t:"機甲設計師",g:"機甲科幻",d:"blue",w:61500,ch:18,tags:["機甲","工程"],note:"",ex:"所有人都想當駕駛員，只有她想知道那台機甲為什麼會在第七秒失控。"},
+  {id:20260910,t:"星海拓荒者",g:"太空歌劇",d:"star",w:64800,ch:18,tags:["星際","拓荒"],note:"",ex:"殖民船醒來的時候，艦上只剩下一個人類，和三百萬顆冷凍的種子。"},
+  {id:20260904,t:"大海賊時代",g:"海上冒險",d:"chart",w:88300,ch:24,tags:["海賊","尋寶"],vols:[["第一集",44100,1],["第二集",44200,1]],note:"",ex:"那張藏寶圖的背面，畫的是她外婆的臉。"},
+  {id:20260830,t:"霧港偵探社",g:"懸疑推理",d:"noir",w:52300,ch:15,tags:["偵探","民國"],note:"",ex:"霧港的雨從不停，就像沈探長抽了十年的那包菸，永遠剩最後一根。"},
+  {id:20260822,t:"西域三千里",g:"歷史冒險",d:"journal",w:73600,ch:20,tags:["絲路","旅行"],note:"",ex:"出了玉門關，駱駝比人更知道哪裡有水。"},
+  {id:20260812,t:"竹林問劍",g:"武俠江湖",d:"wood",w:41000,ch:12,tags:["武俠","師徒"],note:"",ex:"竹林裡沒有風，可每一片竹葉都在發抖。"},
+  {id:20260805,t:"三原色學院",g:"校園日常",d:"bauhaus",w:33400,ch:11,tags:["校園","藝術"],note:"",ex:"入學第一天，教授只問了一個問題：紅色是什麼形狀？"},
+  {id:20260725,t:"植物學家的遺囑",g:"日常治癒",d:"botanic",w:27600,ch:10,tags:["療癒","溫室"],note:"",ex:"外婆留給她的不是錢，是一座溫室，和一本寫滿植物名字的筆記。"},
+  {id:20260716,t:"剪紙姑娘",g:"溫馨日常",d:"collage",w:22800,ch:9,tags:["手作","小鎮"],note:"",ex:"她剪出來的每一隻鳥，第二天早上都會從窗台上消失。"},
+  {id:20260709,t:"城南舊夢",g:"都市懷舊",d:"city",w:44500,ch:13,tags:["懷舊","眷村"],note:"",ex:"拆遷公告貼出來那天，巷口的麵攤老闆第一次沒有開店。"},
+  {id:20260703,t:"規則怪談：午夜公寓",g:"靈異懸疑",d:"minimal",w:18900,ch:8,tags:["規則","怪談"],note:"",ex:"第一條：晚上十二點後，如果有人敲門，請不要回答，因為這棟樓沒有其他住戶。"}
+];
+function makeShelf(host,getCurrent,onRead){
+  let caseStyle="walnut";try{const c=localStorage.getItem("ng-case");if(CASES.some(x=>x[0]===c))caseStyle=c;}catch(_){}
+  const S={books:BOOKS0.map(b=>({...b,tags:[...b.tags]})),q:"",sort:"newest",view:"mixed",mixSeed:Date.now(),dt:null,edit:false,del:false};
+  const el=document.createElement("div");el.className="shx";el.hidden=true;host.appendChild(el);
+  const dt=document.createElement("div");dt.className="shx-dt";dt.hidden=true;host.appendChild(dt);
+  const fmtW=w=>w>=10000?(w/10000).toFixed(1)+" 萬字":(w/1000).toFixed(1)+" 千字";
+  const fmtD=id=>{const s=String(id);return `${s.slice(0,4)}/${s.slice(4,6)}/${s.slice(6,8)}`;};
+  const cover=b=>`<div class="cvr d-${b.d}">${b.d==="ink"?'<span class="seal"></span>':""}${b.d==="botanic"?'<span class="ms mo">eco</span>':""}<span class="ct" style="${b.t.length>6&&!["ink","wood"].includes(b.d)?"font-size:13px":""}">${esc(b.t)}</span><span class="ca">AI 小說工坊</span>${b.vols?`<span class="ser">全 ${b.vols.length} 集</span>`:""}</div>`;
+  const hash=(n,m)=>((n*9301+49297)%233280)%m;
+  function toast(t){const x=document.createElement("div");x.className="toast";x.textContent=t;host.appendChild(x);setTimeout(()=>x.remove(),2200);}
+  function groups(){
+    const q=S.q.trim().toLowerCase();
+    let a=S.books.filter(b=>!q||b.t.toLowerCase().includes(q)||b.tags.some(t=>t.toLowerCase().includes(q)));
+    a.sort({newest:(x,y)=>y.id-x.id,oldest:(x,y)=>x.id-y.id,name:(x,y)=>x.t.localeCompare(y.t,"zh-Hant"),length:(x,y)=>y.w-x.w,color:(x,y)=>DESIGNS[x.d][1].localeCompare(DESIGNS[y.d][1],"zh-Hant")||y.id-x.id,style:(x,y)=>DESIGNS[x.d][0].localeCompare(DESIGNS[y.d][0],"zh-Hant")||y.id-x.id}[S.sort]);
+    if(S.sort==="color"||S.sort==="style"){const gi=S.sort==="color"?1:0;const g=new Map();a.forEach(b=>{const k=DESIGNS[b.d][gi];if(!g.has(k))g.set(k,[]);g.get(k).push(b);});return[...g.entries()].map(([k,v])=>({k:k+"・"+v.length+" 本",books:v}));}
+    return[{k:null,books:a}];
+  }
+  /* each item = [width, html] — packed greedily into shelf rows */
+  const spineH=(b,i)=>170+hash(b.id+i*13,6)*8;
+  const spineW=v=>Math.min(52,Math.max(26,Math.round(24+v/9000)));
+  /* fit the title in one vertical column: shrink to 10px, then ellipsis */
+  const spineFont=(t,h)=>Math.max(10,Math.min(14,Math.floor((h-58)/(t.length*1.18))));
+  const SPS={ink:"label",gothic:"gilt",floral:"cloth",star:"modern",noir:"band",wood:"label",botanic:"cloth",minimal:"modern",deco:"gilt",cyber:"modern",blue:"band",collage:"paper",bauhaus:"modern",chart:"cloth",journal:"band",city:"paper"};
+  const MARK={ink:"landscape",gothic:"church",floral:"local_florist",star:"auto_awesome",noir:"search",wood:"swords",botanic:"eco",minimal:"circle",deco:"diamond",cyber:"memory",blue:"settings",collage:"content_cut",bauhaus:"change_history",chart:"explore",journal:"hiking",city:"location_city"};
+  function spineItems(b,tiltFirst){const [,,bg,fg]=DESIGNS[b.d];const st=SPS[b.d];return (b.vols||[[null,b.w]]).map((v,i)=>{const w=(b.vols?spineW(Math.max(...b.vols.map(x=>x[1]))):spineW(v[1]))-(st==="paper"?4:0);const h=spineH(b,0);const rib=b.vols?i===0:hash(b.id,4)===0;const tilt=false;const out=!tilt&&!b.vols&&hash(b.id+i,7)===0;
+    return[w+3+(tilt?12:0),`<button class="spn s-${st} ${tilt?"tilt":""} ${out?"out":""}" data-bk="${b.id}" style="width:${w}px;height:${h}px;background-color:${bg};color:${fg};--fg:${fg};--bg:${bg}" title="${esc(b.t)}${v[0]?"・"+v[0]:""}">${rib?`<span class="rib" style="left:${30+hash(b.id,3)*15}%"></span>`:""}${st==="modern"?`<span class="ini">${esc(b.t[0])}</span>`:""}<span class="st" style="font-size:${spineFont(b.t,h)}px">${esc(b.t)}</span>${v[0]?`<span class="sv">${v[0]}</span>`:""}<span class="ms mk">${MARK[b.d]}</span></button>`];});}
+  function fit(){const min={};$$(".spn .st",el).forEach(e=>{let f=parseFloat(e.style.fontSize)||14;while(e.scrollHeight>e.clientHeight+1&&f>9){f-=.5;e.style.fontSize=f+"px";}const k=e.parentElement.dataset.bk;min[k]=Math.min(min[k]??99,f);});
+    /* volumes of one series share one title size */
+    $$(".spn .st",el).forEach(e=>{e.style.fontSize=min[e.parentElement.dataset.bk]+"px";});}
+  const coverItem=(b,lean)=>[138,`<button class="slot ${b.vols?"series":""} ${lean?"lean":""}" data-bk="${b.id}" title="${esc(b.t)}"><div class="cvr-wrap">${cover(b)}</div><span class="lb">${esc(b.t)}</span></button>`];
+  function stackItem(bs){const html=bs.map((b,i)=>{const [,,bg,fg]=DESIGNS[b.d];const w=150-i*8-hash(b.id,3)*6;return `<button class="flat" data-bk="${b.id}" style="width:${w}px;height:${spineW(b.w)-4}px;background:${bg};color:${fg};margin-left:${hash(b.id,4)*3}px" title="${esc(b.t)}"><span class="ms" style="font-size:12px">auto_stories</span><span style="overflow:hidden;text-overflow:ellipsis">${esc(b.t)}</span></button>`;}).join("");return[164,`<div class="stack">${html}</div>`];}
+  const DECO=["potted_plant","hourglass_empty","nest_eco_leaf","emoji_objects"];
+  function items(books){
+    const out=[];
+    if(S.view==="cover"){books.forEach(b=>out.push(coverItem(b,false)));return out;}
+    if(S.view==="spine"){books.forEach(b=>out.push(...spineItems(b,false)));return out;}
+    /* mixed: a fresh random arrangement each time the shelf opens or 混排 is pressed; stable while searching or sorting */
+    let a=S.mixSeed>>>0;const rnd=()=>{a=(a+0x6D2B79F5)>>>0;let t=a;t=Math.imul(t^t>>>15,t|1);t^=t+Math.imul(t^t>>>7,t|61);return((t^t>>>14)>>>0)/4294967296;};
+    for(let i=0;i<books.length;i++){
+      const b=books[i],r=rnd();
+      if(r<.2)out.push(coverItem(b,false));
+      else if(r<.36&&books[i+1]){const n=books[i+2]&&rnd()<.35?3:2;out.push(stackItem(books.slice(i,i+n)));i+=n-1;}
+      else out.push(...spineItems(b,false));
+      if(rnd()<.13)out.push([58,`<span class="ms deco" aria-hidden="true" style="color:${caseStyle==="white"||caseStyle==="oak"?"#6B8F5A":"#8FB98A"}">${DECO[Math.floor(rnd()*DECO.length)]}</span>`]);
+    }
+    return out;
+  }
+  function rows(list,avail){const r=[];let cur=[],w=0;list.forEach(it=>{if(w+it[0]>avail&&cur.length){r.push(cur);cur=[];w=0;}cur.push(it);w+=it[0];});if(cur.length)r.push(cur);return r;}
+  function render(){
+    const gs=groups();const n=gs.reduce((a,g)=>a+g.books.length,0);const tw=S.books.reduce((a,b)=>a+b.w,0);
+    el.innerHTML=`<div class="shx-h gut"><div class="shx-hi"><div class="shx-t"><small>THE PRIVATE LIBRARY</small><h2>我的藏書</h2></div>
+      <div class="shx-stats"><div><b>${S.books.length}</b><span>本典藏</span></div><div><b>${(tw/10000).toFixed(1)}</b><span>萬字</span></div><div><b>${S.books.filter(b=>b.vols).length}</b><span>部系列</span></div></div>
+      <span class="sp"></span><button class="shx-act pri" data-s="save"><span class="ms">bookmark_add</span><span class="lb">收藏目前故事</span></button><button class="shx-act" data-s="export"><span class="ms">ios_share</span><span class="lb">匯出全部</span></button><button class="shx-act" data-s="import"><span class="ms">upload_file</span><span class="lb">匯入</span></button><button class="shx-x" data-s="close" aria-label="關閉"><span class="ms">close</span></button></div>
+      <div class="shx-bar"><label class="shx-search"><span class="ms">search</span><input data-s="q" value="${esc(S.q)}" placeholder="搜尋書名或標籤" aria-label="搜尋書名或標籤"></label>
+      <select class="shx-sel" data-s="sort" aria-label="藏書排序">${[["newest","最新優先"],["oldest","最舊優先"],["name","書名（字首）"],["length","長度排序"],["color","顏色分組"],["style","造型分組"]].map(([v,l])=>`<option value="${v}" ${v===S.sort?"selected":""}>${l}</option>`).join("")}</select>
+      <div class="shx-view">${[["mixed","shelves","混排"],["cover","grid_view","封面"],["spine","view_week","書脊"]].map(([v,ic,l])=>`<button data-v="${v}" aria-pressed="${S.view===v}"><span class="ms" style="font-size:16px">${ic}</span>${l}</button>`).join("")}</div>${S.view==="mixed"?`<button class="shx-act" data-s="shuffle" title="重新隨機擺放"><span class="ms">shuffle</span><span class="lb">重新擺放</span></button>`:""}
+      <div class="shx-cases" role="group" aria-label="書櫃樣式"><span>書櫃</span>${CASES.map(([k,l,c])=>`<button data-case="${k}" aria-pressed="${k===caseStyle}" title="${l}" aria-label="${l}" style="background:${c}"></button>`).join("")}</div></div></div>
+      <div class="shx-body"><div class="shx-in gut" data-shin></div></div>`;
+    const inner=$("[data-shin]",el);
+    const W=inner.clientWidth-(parseFloat(getComputedStyle(inner).paddingLeft)+parseFloat(getComputedStyle(inner).paddingRight));
+    const avail=caseStyle==="white"?W-12:W-(innerWidth<=760?40:84);
+    const all=[];gs.forEach(g=>{if(g.k)all.push([40,`<span class="divider" title="${g.k}">${g.k}</span>`]);all.push(...items(g.books));});
+    inner.innerHTML=n?`<div class="case" data-case="${caseStyle}"><span class="case-plate">${gs.length>1?(S.sort==="color"?"依顏色分組":"依造型分組"):"我的藏書"}</span>${rows(all,avail).map(r=>`<div class="row">${r.map(x=>x[1]).join("")}</div>`).join("")}</div>`:`<div class="empty" style="margin-top:40px">${S.books.length?"沒有符合搜尋的藏書。試試其他書名或標籤。":"你的典藏，從第一本開始。將目前故事收藏，讓這裡成為你的私人圖書室。"}</div>`;
+    fit();
+  }
+  function renderDt(){
+    const b=S.books.find(x=>x.id===S.dt);if(!b){dt.hidden=true;return;}const D=DESIGNS[b.d];
+    dt.innerHTML=`<div class="dt-in" role="dialog" aria-label="${esc(b.t)}" style="--cs:${D[2]}26"><div class="dt-top"><div>${cover(b)}</div><div><h3>${esc(b.t)}${b.vols?`（全 ${b.vols.length} 集）`:""}</h3><div class="dt-meta"><span>${fmtD(b.id)}</span><span>${fmtW(b.w)}</span><span>${b.ch} 章</span><span>${b.g}</span><span>裝幀：${D[0]}</span></div><div class="chips">${b.tags.map(t=>`<span class="chip" aria-pressed="true">${esc(t)}</span>`).join("")}</div></div></div>
+      <div class="dt-b">${S.edit?`<label class="f"><span>書名</span><input data-e="t" value="${esc(b.t)}"></label><label class="f"><span>標籤（用逗號分隔）</span><input data-e="tags" value="${esc(b.tags.join(", "))}"></label><label class="f"><span>裝幀樣式</span><select data-e="d">${Object.entries(DESIGNS).map(([k,v])=>`<option value="${k}" ${k===b.d?"selected":""}>${v[0]}</option>`).join("")}</select></label><label class="f"><span>備註</span><textarea data-e="note">${esc(b.note)}</textarea></label><div style="display:flex;gap:8px;justify-content:flex-end"><button class="btn" data-s="cancelEdit">取消</button><button class="btn pri" data-s="saveEdit">儲存</button></div>`:
+      `${b.vols?`<div><h4>分集</h4><div class="vols">${b.vols.map(v=>`<div><span class="${v[2]?"ok":""}">${v[2]?"✓":"…"}</span><b>${v[0]}</b><span>${fmtW(v[1])}${v[2]?"":"・未完"}</span></div>`).join("")}</div></div>`:""}
+      <div><h4>內容預覽</h4><p class="dt-prev">${esc(b.ex)}…</p></div>${b.note?`<div><h4>備註</h4><p style="margin:0;font-size:14px">${esc(b.note)}</p></div>`:""}
+      ${S.del?`<div class="dt-conf"><span class="ms">warning</span>確定刪除《${esc(b.t)}》？這個動作無法復原。<span class="sp"></span><button class="btn sm" data-s="cancelDel">取消</button><button class="btn sm pri" style="background:var(--dan);border-color:var(--dan)" data-s="doDel">刪除</button></div>`:""}
+      <div class="dt-acts"><button class="btn pri" data-s="read"><span class="ms">menu_book</span>載入閱讀</button><button class="btn" data-s="flip"><span class="ms">auto_stories</span>翻書閱讀</button><button class="btn" data-s="dl"><span class="ms">download</span>下載</button><button class="btn" data-s="edit"><span class="ms">edit</span>編輯</button><button class="btn dan" data-s="del"><span class="ms">delete</span>刪除</button></div>`}</div>
+      <div style="margin-top:auto;padding:12px 24px calc(12px + env(safe-area-inset-bottom,0px));border-top:1px solid var(--line);display:flex"><button class="btn ghost" data-s="closeDt"><span class="ms">arrow_back</span>回到書櫃</button></div></div>`;
+    dt.hidden=false;
+  }
+  function save(){const c=getCurrent();if(!c.words){toast("目前還沒有正文，先生成一章再收藏。");return;}
+    const ex=S.books.find(b=>b.cur);if(ex){ex.w=c.words;ex.ch=c.ch;toast(`已更新書櫃中的《${ex.t}》`);}else{S.books.unshift({id:20261016,t:c.title,g:c.genre||"未分類",d:"ink",w:c.words,ch:c.ch,tags:["手稿"],note:"",ex:c.ex,cur:true});toast(`已收藏《${c.title}》`);}render();}
+  el.addEventListener("click",e=>{
+    const bk=e.target.closest("[data-bk]");if(bk){S.dt=+bk.dataset.bk;S.edit=false;S.del=false;renderDt();return;}
+    const v=e.target.closest("[data-v]");if(v){S.view=v.dataset.v;if(S.view==="mixed")S.mixSeed=Math.floor(Math.random()*4294967296);render();return;}
+    const cs=e.target.closest("[data-case]");if(cs&&cs.tagName==="BUTTON"){caseStyle=cs.dataset.case;try{localStorage.setItem("ng-case",caseStyle)}catch(_){}render();return;}
+    const s=e.target.closest("[data-s]");if(!s)return;
+    ({close:()=>{el.hidden=true;},shuffle:()=>{S.mixSeed=Math.floor(Math.random()*4294967296);render();},save,export:()=>toast(`已匯出 ${S.books.length} 本藏書（JSON）`),import:()=>toast("選擇先前匯出的 JSON 檔即可匯入")}[s.dataset.s]||(()=>{}))();
+  });
+  el.addEventListener("input",e=>{if(e.target.dataset.s==="q"){S.q=e.target.value;const pos=e.target.selectionStart;render();const i=$('[data-s="q"]',el);i.focus();i.setSelectionRange(pos,pos);}});
+  el.addEventListener("change",e=>{if(e.target.dataset.s==="sort"){S.sort=e.target.value;render();}});
+  dt.addEventListener("click",e=>{
+    if(e.target===dt){dt.hidden=true;return;}
+    const s=e.target.closest("[data-s]");if(!s)return;const b=S.books.find(x=>x.id===S.dt);
+    switch(s.dataset.s){
+      case"closeDt":dt.hidden=true;break;
+      case"edit":S.edit=true;renderDt();break;
+      case"cancelEdit":S.edit=false;renderDt();break;
+      case"saveEdit":b.t=$('[data-e="t"]',dt).value.trim()||b.t;b.tags=$('[data-e="tags"]',dt).value.split(/[,，]/).map(x=>x.trim()).filter(Boolean);b.d=$('[data-e="d"]',dt).value;b.note=$('[data-e="note"]',dt).value;S.edit=false;renderDt();render();toast("已儲存");break;
+      case"del":S.del=true;renderDt();break;
+      case"cancelDel":S.del=false;renderDt();break;
+      case"doDel":S.books=S.books.filter(x=>x.id!==b.id);dt.hidden=true;render();toast(`已刪除《${b.t}》`);break;
+      case"dl":toast(`已下載《${b.t}》TXT`);break;
+      case"read":case"flip":dt.hidden=true;el.hidden=true;onRead(b,s.dataset.s);break;
+    }
+  });
+  addEventListener("keydown",e=>{if(e.key!=="Escape"||host.hidden)return;if(!dt.hidden)dt.hidden=true;else if(!el.hidden)el.hidden=true;});
+  let rt=null;addEventListener("resize",()=>{if(el.hidden)return;clearTimeout(rt);rt=setTimeout(render,150);});
+  return{open(doSave){S.mixSeed=Math.floor(Math.random()*4294967296);el.hidden=false;render();if(doSave)save();},toast};
+}
+
+makeApp($("#v1"),1);makeApp($("#v2"),2);makeApp($("#v3"),3);
+
+const VARS={v1:["A","流程側欄","左側就是你的「創作進度」五步驟，點哪步看哪步；設定頁把 ①②③ 攤開成一頁，不再一個個開視窗。"],v2:["B","單頁儀表板","最接近現在的工坊：上方進度條、①–④ 摘要卡，點卡片從右側滑出設定；控制台、大綱、手稿在同一頁，右側是工具列。"],v3:["C","左設定・右手稿","左邊是 ①–⑤ 可收合的設定欄，隨時改；右邊是控制台和手稿，邊改設定邊看正文。"]};
+let cur="v2";try{const s=localStorage.getItem("ng-proto5");if(VARS[s])cur=s;}catch(e){}
+function sw(){$("#swTabs").innerHTML=Object.entries(VARS).map(([k,v])=>`<button class="sw-tab" role="tab" data-sw="${k}" aria-selected="${k===cur}"><b>${v[0]}</b>${v[1]}</button>`).join("");$("#swDesc").textContent=VARS[cur][2];$$(".vroot").forEach(v=>v.hidden=v.id!==cur);}
+$("#swTabs").addEventListener("click",e=>{const b=e.target.closest("[data-sw]");if(!b)return;cur=b.dataset.sw;try{localStorage.setItem("ng-proto5",cur)}catch(_){}sw();scrollTo(0,0);});
+sw();
+</script>

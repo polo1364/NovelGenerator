@@ -184,7 +184,7 @@ async function collectLayout(client) {
         shadow: pipelineStyle.boxShadow
       },
       text: {
-        studioLabel: style(studioLabel, '::before').color,
+        studioBand: style(studioLabel).backgroundColor,
         stepTitle: style(stepTitle).color,
         stepMetric: style(stepMetric).color,
         launcherSub: style(launcherSub).color,
@@ -311,16 +311,17 @@ async function run() {
       })()`), { value: 'deepseek-flash', label: 'DeepSeek V4.1 Flash — 推薦寫作' }, `${width}px model default`);
       layouts[width] = await collectLayout(client);
       assert.equal(layouts[width].overflow, true, `${width}px must not have horizontal page overflow`);
-      assert.match(layouts[width].shell.background, /^rgb\(245, 240, 223\)$/);
-      assert.match(layouts[width].shell.border, /^3px solid rgb\(23, 24, 22\)$/);
+      // Studio B：外框改為透明、無框、無陰影，由內部各卡片自己承載底色
+      assert.equal(layouts[width].shell.background, 'rgba(0, 0, 0, 0)');
+      assert.match(layouts[width].shell.border, /^0px none/);
       assert.equal(layouts[width].shell.radius, '4px');
-      assert.match(layouts[width].shell.shadow, /rgb\(23, 24, 22\) 10px 10px 0px 0px/);
+      assert.equal(layouts[width].shell.shadow, 'none');
       assertPipelineReset(layouts[width], `${width}px light`);
-      assert.equal(layouts[width].text.studioLabel, 'rgb(23, 24, 22)', `${width}px studio label must use editorial ink`);
-      assert.equal(layouts[width].text.stepTitle, 'rgb(23, 24, 22)', `${width}px workflow title must use editorial ink`);
-      assert.equal(layouts[width].text.stepMetric, 'rgb(30, 119, 116)', `${width}px workflow metadata must use editorial teal`);
-      assert.equal(layouts[width].text.launcherSub, 'rgb(30, 119, 116)', `${width}px launcher summary must use editorial teal`);
-      assert.equal(layouts[width].text.disabledColor, 'rgb(87, 83, 78)', `${width}px disabled action must remain readable`);
+      assert.equal(layouts[width].text.studioBand, 'rgb(29, 51, 67)', `${width}px workflow band must use the studio navy`);
+      assert.equal(layouts[width].text.stepTitle, 'rgb(238, 243, 246)', `${width}px workflow title must be light on the navy band`);
+      assert.equal(layouts[width].text.stepMetric, 'rgb(159, 179, 192)', `${width}px workflow metadata must use the muted band tone`);
+      assert.equal(layouts[width].text.launcherSub, 'rgb(98, 104, 100)', `${width}px launcher summary must use the studio muted ink`);
+      assert.equal(layouts[width].text.disabledColor, 'rgb(29, 32, 31)', `${width}px disabled action must remain readable`);
       assert.ok(Number(layouts[width].text.disabledOpacity) >= 0.72, `${width}px disabled action opacity must remain at least 0.72`);
       assert.equal(layouts[width].moduleColumns.split(' ').length, width <= 600 ? 1 : width <= 1100 ? 2 : 4);
       assert.equal(layouts[width].workspaceColumns.split(' ').length, 1);

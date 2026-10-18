@@ -41,8 +41,15 @@
     <link rel="stylesheet" href="css/reader-modes.css" />
     <link rel="stylesheet" href="css/manuscript-workspace.css" />
     <link rel="stylesheet" href="css/mobile-touch.css" />
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;500;700&family=JetBrains+Mono:wght@400;500&display=swap" media="print" onload="this.media='all'" />
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..24,300..500,0,0&display=block" media="print" onload="this.media='all'" />
+    <noscript>
+      <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;500;700&family=JetBrains+Mono:wght@400;500&display=swap" />
+      <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..24,300..500,0,0&display=block" />
+    </noscript>
+    <link rel="stylesheet" href="css/studio-b.css" />
   </head>
-  <body>
+  <body class="studio-b">
     <!-- 離線狀態提示 -->
     <div id="offlineBanner" class="offline-banner">
       📴 目前為離線模式 - 朗讀、閱讀、匯出、匯入功能仍可使用
@@ -57,7 +64,7 @@
     <!-- ==================== 浮動工具列 ==================== -->
     <div class="floating-toolbar">
       <!-- API 設定 -->
-      <button id="apiPanelToggle" class="toolbar-btn btn-api" title="API 設定">
+      <button id="apiPanelToggle" class="toolbar-btn btn-api" title="API 設定"><span class="sb-ic" aria-hidden="true">tune</span>
         <span class="text-char" style="grid-column: 1 / -1; grid-row: 1;">API</span>
         <span class="text-char" style="grid-column: 1 / -1; grid-row: 2;">設定</span>
         <span class="toolbar-tooltip">API 設定</span>
@@ -65,7 +72,7 @@
 
       <div class="toolbar-divider"></div>
 
-      <button id="generationControlsBtn" type="button" class="toolbar-btn btn-generate" title="創作控制" aria-label="創作控制" aria-controls="primaryActions">
+      <button id="generationControlsBtn" type="button" class="toolbar-btn btn-generate" title="創作控制" aria-label="創作控制" aria-controls="primaryActions"><span class="sb-ic" aria-hidden="true">edit_square</span>
         <span class="text-char">創</span><span class="text-char">作</span>
         <span class="text-char">控</span><span class="text-char">制</span>
         <span class="toolbar-tooltip">創作控制</span>
@@ -92,7 +99,7 @@
 
       <!-- 下載小說 -->
       <div class="toolbar-download-wrap">
-        <button id="downloadBtn" class="toolbar-btn btn-download" title="下載小說" disabled>
+        <button id="downloadBtn" class="toolbar-btn btn-download" title="下載小說" disabled><span class="sb-ic" aria-hidden="true">download</span>
           <span class="text-char">下</span>
           <span class="text-char">載</span>
           <span class="text-char">小</span>
@@ -106,7 +113,7 @@
       </div>
 
       <!-- 朗讀文章 -->
-      <button id="speakBtn" class="toolbar-btn btn-speak" title="朗讀文章" disabled>
+      <button id="speakBtn" class="toolbar-btn btn-speak" title="朗讀文章" disabled><span class="sb-ic" aria-hidden="true">record_voice_over</span>
         <span class="text-char">朗</span>
         <span class="text-char">讀</span>
         <span class="text-char">文</span>
@@ -115,7 +122,7 @@
       </button>
 
       <!-- 翻書閱讀 -->
-      <button id="bookReaderBtn" class="toolbar-btn btn-book" title="翻書閱讀" disabled>
+      <button id="bookReaderBtn" class="toolbar-btn btn-book" title="翻書閱讀" disabled><span class="sb-ic" aria-hidden="true">auto_stories</span>
         <span class="text-char">翻</span>
         <span class="text-char">書</span>
         <span class="text-char">閱</span>
@@ -126,7 +133,7 @@
       <div class="toolbar-divider"></div>
 
       <!-- 大綱預覽 -->
-      <button id="outlineBtn" class="toolbar-btn btn-outline-preview" title="預覽大綱">
+      <button id="outlineBtn" class="toolbar-btn btn-outline-preview" title="預覽大綱"><span class="sb-ic" aria-hidden="true">account_tree</span>
         <span class="text-char">預</span>
         <span class="text-char">覽</span>
         <span class="text-char">大</span>
@@ -196,11 +203,6 @@
           <small style="opacity: 0.7;">支援離線閱讀、朗讀、書櫃管理、匯出匯入 · <a id="readerSiteLink" href="reader/" style="color: var(--accent); text-decoration: underline;">📖 小說閱讀站</a></small>
         </p>
         <span class="header-mark"></span>
-      </header>
-
-      <!-- ==================== 創作區：書桌場景 ==================== -->
-      <div class="desk-scene">
-        <div class="card editorial-console" id="stepSetup">
         <div class="pipeline-header editorial-console__workflow">
         <button id="deskLamp" class="desk-tube-light" type="button" aria-label="燈管開關" title="點擊開關燈管（切換明暗模式）">
           <span class="tube-mount tube-mount--left" aria-hidden="true"></span>
@@ -261,9 +263,14 @@
         </nav>
         </div>
 
+      </header>
+
+      <!-- ==================== 創作區：書桌場景 ==================== -->
+      <div class="desk-scene">
+        <div class="card editorial-console" id="stepSetup">
         <div class="workspace-setup-launchers editorial-console__modules">
           <button type="button" id="openStoryModalBtn" class="workspace-launcher-btn editorial-module">
-            <span class="wsl-icon" aria-hidden="true">📖</span>
+            <span class="wsl-icon" aria-hidden="true"><span class="sb-ic">menu_book</span></span>
             <span class="editorial-module-tag" aria-hidden="true">CORE</span>
             <span class="wsl-text">
               <span class="wsl-title">① 故事設定</span>
@@ -271,7 +278,7 @@
             </span>
           </button>
           <button type="button" id="openAdvancedModalBtn" class="workspace-launcher-btn editorial-module">
-            <span class="wsl-icon" aria-hidden="true">🎛️</span>
+            <span class="wsl-icon" aria-hidden="true"><span class="sb-ic">tune</span></span>
             <span class="editorial-module-tag" aria-hidden="true">TUNE</span>
             <span class="wsl-text">
               <span class="wsl-title">② 進階設定</span>
@@ -279,7 +286,7 @@
             </span>
           </button>
           <button type="button" id="openSpecialModalBtn" class="workspace-launcher-btn editorial-module">
-            <span class="wsl-icon" aria-hidden="true">✨</span>
+            <span class="wsl-icon" aria-hidden="true"><span class="sb-ic">auto_awesome</span></span>
             <span class="editorial-module-tag" aria-hidden="true">SPICE</span>
             <span class="wsl-text">
               <span class="wsl-title">③ 特殊元素與規則</span>
@@ -287,7 +294,7 @@
             </span>
           </button>
           <button type="button" id="openCharacterModalBtn" class="workspace-launcher-btn editorial-module">
-            <span class="wsl-icon" aria-hidden="true">👤</span><span class="editorial-module-tag" aria-hidden="true">CAST</span>
+            <span class="wsl-icon" aria-hidden="true"><span class="sb-ic">groups</span></span><span class="editorial-module-tag" aria-hidden="true">CAST</span>
             <span class="wsl-text"><span class="wsl-title">④ 人物設計</span><span class="wsl-sub" id="launcherCharacterSub">尚未設定</span></span>
           </button>
         </div>
@@ -328,6 +335,7 @@
             <div class="outline-attach-head">
               <span id="outlineAttachTitle" class="outline-attach-title"></span>
               <div class="outline-attach-actions">
+                <button type="button" id="outlineAttachGenerateBtn" class="btn-outline btn-small sb-outline-generate">生成大綱</button>
                 <button type="button" id="outlineAttachOpenBtn" class="btn-outline btn-small" disabled>開啟大綱視窗</button>
                 <button type="button" id="outlineAttachClearBtn" class="btn-outline btn-small" disabled>清除大綱</button>
               </div>
@@ -346,18 +354,25 @@
             <span class="generation-console-caption">設定就緒後，開始下一段故事</span>
           </div>
           <button id="primaryGenerateBtn" type="button" class="primary-action-btn primary-generate" disabled>
-            <span class="pa-icon">✍️</span>
+            <span class="pa-icon"><span class="sb-ic">play_arrow</span>✍️</span>
             <span class="pa-label">開始生成小說</span>
           </button>
           <button id="primaryContinueBtn" type="button" class="primary-action-btn primary-continue" disabled>
-            <span class="pa-icon">⏩</span>
+            <span class="pa-icon"><span class="sb-ic">fast_forward</span>⏩</span>
             <span class="pa-label">繼續生成</span>
           </button>
           <button id="resetWorkspaceBtn" type="button" class="primary-action-btn primary-reset">
-            <span class="pa-icon">🧹</span>
+            <span class="pa-icon"><span class="sb-ic">mop</span>🧹</span>
             <span class="pa-label">清除結果</span>
           </button>
           <p id="primaryActionHint" class="primary-action-hint" aria-live="polite"></p>
+          <div class="sb-stats" aria-hidden="true">
+            <div class="sb-stat sb-stat--state"><span>狀態</span><b id="sbStatState">準備生成</b></div>
+            <div class="sb-stat sb-stat--words"><span>已生成</span><b id="sbStatWords">0 字</b></div>
+            <div class="sb-stat sb-stat--time"><span>已耗時</span><b id="sbStatTime">0:00</b></div>
+            <div class="sb-stat sb-stat--cost"><span>累計費用</span><b id="sbStatCost">$0.0000</b></div>
+          </div>
+          <div class="sb-progress" aria-hidden="true"><div class="sb-progress-head"><span id="sbStatChapter">章節進度</span></div><div class="sb-progress-bar"><i id="sbStatBar"></i></div></div>
           <div id="generationCostNotice" role="note">
             <span class="generation-estimate-label">一段生成參考費用 · USD</span>
             <strong id="generationEstimate">估算中…</strong>
@@ -416,6 +431,7 @@
           <div class="output-header-row">
             <span class="output-title"><small>THE MANUSCRIPT</small>創作手稿</span>
             <div class="manuscript-tools" aria-label="手稿操作">
+              <div role="group" class="sb-layout-toggle" aria-label="正文排版"><button id="manuscriptHorizontal" type="button" aria-pressed="true">橫排</button><button id="manuscriptVertical" type="button" aria-pressed="false">直排</button><button id="manuscriptSpeak" type="button" disabled>朗讀</button></div>
               <button id="manuscriptShelf" type="button">書櫃</button>
               <button id="manuscriptSave" type="button" disabled>收藏</button>
               <details class="manuscript-download"><summary>下載</summary><div><button type="button" data-manuscript-format="txt" disabled>TXT 純文字</button><button type="button" data-manuscript-format="html" disabled>HTML 閱讀版</button></div></details>
@@ -438,7 +454,7 @@
             <div class="manuscript-sidebar-foot">每一個世界，從一句話開始。</div>
           </aside>
           <div class="manuscript-paper">
-            <div class="manuscript-paper-tools"><span>AUTHOR’S PROOF · 正文</span><div role="group" aria-label="正文排版"><button id="manuscriptHorizontal" type="button" aria-pressed="true">橫排</button><button id="manuscriptVertical" type="button" aria-pressed="false">直排</button><button id="manuscriptSpeak" type="button" disabled>朗讀</button></div></div>
+            <div class="manuscript-paper-tools"><span>AUTHOR’S PROOF · 正文</span></div>
             <div class="output-wrap" id="outputWrap">
               <div class="vertical-viewport" id="verticalViewport" tabindex="0" role="region" aria-label="生成手稿正文">
                 <div id="result" class="output"></div>
@@ -621,7 +637,7 @@
 
       <!-- 浮動書籤導航 -->
       <div id="bookmarkNavContainer" class="bookmark-nav-container">
-        <button id="bookmarkNavToggle" class="bookmark-nav-toggle" title="我的書櫃">
+        <button id="bookmarkNavToggle" class="bookmark-nav-toggle" title="我的書櫃"><span class="sb-ic" aria-hidden="true">shelves</span>
           <span class="text-char">我</span>
           <span class="text-char">的</span>
           <span class="text-char">書</span>
@@ -670,12 +686,21 @@
       <div id="bookshelfModal" class="bookshelf-modal" role="dialog" aria-modal="true" aria-labelledby="bookshelfTitle">
         <div class="bookshelf-content">
           <div class="bookshelf-header">
-            <div class="shelf-heading"><span class="shelf-eyebrow">THE PRIVATE LIBRARY</span><h2 id="bookshelfTitle" class="bookshelf-title">我的藏書</h2><span id="shelfCount" class="shelf-count"></span></div>
+            <div class="shelf-heading"><span class="shelf-eyebrow">THE PRIVATE LIBRARY</span><h2 id="bookshelfTitle" class="bookshelf-title">我的藏書</h2><span id="shelfCount" class="shelf-count"></span><div id="shelfStats" class="shelf-stats" aria-live="polite"></div></div>
             <div class="bookshelf-tools">
               <input type="search" id="bookshelfSearch" class="bookshelf-search" aria-label="搜尋書名或標籤" placeholder="搜尋書名或標籤" />
               <div class="shelf-view-toggle" role="group" aria-label="書本展示方式">
                 <button type="button" data-shelf-view="cover" aria-pressed="true">封面</button>
                 <button type="button" data-shelf-view="spine" aria-pressed="false">書脊</button>
+                <button type="button" data-shelf-view="mixed" aria-pressed="false">混排</button>
+              </div>
+              <button id="bookshelfShuffleBtn" type="button" class="bookshelf-tool-btn shelf-shuffle" title="重新隨機擺放" hidden><span class="sb-ic" aria-hidden="true">shuffle</span><span class="shelf-shuffle-label">重新擺放</span></button>
+              <div class="shelf-case-picker" role="group" aria-label="書櫃樣式">
+                <button type="button" data-shelf-case="walnut" aria-pressed="true" title="胡桃木" aria-label="胡桃木"></button>
+                <button type="button" data-shelf-case="oak" aria-pressed="false" title="原木北歐" aria-label="原木北歐"></button>
+                <button type="button" data-shelf-case="iron" aria-pressed="false" title="黑鐵工業" aria-label="黑鐵工業"></button>
+                <button type="button" data-shelf-case="classic" aria-pressed="false" title="古典書房" aria-label="古典書房"></button>
+                <button type="button" data-shelf-case="white" aria-pressed="false" title="白色層板" aria-label="白色層板"></button>
               </div>
               <select id="bookshelfSort" class="bookshelf-sort" aria-label="藏書排序">
                 <option value="newest">📅 最新優先</option>
@@ -685,10 +710,10 @@
                 <option value="color">🎨 顏色分組</option>
                 <option value="style">📚 造型分組</option>
               </select>
-              <button id="bookshelfSaveBtn" type="button" class="bookshelf-tool-btn" title="收藏目前故事到書櫃">💾</button>
-              <button id="bookshelfExportBtn" type="button" class="bookshelf-tool-btn" title="匯出全部">📤</button>
-              <button id="bookshelfImportBtn" type="button" class="bookshelf-tool-btn" title="匯入">📥</button>
-              <button id="bookshelfCloseBtn" type="button" class="bookshelf-tool-btn" title="關閉（Esc）">✕</button>
+              <button id="bookshelfSaveBtn" type="button" class="bookshelf-tool-btn" title="收藏目前故事到書櫃" aria-label="收藏目前故事到書櫃"><span class="sb-ic" aria-hidden="true">bookmark_add</span></button>
+              <button id="bookshelfExportBtn" type="button" class="bookshelf-tool-btn" title="匯出全部" aria-label="匯出全部"><span class="sb-ic" aria-hidden="true">ios_share</span></button>
+              <button id="bookshelfImportBtn" type="button" class="bookshelf-tool-btn" title="匯入" aria-label="匯入"><span class="sb-ic" aria-hidden="true">upload_file</span></button>
+              <button id="bookshelfCloseBtn" type="button" class="bookshelf-tool-btn" title="關閉（Esc）" aria-label="關閉書櫃"><span class="sb-ic" aria-hidden="true">close</span></button>
             </div>
           </div>
           <div class="bookshelf-scroll">
@@ -716,6 +741,11 @@
                 <button id="bookDetailEdit" type="button" class="bd-btn bd-edit">✏️ 編輯</button>
                 <button id="bookDetailDelete" type="button" class="bd-btn bd-delete">🗑️ 刪除</button>
               </div>
+              <div id="bookDetailConfirm" class="book-detail-confirm" role="alert" hidden>
+                <span>確定要從書櫃刪除這本嗎？這個動作無法復原。</span>
+                <button id="bookDetailConfirmNo" type="button" class="bd-btn">取消</button>
+                <button id="bookDetailConfirmYes" type="button" class="bd-btn bd-delete-confirm">刪除</button>
+              </div>
               <button id="bookDetailClose" type="button" class="book-detail-close" aria-label="關閉書本詳情">✕</button>
             </div>
           </div>
@@ -727,7 +757,7 @@
 
       <!-- 設定面板 -->
       <div class="settings-panel">
-        <button id="settingsToggle" class="settings-toggle" title="設定">
+        <button id="settingsToggle" class="settings-toggle" title="設定"><span class="sb-ic" aria-hidden="true">text_fields</span>
           <span class="text-char">顯</span>
           <span class="text-char">示</span>
           <span class="text-char">設</span>

@@ -7,7 +7,7 @@
    - /api/* 與 /reader/* 不走 SW
    ============================================================ */
 
-const CACHE_VERSION = 'v104';
+const CACHE_VERSION = 'v105';
 const CACHE_NAME = `novel-workshop-${CACHE_VERSION}`;
 
 const APP_SHELL = [
@@ -20,6 +20,7 @@ const APP_SHELL = [
   './css/reader-modes.css',
   './css/manuscript-workspace.css',
   './css/mobile-touch.css',
+  './css/studio-b.css',
   './js/manuscript-workspace.js',
   './assets/moon.webp',
   './assets/sakura.webp',

@@ -223,12 +223,15 @@ async function run() {
       assert.equal(await client.evaluate("document.querySelectorAll('#bookmarkList img,#bookmarkList script').length"),0);
       assert.ok(await client.evaluate("!window.__unsafeExecuted"));
       await click(client,'.shelf-book');
-      // Accept only the fixture deletion dialog; no user data is in this profile.
-      const deletion = click(client,'#bookDetailDelete');
-      await poll('delete confirmation',async()=> {
-        try { await client.send('Page.handleJavaScriptDialog',{accept:true}); return true; } catch { return false; }
-      });
-      await deletion;
+      // Studio B：刪除改為面板內確認列（不再用 confirm()）；先驗證「取消」不會刪除，再確認刪除。
+      await click(client,'#bookDetailDelete');
+      assert.equal(await client.evaluate("document.getElementById('bookDetailConfirm').hidden"),false);
+      await click(client,'#bookDetailConfirmNo');
+      assert.equal(await client.evaluate("document.getElementById('bookDetailConfirm').hidden"),true);
+      assert.ok(await client.evaluate("document.getElementById('bookDetail').classList.contains('open')"));
+      await click(client,'#bookDetailDelete');
+      await click(client,'#bookDetailConfirmYes');
+      await poll('delete confirmation',()=>client.evaluate("!document.getElementById('bookDetail').classList.contains('open')"));
       await search(client,'');
       assert.equal(await client.evaluate("document.querySelectorAll('.shelf-book').length"),202);
       const downloadDir=fs.mkdtempSync(path.join(output,'export-'));
@@ -239,7 +242,7 @@ async function run() {
       assert.equal(exported.length,202);
       assert.deepEqual(exported.find(b=>b.id===fixture[0].id),fixture[0]);
       assert.ok(exported.every(b=>!('design' in b) && !('appearance' in b)));
-      await poll('offline shell cached',()=>client.evaluate(`caches.open('novel-workshop-v104').then(async c => !!(await c.match('./js/book-design.js')) && !!(await c.match('./css/bookshelf-atelier.css')) && !!(await c.match('./css/reader-modes.css')) && !!(await c.match('./assets/sakura.webp')) && !!(await c.match('./js/manuscript-workspace.js')) && !!(await c.match('./css/manuscript-workspace.css')) && !!(await c.match('./css/mobile-touch.css')))`));
+      await poll('offline shell cached',()=>client.evaluate(`caches.open('novel-workshop-v105').then(async c => !!(await c.match('./css/studio-b.css')) && !!(await c.match('./js/book-design.js')) && !!(await c.match('./css/bookshelf-atelier.css')) && !!(await c.match('./css/reader-modes.css')) && !!(await c.match('./assets/sakura.webp')) && !!(await c.match('./js/manuscript-workspace.js')) && !!(await c.match('./css/manuscript-workspace.css')) && !!(await c.match('./css/mobile-touch.css')))`));
       await client.send('Network.emulateNetworkConditions',{offline:true,latency:0,downloadThroughput:0,uploadThroughput:0});
       await client.evaluate('window.__qaReloading=true');
       await client.send('Page.reload');
