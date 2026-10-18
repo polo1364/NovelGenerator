@@ -484,3 +484,45 @@ test('canceling peak confirmation prevents title request in outline-to-story flo
   vm.createContext(context);
   await vm.runInContext('(' + handler + ')()', context);
 });
+
+function conflictHarness(rewriteStillConflicts) {
+  let continuations = 0;
+  const conflict = { character: '林默', conflictType: 'hard_boundary', constraint: '絕不殺害無辜之人', issue: '殺了路人', evidence: '林默一刀殺了路過的老人' };
+  const h = continuationHarness((prompt, key, model, options) => {
+    if (options.taskType === 'state') {
+      const bad = continuations === 1 || rewriteStillConflicts;
+      return JSON.stringify(bad ? { establishedFacts: ['林默出手'], characterConflicts: [conflict] } : { establishedFacts: ['林默放走老人'] });
+    }
+    continuations++;
+    return h.ctx.latestStory + (continuations === 1 || rewriteStillConflicts ? '林默一刀殺了路過的老人。' : '林默放走了路過的老人。').repeat(30);
+  });
+  Object.assign(h.ctx, {
+    endGeneration: () => {},
+    collectCharactersInfo: () => ({ charactersInfo: '角色1：【林默】設定：絕不殺害無辜之人', mainNames: [], secondaryNames: [], characterNames: [] })
+  });
+  return { h, count: () => continuations };
+}
+
+test('寫後自檢：已驗證的人物設定衝突會退回並重寫一次，重寫後沒有衝突就接受', async () => {
+  const { h, count } = conflictHarness(false);
+  const c = h.ctx;
+  const before = c.latestStory;
+  const result = await c.doContinueGenerationWithAutoResume({ auto: true });
+  assert.equal(result.ok, true);
+  assert.equal(result.conflictUnresolved, undefined);
+  assert.equal(count(), 2);
+  assert.ok(c.latestStory.startsWith(before));
+  assert.doesNotMatch(c.latestStory, /殺了路過/);
+  const prompts = h.calls.filter(call => call[3].taskType === 'continuation').map(call => call[0]);
+  assert.doesNotMatch(prompts[0], /重寫本段/);
+  assert.match(prompts[1], /重寫本段[\s\S]*林默：殺了路人/);
+});
+
+test('寫後自檢：重寫後仍衝突就暫停自動續寫並保留正文，不會無限重寫', async () => {
+  const { h, count } = conflictHarness(true);
+  const result = await h.ctx.doContinueGenerationWithAutoResume({ auto: true });
+  assert.equal(count(), 2);
+  assert.equal(result.conflictUnresolved, true);
+  assert.equal(result.incomplete, true);
+  assert.match(h.ctx.latestStory, /殺了路過/);
+});

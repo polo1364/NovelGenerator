@@ -232,7 +232,7 @@ test('工作坊依序載入規劃模組並快取到新版離線殼層', () => {
   const sw = fs.readFileSync(path.join(__dirname, '..', 'public', 'sw.js'), 'utf8');
 
   assert.match(html, /generation-planning\.js[\s\S]*app\.js/);
-  assert.match(sw, /const CACHE_VERSION\s*=\s*'v109'/);
+  assert.match(sw, /const CACHE_VERSION\s*=\s*'v110'/);
   assert.match(sw, /\.\/js\/generation-planning\.js/);
 });
 
@@ -300,4 +300,55 @@ test('生成與續寫會注入多樣性契約並傳入創意幅度', () => {
   assert.match(app, /\$\{diversityGuidance\}/);
   assert.match(app, /diversityMode:\s*getDiversityMode\(\)/);
   assert.match(app, /getSamplingProfile\(options\.taskType, options\.diversityMode\)/);
+});
+
+test('全書章記：解析、依章號合併、注入續寫並在過長時縮短早期章節', () => {
+  const raw = '```json\n{"establishedFacts":["甲"],"chapterNotes":[{"chapter":2,"note":"  因為失竊，  主角潛入倉庫，找到箱子。 "},{"chapter":"3","note":"結果被發現"},{"chapter":9,"note":"超出章數"},{"chapter":0,"note":"無效"}]}\n```';
+  const parsed = planning.parseChapterNotes(raw, 3);
+  assert.deepEqual(parsed, [{ chapter: 2, note: '因為失竊， 主角潛入倉庫，找到箱子。' }, { chapter: 3, note: '結果被發現' }]);
+  assert.deepEqual(planning.parseChapterNotes('不是 JSON', 3), []);
+
+  const merged = planning.mergeChapterNotes([{ chapter: 1, note: '第一章舊' }, { chapter: 3, note: '舊三' }], parsed);
+  assert.deepEqual(merged.map(item => item.chapter), [1, 2, 3]);
+  assert.equal(merged[2].note, '結果被發現');
+
+  const guidance = planning.formatChapterNotesGuidance(merged);
+  assert.match(guidance, /【全書章記/);
+  assert.match(guidance, /第1章：第一章舊\n第2章：/);
+  assert.equal(planning.formatChapterNotesGuidance([]), '');
+
+  const many = Array.from({ length: 60 }, (_, i) => ({ chapter: i + 1, note: '事件'.repeat(60) }));
+  const long = planning.formatChapterNotesGuidance(many, 3000);
+  assert.ok(long.length < 3400, long.length);
+  assert.match(long, /第60章：(事件){60}\n/);
+  assert.match(long, /第1章：(事件){1,30}…/);
+
+  const prompt = planning.buildStoryStatePrompt({ storyText: '正文', chapterCount: 3, notedChapters: [1, 2] });
+  assert.match(prompt, /"chapterNotes"/);
+  assert.match(prompt, /已有章記的章節：1、2/);
+});
+
+test('狀態表保留較多舊紀錄，未回收伏筆不會被擠掉', () => {
+  const quote = i => `第${i}條伏筆的原文依據`;
+  const text = Array.from({ length: 30 }, (_, i) => quote(i)).join('。');
+  const records = Array.from({ length: 30 }, (_, i) => ({ thread: `伏筆${i}`, plantedChapter: '1', payoff: '', status: i < 20 ? 'open' : 'resolved', evidence: quote(i) }));
+  const { state } = planning.checkStoryContinuity(null, { foreshadowing: records }, text, text);
+  const threads = state.foreshadowing.map(item => item.thread);
+  for (let i = 0; i < 20; i++) assert.ok(threads.includes(`伏筆${i}`), `open 伏筆${i} 應保留`);
+  assert.ok(threads.length >= 24, threads.length);
+});
+
+test('全書章記存進狀態表並注入續寫 prompt', () => {
+  const app = fs.readFileSync(path.join(__dirname, '..', 'public', 'js', 'app.js'), 'utf8');
+  assert.match(app, /chapterNotes: planner\.mergeChapterNotes\(previous && previous\.chapterNotes, planner\.parseChapterNotes\(raw, countChapters\(story\)\)\)/);
+  assert.match(app, /planner\.formatChapterNotesGuidance\(stored\.chapterNotes\)/);
+});
+
+test('寫後自檢：新內容有已驗證的人物設定衝突時退回重寫一次，仍衝突就暫停', () => {
+  const app = fs.readFileSync(path.join(__dirname, '..', 'public', 'js', 'app.js'), 'utf8');
+  assert.match(app, /function getNewTextConflicts\(newText\)/);
+  assert.match(app, /latestStory = baseStory;[\s\S]*?localStorage\.setItem\(STORY_STATE_STORAGE_KEY, ledgerBefore\)/);
+  assert.match(app, /continueChapterWithResume\(\{ \.\.\.opts, rewriteAttempt: true \}\)/);
+  assert.match(app, /result\.conflictUnresolved = true/);
+  assert.match(app, /\$\{storyStateGuidance\}\$\{chapterRewriteGuidance\}/);
 });

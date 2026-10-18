@@ -11,7 +11,9 @@ function section(start, end) {
 }
 function helpers(storage) {
   const saved = new Map();
+  // 續寫外層會先記下狀態表（寫後自檢重寫時要退回），這裡提供空的狀態表
   const ctx = { chaptersInput: { value: '10' }, lengthInput: { value: '50000' }, NovelGenerationPlanning: planning,
+    STORY_STATE_STORAGE_KEY: 'novelStoryStateLedger', readStoryStateLedger: () => null,
     localStorage: storage || { getItem: key => saved.get(key) || null, setItem: (key, value) => saved.set(key, value), removeItem: key => saved.delete(key) } };
   vm.createContext(ctx);
   vm.runInContext(section('function isStoryResumePending(', 'function formatChapterWordRequirement('), ctx);

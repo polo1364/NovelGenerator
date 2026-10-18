@@ -46,6 +46,57 @@
     foreshadowing: ['thread', 'plantedChapter', 'payoff', 'status', 'evidence'],
     entities: ['entity', 'kind', 'status', 'location', 'holder', 'evidence', 'transitionEvidence']
   };
+  // 全書因果要靠舊紀錄：表格保留較多筆；未回收的伏筆全部保留（上限 40），已回收的只留最近幾筆。
+  const RECORD_LIMITS = Object.freeze({ characterKnowledge: 16, causalEvents: 16, foreshadowing: 24, entities: 24 });
+  const MAX_OPEN_FORESHADOWING = 40;
+  function keepRecords(key, records) {
+    const limit = RECORD_LIMITS[key] || 8;
+    if (key !== 'foreshadowing') return records.slice(-limit);
+    const open = records.filter(item => item.status !== 'resolved').slice(-MAX_OPEN_FORESHADOWING);
+    const resolved = records.filter(item => item.status === 'resolved');
+    const keep = new Set([...open, ...resolved.slice(-Math.max(4, limit - open.length))]);
+    return records.filter(item => keep.has(item));
+  }
+
+  // 全書章記：每章一則「前因→事件→結果」，寫新章時依章序帶入，前面章節的因果才不會被遺忘。
+  const MAX_CHAPTER_NOTE_LENGTH = 120;
+  const CHAPTER_NOTES_BUDGET = 4000;
+  function mergeChapterNotes(previous, next) {
+    const notes = new Map();
+    for (const item of [...(Array.isArray(previous) ? previous : []), ...(Array.isArray(next) ? next : [])]) {
+      const chapter = Number.parseInt(item && item.chapter, 10);
+      const note = item && typeof item.note === 'string' ? item.note.replace(/\s+/g, ' ').trim().slice(0, MAX_CHAPTER_NOTE_LENGTH) : '';
+      if (chapter >= 1 && note) notes.set(chapter, note);
+    }
+    return [...notes].sort((a, b) => a[0] - b[0]).map(([chapter, note]) => ({ chapter, note }));
+  }
+  function parseChapterNotes(rawText, maxChapter) {
+    const raw = String(rawText || '');
+    const start = raw.indexOf('{');
+    const end = raw.lastIndexOf('}');
+    if (start < 0 || end <= start) return [];
+    try {
+      const value = JSON.parse(raw.slice(start, end + 1));
+      const limit = Number.parseInt(maxChapter, 10) || 0;
+      return mergeChapterNotes([], Array.isArray(value.chapterNotes) ? value.chapterNotes : [])
+        .filter(item => !limit || item.chapter <= limit);
+    } catch (_) {
+      return [];
+    }
+  }
+  function formatChapterNotesGuidance(value, budget = CHAPTER_NOTES_BUDGET) {
+    const notes = mergeChapterNotes(value, []);
+    if (!notes.length) return '';
+    // 太長時從最早的章開始縮短，最近 5 章保留完整
+    let shortLength = MAX_CHAPTER_NOTE_LENGTH;
+    const render = () => notes.map((item, i) => `第${item.chapter}章：${i < notes.length - 5 && item.note.length > shortLength ? item.note.slice(0, shortLength) + '…' : item.note}`).join('\n');
+    let text = render();
+    while (text.length > budget && shortLength > 24) {
+      shortLength -= 12;
+      text = render();
+    }
+    return `\n\n【全書章記（已寫章節的前因與結果，依章序）】\n${text}\n• 新章節的事件須能由上列前因推得；已發生的結果與人物動機不得推翻，已回收的伏筆不重複回收。`;
+  }
 
   function shortText(value, limit = 180) {
     return typeof value === 'string' ? value.trim().slice(0, limit) : '';
@@ -53,8 +104,9 @@
 
   function sanitizeRecords(value, fields) {
     if (!Array.isArray(value)) return [];
+    // 上一版狀態也會經過這裡：只留前 8 筆會在每次合併時丟掉舊紀錄，改成保留最近 48 筆（實際上限見 RECORD_LIMITS）
     return value.filter(item => item && typeof item === 'object' && !Array.isArray(item))
-      .slice(0, 8)
+      .slice(-48)
       .map(item => Object.fromEntries(fields.map(key => [key, shortText(item[key])])))
       .filter(item => item[fields[0]]);
   }
@@ -88,7 +140,7 @@
     }
   }
 
-  function buildStoryStatePrompt({ previousState, storyText, chapterCount, characterCanon = '', previousIssues = [] } = {}) {
+  function buildStoryStatePrompt({ previousState, storyText, chapterCount, characterCanon = '', previousIssues = [], notedChapters = [] } = {}) {
     const previous = sanitizeStoryState(previousState) || {
       establishedFacts: [],
       characterStates: [],
@@ -105,7 +157,8 @@
 • 每個摘要陣列最多 4 項，每項最多 30 字；recentOutcome 最多 80 字。
 • 下列新增表格每種最多 3 項，只列新增或有改變的紀錄；未變動的舊表格紀錄由系統合併保留。
 • 表格每個文字欄位最多 30 字，evidence 與 transitionEvidence 各最多 40 字；優先保留影響後續的變更。
-• 整份 JSON 以 2,000 字元以內為目標，必要時減少筆數，必須保留結尾括號，不可輸出半份 JSON。
+• chapterNotes 是全書章記：為「最近已寫正文」裡的每一章各寫一則（chapter 用阿拉伯數字，依正文章名；含最後一章）。note 最多 80 字，依序寫「前因 → 本章關鍵事件 → 結果與改變了什麼」，只寫正文已發生的事。「已有章記的章節」若本次正文沒有改寫它，就不用再寫。
+• 整份 JSON（含 chapterNotes）以 2,000 字元以內為目標；超出時先減少表格筆數，章記優先保留，必須保留結尾括號，不可輸出半份 JSON。
 • characterKnowledge 記錄誰知道什麼、透過誰或哪個事件得知；讀者知道不代表角色知道。
 • causalEvents 記錄事件、人物動機、前因與結果；沒有依據的關聯不可當成事實。
 • foreshadowing 記錄伏筆、埋設章節、預計回收位置與 open/resolved 狀態；預計回收不是已發生事件。
@@ -120,12 +173,13 @@
 • 只輸出 JSON 物件，不要 Markdown、code fence 或說明文字。
 
 JSON 格式：
-{"establishedFacts":[],"characterStates":[],"unresolvedThreads":[],"timeline":[],"recentOutcome":"", "characterKnowledge":[{"character":"","fact":"","learnedFrom":"","evidence":""}],"causalEvents":[{"event":"","motive":"","cause":"","effect":"","evidence":""}],"foreshadowing":[{"thread":"","plantedChapter":"","payoff":"","status":"open","evidence":""}],"entities":[{"entity":"","kind":"character","status":"unknown","location":"","holder":"","evidence":"","transitionEvidence":""}]}
+{"establishedFacts":[],"characterStates":[],"unresolvedThreads":[],"timeline":[],"recentOutcome":"","chapterNotes":[{"chapter":1,"note":""}], "characterKnowledge":[{"character":"","fact":"","learnedFrom":"","evidence":""}],"causalEvents":[{"event":"","motive":"","cause":"","effect":"","evidence":""}],"foreshadowing":[{"thread":"","plantedChapter":"","payoff":"","status":"open","evidence":""}],"entities":[{"entity":"","kind":"character","status":"unknown","location":"","holder":"","evidence":"","transitionEvidence":""}]}
 
 【人物設定（約束資料，不是已發生事件）】
 ${characterCanon || '未提供'}
 
 目前已完成章節：約 ${Number.parseInt(chapterCount, 10) || 0} 章
+已有章記的章節：${notedChapters.length ? notedChapters.join('、') : '無'}
 
 【上一版狀態表】
 ${JSON.stringify(previous)}
@@ -270,7 +324,7 @@ ${writingPrompt}`;
         merged.set(id, item);
         acceptedQuotes.push(item.transitionEvidence && hasQuote(addedText, item.transitionEvidence) ? item.transitionEvidence : item.evidence);
       }
-      state[key] = [...merged.values()].slice(-8);
+      state[key] = keepRecords(key, [...merged.values()]);
     }
     // 模型省略或重複舊紀錄不等於解決問題；只保留仍有對應狀態的待確認標記。
     for (const issue of pending) {
@@ -411,6 +465,9 @@ ${writingPrompt}`;
     buildChapterOutlineGuidance,
     getSamplingProfile,
     parseStoryState,
+    parseChapterNotes,
+    mergeChapterNotes,
+    formatChapterNotesGuidance,
     buildStoryStatePrompt,
     formatStoryStateGuidance,
     createStoryFingerprint,

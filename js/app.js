@@ -1272,7 +1272,8 @@
         const issues = planner.getContinuityIssues(warnings, stored.issues);
         return planner.formatStoryStateGuidance(stored.state, { issues }) + (issues.length
           ? '\n【待確認項目：下列新舊值皆不是確定現況，須對照正文；不得新增情節替檢查報告補理由】\n'
-            + issues.map(issue => `${issue.category === 'extraction' ? '摘要依據缺漏（不是已確認劇情矛盾）' : '疑似衝突待確認'}：${issue.message}`).join('\n') : '');
+            + issues.map(issue => `${issue.category === 'extraction' ? '摘要依據缺漏（不是已確認劇情矛盾）' : '疑似衝突待確認'}：${issue.message}`).join('\n') : '')
+          + planner.formatChapterNotesGuidance(stored.chapterNotes);
       }
 
       async function refreshStoryStateLedger(storyText, signal, options = {}) {
@@ -1312,7 +1313,8 @@
           previousIssues: previous ? planner.getContinuityIssues(previous.warnings, previous.issues) : [],
           storyText: story,
           chapterCount: countChapters(story),
-          characterCanon: collectCharactersInfo().charactersInfo
+          characterCanon: collectCharactersInfo().charactersInfo,
+          notedChapters: (previous && Array.isArray(previous.chapterNotes) ? previous.chapterNotes : []).map(item => item.chapter)
         });
 
         try {
@@ -1349,6 +1351,7 @@
             state,
             warnings,
             issues,
+            chapterNotes: planner.mergeChapterNotes(previous && previous.chapterNotes, planner.parseChapterNotes(raw, countChapters(story))),
             checkStatus: 'checked'
           }));
           renderContinuityReport(warnings, 'checked', { coverage: getContinuityCoverage(story), issues });
@@ -1372,6 +1375,8 @@
       }
 
       let manualStoryCheck = false;
+      // ② 寫後自檢重寫時，附加在續寫 prompt 的修正指示（只用一次）
+      let chapterRewriteGuidance = '';
 
       async function retryStoryContinuity() {
         if (manualStoryCheck || storyStateController || currentAbortController || seriesRunning || autoContinueRunning) return;
@@ -7643,7 +7648,52 @@ ${shouldGenerateChapterByChapter ? '\n⚠️ 本次僅需創作第1章，後續�
       const AUTO_TRUNCATE_RESUME_MAX = 15;
 
       /** 截斷時自動接續，直到完成或達上限（免手動連點「繼續生成」） */
+      // ② 寫後自檢：本次新寫的正文若有「經原文與人物設定逐字驗證」的衝突，退回本次內容與狀態表，
+      // 帶修正指示重寫一次；重寫後仍衝突就暫停自動續寫，正文保留交給使用者判斷。
       async function doContinueGenerationWithAutoResume(opts = {}) {
+        const baseStory = latestStory;
+        const ledgerBefore = localStorage.getItem(STORY_STATE_STORAGE_KEY);
+        let result = await continueChapterWithResume(opts);
+        if (opts.rewriteAttempt || !result.ok || result.aborted || result.incomplete || userAborted || seriesAborted) return result;
+        if (!latestStory.startsWith(baseStory)) return result;
+        const conflicts = getNewTextConflicts(latestStory.slice(baseStory.length));
+        if (!conflicts.length) return result;
+
+        showStatus('loading', '🔁 新內容與人物設定矛盾，退回並自動重寫一次…');
+        latestStory = baseStory;
+        resultDiv.textContent = latestStory;
+        persistStory(latestStory);
+        updateWordCount(latestStory);
+        parseAndShowChapters(latestStory);
+        try {
+          if (ledgerBefore === null) localStorage.removeItem(STORY_STATE_STORAGE_KEY);
+          else localStorage.setItem(STORY_STATE_STORAGE_KEY, ledgerBefore);
+        } catch (_) {}
+        restoreContinuityReport();
+        chapterRewriteGuidance = '\n\n【重寫本段：上一版違反人物設定，這次必須避免】\n'
+          + conflicts.map(item => `• ${item.character}：${item.issue}（設定：${item.constraint}）`).join('\n')
+          + '\n• 改寫事件經過或人物的選擇，使其符合設定；不得只換說法掩飾同一行為。';
+        try {
+          result = await continueChapterWithResume({ ...opts, rewriteAttempt: true });
+        } finally {
+          chapterRewriteGuidance = '';
+        }
+        if (result.ok && !result.aborted && !result.incomplete && latestStory.startsWith(baseStory)
+            && getNewTextConflicts(latestStory.slice(baseStory.length)).length) {
+          result.incomplete = true;
+          result.conflictUnresolved = true;
+          showStatus('warning', '⚠️ 重寫後仍與人物設定矛盾，已暫停自動續寫；正文已保留，請查看「故事連貫性紀錄」再決定是否繼續');
+        }
+        return result;
+      }
+
+      function getNewTextConflicts(newText) {
+        const stored = readStoryStateLedger();
+        const conflicts = stored && stored.state && Array.isArray(stored.state.characterConflicts) ? stored.state.characterConflicts : [];
+        return newText ? conflicts.filter(item => item && item.evidence && newText.includes(item.evidence)) : [];
+      }
+
+      async function continueChapterWithResume(opts = {}) {
         const maxResume = opts.maxResume ?? AUTO_TRUNCATE_RESUME_MAX;
         const plan = getStoryLengthPlan();
         const targetChapters = parseInt(chaptersInput.value) || 0;
@@ -7932,7 +7982,7 @@ ${truncatedNotice}${storyContext}${settingsReminder}
 ═══════════════════════════════════════
 【續寫指令】
 ═══════════════════════════════════════
-${chapterOutlineGuidance}${storyStateGuidance}${diversityGuidance}
+${chapterOutlineGuidance}${storyStateGuidance}${chapterRewriteGuidance}${diversityGuidance}
 
 創作要求：
 • 如一位資深作家般延續故事，文筆老練、情節流暢
