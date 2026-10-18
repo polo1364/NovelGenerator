@@ -42,22 +42,55 @@
     if (element.textContent !== text) element.textContent = text;
   }
 
+  const isVertical = () => result.classList.contains('vertical-writing');
+
+  // 原稿紙一字一格：英數、空白、破折號、框線、部分符號在字型裡寬度不是一格，各包成一格寬，後面的字才不會錯位。textContent 不變。
+  const HALF_WIDTH = /[\u0020-\u007E\u00A0-\u00FF\u2010-\u2015\u2025\u2500-\u25FF]+/g;
+  const LONG_DASH = /[\u2014\u2015\u2500\u2501]/;        // 畫成貫穿整格的線，「——」才會連成一條
+  const SIDEWAYS = /[\u2010-\u2013\u2025\u2502-\u257F]/; // 直排時跟著轉向，不強制直立
+  function appendText(target, text) {
+    let last = 0;
+    for (const match of text.matchAll(HALF_WIDTH)) {
+      if (match.index > last) target.append(document.createTextNode(text.slice(last, match.index)));
+      for (const ch of match[0]) {
+        const cell = document.createElement('span');
+        cell.className = 'manuscript-hw' + (LONG_DASH.test(ch) ? ' manuscript-dash' : SIDEWAYS.test(ch) ? ' manuscript-sideways' : '');
+        cell.textContent = ch;
+        target.append(cell);
+      }
+      last = match.index + match[0].length;
+    }
+    if (last < text.length) target.append(document.createTextNode(text.slice(last)));
+  }
+
   function activeChapter() {
     const headings = [...result.querySelectorAll('.manuscript-chapter')];
     if (!headings.length) return;
-    const top = viewport.getBoundingClientRect().top + 60;
+    const box = viewport.getBoundingClientRect();
     let active = 0;
-    headings.forEach((heading, i) => { if (heading.getBoundingClientRect().top <= top) active = i; });
+    // 直排由右往左讀：章名的右緣進到視窗右側就算讀到了
+    headings.forEach((heading, i) => {
+      const rect = heading.getBoundingClientRect();
+      if (isVertical() ? rect.right >= box.right - 60 : rect.top <= box.top + 60) active = i;
+    });
     index.querySelectorAll('button').forEach((button, i) => button.setAttribute('aria-current', String(i === active)));
   }
 
   function decorate() {
-    if (result.classList.contains('vertical-writing') || document.body.classList.contains('is-generating')) return;
-    // Speech owns its highlight; a legacy vertical target can be redecorated on return.
+    if (document.body.classList.contains('is-generating')) return;
+    // Speech owns its highlight; a legacy target can be redecorated on return.
     if (result.querySelector('.speaking-segment, .manuscript-chapter')) return;
     const text = result.textContent;
     const valid = chapters.filter(chapter => chapter.fullLine && text.slice(chapter.index, chapter.index + chapter.fullLine.length) === chapter.fullLine);
-    if (!valid.length) return;
+    if (!valid.length) {
+      // 沒有章名也要把半形字包成一格
+      if (!result.querySelector('.manuscript-hw') && text.match(HALF_WIDTH)) {
+        const fragment = document.createDocumentFragment();
+        appendText(fragment, text);
+        result.replaceChildren(fragment);
+      }
+      return;
+    }
     const fragment = document.createDocumentFragment();
     let start = 0;
     valid.forEach((chapter, i) => {
@@ -68,7 +101,7 @@
         bookTitle.textContent = before;
         fragment.append(bookTitle);
       } else {
-        fragment.append(document.createTextNode(before));
+        appendText(fragment, before);
       }
       const heading = document.createElement('span');
       heading.className = 'manuscript-chapter';
@@ -89,10 +122,10 @@
       if (chapterLabel) {
         const label = document.createElement('span');
         label.className = 'manuscript-chapter-label';
-        label.textContent = chapterLabel;
+        appendText(label, chapterLabel);
         heading.append(label);
       }
-      heading.append(document.createTextNode(title.slice(chapterLabel.length)));
+      appendText(heading, title.slice(chapterLabel.length));
       fragment.append(heading);
       start = chapter.index + chapter.fullLine.length;
       const space = text.slice(start).match(/^[\t \r\n]+/)?.[0] || '';
@@ -104,10 +137,10 @@
         start += space.length;
       }
     });
-    fragment.append(document.createTextNode(text.slice(start)));
-    const position = viewport.scrollTop;
+    appendText(fragment, text.slice(start));
+    const position = [viewport.scrollTop, viewport.scrollLeft];
     result.replaceChildren(fragment);
-    viewport.scrollTop = position;
+    [viewport.scrollTop, viewport.scrollLeft] = position;
     activeChapter();
   }
 
@@ -152,7 +185,9 @@
     const heading = result.querySelector(`.manuscript-chapter[data-chapter="${chapterIndex}"]`);
     if (!heading) return false;
     follow.checked = false;
-    viewport.scrollTop += heading.getBoundingClientRect().top - viewport.getBoundingClientRect().top - 24;
+    const rect = heading.getBoundingClientRect(), box = viewport.getBoundingClientRect();
+    if (isVertical()) viewport.scrollLeft += rect.right - box.right + 24;
+    else viewport.scrollTop += rect.top - box.top - 24;
     activeChapter();
     return true;
   }

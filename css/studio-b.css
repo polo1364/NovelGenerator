@@ -340,8 +340,19 @@ body.studio-b #readingScene .output .manuscript-chapter {
   border: 0; color: var(--sb-m1); white-space: pre-wrap;
 }
 body.studio-b #readingScene .output .manuscript-chapter::before,
-body.studio-b #readingScene .output .manuscript-chapter::after,
-body.studio-b #readingScene .output .manuscript-chapter-label { display: none; }
+body.studio-b #readingScene .output .manuscript-chapter::after { display: none; }
+/* 「第1章：」照樣寫在格子裡，跟原文一致 */
+body.studio-b #readingScene .output .manuscript-chapter-label { position: static; max-width: none; font: inherit; letter-spacing: inherit; color: inherit; }
+/* 半形字（英數、空白、框線）每個固定佔一格，字放在格子中間；直排時直立 */
+body.studio-b #readingScene .output .manuscript-hw {
+  display: inline-block; inline-size: 1em; margin-inline-end: .6em; letter-spacing: 0; text-align: center; line-height: 1; text-indent: 0;
+}
+body.studio-b #readingScene .output.vertical-writing .manuscript-hw:not(.manuscript-sideways, .manuscript-dash) { text-orientation: upright; }
+/* 破折號：字本身透明（複製、匯出仍是原字），改畫一條貫穿整格的線 */
+body.studio-b #readingScene .output .manuscript-dash { position: relative; color: transparent; }
+body.studio-b #readingScene .output .manuscript-dash::after {
+  content: ""; position: absolute; inset-inline: -.3em; inset-block-start: calc(50% - .04em); block-size: .08em; background: var(--sb-ink);
+}
 
 /* 直排：同一套格子轉九十度，一行變成一欄，由右往左 */
 body.studio-b #readingScene .output.vertical-writing {
@@ -440,7 +451,7 @@ body.studio-b .mix-spn.s-gilt { background-image: linear-gradient(90deg, rgba(0,
 body.studio-b .mix-spn.s-gilt::before, body.studio-b .mix-spn.s-gilt::after { content: ""; position: absolute; left: 0; right: 0; height: 14px; opacity: .85;
   background: linear-gradient(var(--ac), var(--ac)) 0 0 / 100% 2px no-repeat, linear-gradient(var(--ac), var(--ac)) 0 6px / 100% 1px no-repeat, linear-gradient(var(--ac), var(--ac)) 0 12px / 100% 2px no-repeat; }
 body.studio-b .mix-spn.s-gilt::before { top: 9px; } body.studio-b .mix-spn.s-gilt::after { bottom: 22px; }
-body.studio-b .mix-spn.s-gilt .st { margin: 22px 0 18px; color: var(--ac); }
+body.studio-b .mix-spn.s-gilt .st { margin: 22px 0 18px; color: var(--gilt, var(--ac)); }
 body.studio-b .mix-spn.s-cloth { background-image: repeating-linear-gradient(45deg, rgba(255,255,255,.08) 0 1px, transparent 1px 4px), repeating-linear-gradient(-45deg, rgba(0,0,0,.08) 0 1px, transparent 1px 4px); }
 body.studio-b .mix-spn.s-cloth .mk { width: 18px; height: 18px; background: none; border: 1.5px solid var(--ac); box-shadow: inset 0 0 0 3px var(--bg), inset 0 0 0 9px var(--ac); }
 body.studio-b .mix-spn.s-modern { padding-top: 8px; }

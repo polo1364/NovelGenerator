@@ -40,7 +40,8 @@ def run():
                 assert page.locator('#result').text_content() == STORY
                 page.locator('#manuscriptVertical').click()
                 expect(page.locator('#result')).to_have_class('output vertical-writing')
-                assert page.locator('#result').evaluate('e=>e.firstChild.nodeType===Node.TEXT_NODE')
+                # 直排也顯示章名（與橫排一致），文字內容不變
+                expect(page.locator('#result .manuscript-chapter')).to_have_count(3)
                 assert page.locator('#result').text_content() == STORY
                 page.locator('#manuscriptChapters button').nth(1).click()
                 page.locator('#manuscriptHorizontal').click()

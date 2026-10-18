@@ -5,14 +5,14 @@
 })(typeof globalThis !== 'undefined' ? globalThis : this, function () {
   'use strict';
   const GENRES = [
-    { id: 'ancient', name: '山河藏卷', words: ['長安','江湖','山河','劍','宮','古','朝','江南','chang an'], patterns: ['lines','contours'], colors: ['#304e47','#743a30','#b8a485'] },
-    { id: 'fantasy', name: '幻境典藏', words: ['龍','魔法','精靈','王冠','奇幻','dragon','magic','crown'], patterns: ['crest','botanical'], colors: ['#273d47','#493451','#38514b'] },
-    { id: 'mystery', name: '暗夜檔案', words: ['密室','失蹤','證人','血色','謎','兇','遺書','mystery','witness'], patterns: ['lines','geometry'], colors: ['#282c33','#4f3038','#32464a'] },
-    { id: 'science', name: '未來文庫', words: ['星際','量子','機械','銀河','宇宙','星艦','orbit','space','robot'], patterns: ['stars','geometry'], colors: ['#244350','#384759','#485153'] },
-    { id: 'romance', name: '花信書簡', words: ['戀','花','告白','重逢','love','春天'], patterns: ['botanical','crest'], colors: ['#a7807c','#586449','#8c5862'] },
-    { id: 'adventure', name: '遠行手記', words: ['遠征','荒島','航海','沙漠','冰原','探險','adventure','map'], patterns: ['contours','stars'], colors: ['#786044','#435b53','#85593e'] },
-    { id: 'literature', name: '歲月選集', words: ['故鄉','歲月','詩','記憶','時光','散文','quiet','poem'], patterns: ['lines','botanical'], colors: ['#c9bea3','#899187','#7e5b46'] },
-    { id: 'modern', name: '城市叢書', words: ['城市','都市','人生','公寓','neon','city','dream'], patterns: ['geometry','contours'], colors: ['#b87648','#455b67','#b7b09e'] }
+    { id: 'ancient', name: '山河藏卷', words: ['長安','江湖','山河','劍','宮','古','朝','江南','chang an'], patterns: ['lines','contours'], colors: ['#1e6a55', '#ad2e24', '#e0b55c'] },
+    { id: 'fantasy', name: '幻境典藏', words: ['龍','魔法','精靈','王冠','奇幻','dragon','magic','crown'], patterns: ['crest','botanical'], colors: ['#2b2f8c', '#6e2a96', '#0b7070'] },
+    { id: 'mystery', name: '暗夜檔案', words: ['密室','失蹤','證人','血色','謎','兇','遺書','mystery','witness'], patterns: ['lines','geometry'], colors: ['#1a2133', '#821c35', '#16505a'] },
+    { id: 'science', name: '未來文庫', words: ['星際','量子','機械','銀河','宇宙','星艦','orbit','space','robot'], patterns: ['stars','geometry'], colors: ['#1450b0', '#09657a', '#3a3fb0'] },
+    { id: 'romance', name: '花信書簡', words: ['戀','花','告白','重逢','love','春天'], patterns: ['botanical','crest'], colors: ['#a93158', '#f0a8aa', '#962a63'] },
+    { id: 'adventure', name: '遠行手記', words: ['遠征','荒島','航海','沙漠','冰原','探險','adventure','map'], patterns: ['contours','stars'], colors: ['#a85314', '#2c7340', '#a8381c'] },
+    { id: 'literature', name: '歲月選集', words: ['故鄉','歲月','詩','記憶','時光','散文','quiet','poem'], patterns: ['lines','botanical'], colors: ['#f0e3bd', '#86b796', '#80492a'] },
+    { id: 'modern', name: '城市叢書', words: ['城市','都市','人生','公寓','neon','city','dream'], patterns: ['geometry','contours'], colors: ['#e66b25', '#136284', '#f3d55e'] }
   ];
   const MATERIALS = {
     hardback: ['cloth','paper'], rounded: ['leather','cloth'], flat: ['paper','cloth'],
@@ -22,22 +22,22 @@
   const COMPOSITIONS = ['central','asymmetric','divided','diagonal','framed','allover'];
   // Art directions are independent of book structure/layout; each draws new seeded geometry.
   const STYLES = [
-    {id:'ink',name:'水墨山水',words:['水墨','ink wash'],genres:['ancient','literature'],colors:['#d7cfb6','#bcbba5','#4a5b51']},
-    {id:'woodcut',name:'木刻版畫',words:['木刻','浮世繪','woodcut'],genres:['ancient','adventure'],colors:['#d3b98b','#374c60','#8d4b35']},
-    {id:'deco',name:'裝飾藝術',words:['裝飾藝術','爵士','art deco'],genres:['fantasy','modern','romance'],colors:['#234c43','#303c52','#653a43']},
-    {id:'gothic',name:'哥德藏典',words:['哥德','教堂','gothic'],genres:['fantasy','mystery'],colors:['#33303b','#572c3b','#384139']},
-    {id:'celestial',name:'星象秘典',words:['星象','占星','塔羅','celestial'],genres:['fantasy','science'],colors:['#282c4a','#434059','#24464b']},
-    {id:'cyber',name:'賽博未來',words:['賽博','霓虹','cyberpunk'],genres:['science','modern'],colors:['#202f3a','#33233e','#243c40']},
-    {id:'blueprint',name:'工程藍圖',words:['藍圖','工程','blueprint'],genres:['science','adventure'],colors:['#294a6b','#345c63','#344e59']},
-    {id:'herbarium',name:'植物標本',words:['植物標本','花園','herbarium'],genres:['romance','literature'],colors:['#d3ccb0','#b1b99b','#3b5748']},
-    {id:'collage',name:'紙藝拼貼',words:['拼貼','剪報','collage'],genres:['modern','literature','romance'],colors:['#c9bb9e','#b5987d','#44556a']},
-    {id:'bauhaus',name:'包浩斯',words:['包浩斯','構成主義','bauhaus'],genres:['modern','science'],colors:['#d7c6a6','#b18a68','#48545b']},
-    {id:'minimal',name:'極簡文庫',words:['極簡','留白','minimal'],genres:['literature','modern','mystery'],colors:['#d2ccb9','#aebbb5','#485455']},
-    {id:'ocean',name:'航海圖誌',words:['航海','海圖','nautical'],genres:['adventure','ancient'],colors:['#294e60','#c7b88f','#406663']},
-    {id:'terrazzo',name:'礦石紙紋',words:['水磨石','礦石','terrazzo'],genres:['modern','romance'],colors:['#d1c0a7','#b6bda9','#b29c90']},
-    {id:'manuscript',name:'古籍手稿',words:['手稿','羊皮紙','manuscript'],genres:['ancient','mystery','literature'],colors:['#c7b48e','#b8ab8e','#735345']},
-    {id:'noir',name:'黑色電影',words:['黑色電影','黑幕','noir'],genres:['mystery','modern'],colors:['#30343a','#393f43','#542e37']},
-    {id:'tapestry',name:'織錦花毯',words:['織錦','花毯','tapestry'],genres:['ancient','fantasy','romance'],colors:['#6d3641','#33514b','#574459']}
+    {id:'ink',name:'水墨山水',words:['水墨','ink wash'],genres:['ancient','literature'],colors:['#efe6c8','#cfe0c6','#1e5a48']},
+    {id:'woodcut',name:'木刻版畫',words:['木刻','浮世繪','woodcut'],genres:['ancient','adventure'],colors:['#f0c46a','#1f4f86','#b23a22']},
+    {id:'deco',name:'裝飾藝術',words:['裝飾藝術','爵士','art deco'],genres:['fantasy','modern','romance'],colors:['#0d6b56','#1d3f8f','#93203f']},
+    {id:'gothic',name:'哥德藏典',words:['哥德','教堂','gothic'],genres:['fantasy','mystery'],colors:['#2c1a4a','#7c1430','#16473a']},
+    {id:'celestial',name:'星象秘典',words:['星象','占星','塔羅','celestial'],genres:['fantasy','science'],colors:['#1a237e','#4a2a8c','#0b5d78']},
+    {id:'cyber',name:'賽博未來',words:['賽博','霓虹','cyberpunk'],genres:['science','modern'],colors:['#101b3d','#6b1595','#00727a']},
+    {id:'blueprint',name:'工程藍圖',words:['藍圖','工程','blueprint'],genres:['science','adventure'],colors:['#1556b0','#0b7285','#2459b8']},
+    {id:'herbarium',name:'植物標本',words:['植物標本','花園','herbarium'],genres:['romance','literature'],colors:['#efe8c0','#c5e0a5','#276b40']},
+    {id:'collage',name:'紙藝拼貼',words:['拼貼','剪報','collage'],genres:['modern','literature','romance'],colors:['#f3dcae','#f0a37a','#28508f']},
+    {id:'bauhaus',name:'包浩斯',words:['包浩斯','構成主義','bauhaus'],genres:['modern','science'],colors:['#f5cf4f','#b82a20','#1f4fb3']},
+    {id:'minimal',name:'極簡文庫',words:['極簡','留白','minimal'],genres:['literature','modern','mystery'],colors:['#f4efe2','#bfe3dc','#22384f']},
+    {id:'ocean',name:'航海圖誌',words:['航海','海圖','nautical'],genres:['adventure','ancient'],colors:['#0f5c8c','#f0d898','#086a63']},
+    {id:'terrazzo',name:'礦石紙紋',words:['水磨石','礦石','terrazzo'],genres:['modern','romance'],colors:['#f2dcc2','#cfe3bf','#e8a598']},
+    {id:'manuscript',name:'古籍手稿',words:['手稿','羊皮紙','manuscript'],genres:['ancient','mystery','literature'],colors:['#ecc988','#d8bf8a','#97361c']},
+    {id:'noir',name:'黑色電影',words:['黑色電影','黑幕','noir'],genres:['mystery','modern'],colors:['#191c22','#2a2f3a','#8c1c2c']},
+    {id:'tapestry',name:'織錦花毯',words:['織錦','花毯','tapestry'],genres:['ancient','fantasy','romance'],colors:['#9b1e3c','#156b58','#63308a']}
   ];
   function hash(value) {
     let h = 2166136261;

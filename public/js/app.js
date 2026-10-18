@@ -211,23 +211,30 @@
         resultDiv.style.minWidth = minWidth + 'px';
       }
 
+      /** 直排：手稿第一個／最後一個看得見的字。章名會拆成好幾個節點，隱藏的 Markdown 標記要略過。 */
+      function verticalEdgeRange(atEnd) {
+        if (!resultDiv) return null;
+        const walker = document.createTreeWalker(resultDiv, NodeFilter.SHOW_TEXT, {
+          acceptNode: node => node.data.length && !node.parentElement.closest('.manuscript-markdown')
+            ? NodeFilter.FILTER_ACCEPT : NodeFilter.FILTER_SKIP
+        });
+        let node = walker.nextNode();
+        if (atEnd) for (let next = walker.nextNode(); next; next = walker.nextNode()) node = next;
+        if (!node) return null;
+        const range = document.createRange();
+        range.setStart(node, atEnd ? node.length - 1 : 0);
+        range.setEnd(node, atEnd ? node.length : 1);
+        return range;
+      }
+
       /** 直排串流：用 Range 對齊文字，不依賴 scrollLeft 正負方向（各瀏覽器直排實作不同） */
       function scrollVerticalToTextEdge(preferStart) {
         const scroller = getVerticalScroller();
         if (!scroller || !resultDiv) return;
         const generating = document.body.classList.contains('is-generating');
         syncVerticalLayout(generating);
-        const textNode = resultDiv.firstChild;
-        if (!textNode || textNode.nodeType !== Node.TEXT_NODE || textNode.length === 0) return;
-        const len = textNode.length;
-        const range = document.createRange();
-        if (preferStart) {
-          range.setStart(textNode, 0);
-          range.setEnd(textNode, Math.min(1, len));
-        } else {
-          range.setStart(textNode, Math.max(0, len - 1));
-          range.setEnd(textNode, len);
-        }
+        const range = verticalEdgeRange(!preferStart);
+        if (!range) return;
         const r = range.getBoundingClientRect();
         const v = scroller.getBoundingClientRect();
         if (r.width <= 0 && r.height <= 0) return;
@@ -276,11 +283,8 @@
 
       function isVerticalTextStartInView(scroller) {
         if (!resultDiv || !scroller) return false;
-        const textNode = resultDiv.firstChild;
-        if (!textNode || textNode.nodeType !== Node.TEXT_NODE || textNode.length === 0) return false;
-        const range = document.createRange();
-        range.setStart(textNode, 0);
-        range.setEnd(textNode, Math.min(1, textNode.length));
+        const range = verticalEdgeRange(false);
+        if (!range) return false;
         const r = range.getBoundingClientRect();
         const v = scroller.getBoundingClientRect();
         if (r.width <= 0 && r.height <= 0) return false;
@@ -338,14 +342,11 @@
         if (isVerticalWriting()) {
           const scroller = getVerticalScroller();
           if (!resultDiv || !scroller) return true;
-          const textNode = resultDiv.firstChild;
-          if (!textNode || textNode.nodeType !== Node.TEXT_NODE || textNode.length === 0) return true;
+          const range = verticalEdgeRange(true);
+          if (!range) return true;
           const contentWidth = resultDiv.scrollWidth;
           const viewWidth = scroller.clientWidth;
           if (contentWidth <= viewWidth) return true;
-          const range = document.createRange();
-          range.setStart(textNode, Math.max(0, textNode.length - 1));
-          range.setEnd(textNode, textNode.length);
           const r = range.getBoundingClientRect();
           const v = scroller.getBoundingClientRect();
           return r.left >= v.left - threshold && r.right <= v.right + threshold;
@@ -363,8 +364,7 @@
         if (!scroller || !resultDiv) return false;
         const streaming = forStream || document.body.classList.contains('is-generating');
         syncVerticalLayout(streaming);
-        const textNode = resultDiv.firstChild;
-        if (textNode && textNode.nodeType === Node.TEXT_NODE && textNode.length > 0) {
+        if (verticalEdgeRange(false)) {
           scrollVerticalToTextEdge(true);
           return true;
         }
@@ -9959,6 +9959,15 @@ ${continueWordReq}
       const MIX_SPINE_STYLES = ['label', 'gilt', 'cloth', 'modern', 'band', 'paper'];
       const MIX_DECO = ['potted_plant', 'hourglass_empty', 'nest_eco_leaf', 'emoji_objects'];
 
+      // 燙金字：金色跟書脊底色對比夠（≥4.5）才用，不然用書名字色，淺色書脊上的字才讀得到
+      function shelfGiltInk(design) {
+        const lum = hex => hex.slice(1).match(/../g).map(v => parseInt(v, 16) / 255)
+          .map(v => v <= .04045 ? v / 12.92 : ((v + .055) / 1.055) ** 2.4)
+          .reduce((sum, v, i) => sum + v * [.2126, .7152, .0722][i], 0);
+        const a = lum(design.accent), b = lum(design.color);
+        return (Math.max(a, b) + .05) / (Math.min(a, b) + .05) >= 4.5 ? design.accent : design.ink;
+      }
+
       function renderMixedShelf(body, books, available) {
         const esc = typeof escapeHtml === 'function' ? escapeHtml : (s => String(s).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c])));
         let a = shelfMixSeed >>> 0;
@@ -9985,7 +9994,7 @@ ${continueWordReq}
             const label = isSeries ? (v.label || (typeof getVolumeLabel === 'function' ? getVolumeLabel(i, total) : `第 ${i + 1} 集`)) : '';
             const ribbon = isSeries ? i === 0 : hash(bm.id + 7, 4) === 0;
             const out = !isSeries && hash(bm.id + i, 7) === 0;
-            return [w + 3, `<button type="button" class="mix-spn s-${style}${out ? ' out' : ''}" data-book-id="${bm.id}" title="${esc(name)}${label ? '・' + esc(label) : ''}" style="width:${w}px;height:${h}px;background-color:${design.color};color:${design.ink};--fg:${design.ink};--bg:${design.color};--ac:${design.accent}">`
+            return [w + 3, `<button type="button" class="mix-spn s-${style}${out ? ' out' : ''}" data-book-id="${bm.id}" title="${esc(name)}${label ? '・' + esc(label) : ''}" style="width:${w}px;height:${h}px;background-color:${design.color};color:${design.ink};--fg:${design.ink};--bg:${design.color};--ac:${design.accent};--gilt:${shelfGiltInk(design)}">`
               + (ribbon ? `<span class="rib" style="left:${30 + hash(bm.id, 3) * 15}%"></span>` : '')
               + (style === 'modern' ? `<span class="ini">${esc(name.slice(0, 1))}</span>` : '')
               + `<span class="st" style="font-size:${spineFont(name, h)}px">${esc(name)}</span>`
@@ -11590,7 +11599,6 @@ ${continueWordReq}
 
       function setWritingMode(mode) {
         const vertical = mode === 'vertical';
-        if (vertical) window.ManuscriptWorkspace?.plainText();
         resultDiv.classList.toggle('vertical-writing', vertical);
         if (outputWrap) {
           outputWrap.classList.toggle('vertical-scroll', vertical);
