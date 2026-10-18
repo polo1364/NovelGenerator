@@ -250,6 +250,8 @@ body.studio-b .settings-toggle {
   display: grid !important; place-items: center; grid-template-columns: 1fr; color: var(--sb-gold); padding: 0;
 }
 body.studio-b .bookmark-nav-toggle .text-char, body.studio-b .settings-toggle .text-char { display: none; }
+/* 文字標籤隱藏後只剩圖示：原本兩列的格線改成單格，圖示才會上下置中 */
+body.studio-b .floating-toolbar .toolbar-btn, body.studio-b #bookmarkNavToggle, body.studio-b #settingsToggle { grid-template: 1fr / 1fr !important; place-items: center; }
 body.studio-b .bookmark-nav-toggle > .sb-ic, body.studio-b .settings-toggle > .sb-ic { grid-area: 1 / 1; font-size: 24px; }
 body.studio-b .settings-toggle > .sb-ic { color: var(--sb-hbfg); }
 body.studio-b .bookmark-nav-toggle .badge { background: var(--sb-m4); color: #fff; }
@@ -299,38 +301,42 @@ body.studio-b #readingScene .manuscript-footer-actions #manuscriptContinue:not(:
 /* ---------- 原稿紙：每個字落在一格 ----------
  * 照原型：格子邊長 1.6em，字置中，格子四周各留 0.3em。
  * letter-spacing .6em 讓每個字前進 1.6em；格線往左（直排往上）退 0.3em，字就落在格子正中。
- * 行距 2.1em：格子 1.6em，上下各 0.25em 是行與行之間的空白。
+ * 行距約 2.1em（取整數 px，見 --lh）：格子 1.6em，上下各留一半空白。
  * 內容寬度修成 1.6em 的整數倍，最後一格才會完整。 */
 body.studio-b #readingScene .output:not(.vertical-writing) {
   --g: var(--sb-grid); --pp: var(--sb-paper);
-  line-height: 2.1 !important; letter-spacing: .6em !important; text-align: left !important; font-feature-settings: "fwid";
+  /* 行距取整數 px：瀏覽器以 1/64px 存行高，44.1px 這種值每行會少一點點，長篇累積下來字會偏出格子 */
+  --lh: round(nearest, 2.1em, 1px); --gap: calc((var(--lh) - 1.6em) / 2);
+  line-height: var(--lh) !important; letter-spacing: .6em !important; text-align: left !important; font-feature-settings: "fwid";
   color: var(--sb-ink); background-color: var(--pp);
   padding: 28px 28px 64px;
   padding-left: calc(28px + .3em);
   padding-right: calc(100% - 28px - .3em - round(down, 100% - 56px - .6em, 1.6em));
   /* 空白時也鋪滿整個稿紙視窗；高度一定是整行，格子不會被切半 */
-  min-height: calc(92px + round(down, 100% - 92px, 2.1em));
-  /* 格子用一格一格重複鋪的圖層（比 repeating-gradient 穩，不會掉線）；鋪出 padding 的部分用紙色蓋掉 */
+  min-height: calc(92px + round(down, 100% - 92px, var(--lh)));
+  /* 每種格線都是「一整張」不重複鋪的 repeating-gradient：
+   * 重複鋪小圖塊時，瀏覽器會把圖塊對齊到實體像素，Windows 縮放 125%／150% 時線會消失、越往後越偏。
+   * 鋪出 padding 的部分用紙色蓋掉。 */
   background-image:
     linear-gradient(var(--pp), var(--pp)),
     linear-gradient(var(--pp), var(--pp)),
     linear-gradient(var(--pp), var(--pp)),
     linear-gradient(var(--pp), var(--pp)),
-    linear-gradient(to bottom, transparent .25em, var(--g) .25em calc(.25em + 1px), transparent calc(.25em + 1px) calc(1.85em - 1px), var(--g) calc(1.85em - 1px) 1.85em, transparent 1.85em),
-    linear-gradient(to bottom, var(--pp) .25em, transparent .25em 1.85em, var(--pp) 1.85em),
-    linear-gradient(to right, var(--g) 0 1px, transparent 1px);
+    repeating-linear-gradient(to bottom, transparent 0 var(--gap), var(--g) var(--gap) calc(var(--gap) + 1px), transparent calc(var(--gap) + 1px) calc(calc(var(--gap) + 1.6em) - 1px), var(--g) calc(calc(var(--gap) + 1.6em) - 1px) calc(var(--gap) + 1.6em), transparent calc(var(--gap) + 1.6em) var(--lh)),
+    repeating-linear-gradient(to bottom, var(--pp) 0 var(--gap), transparent var(--gap) calc(var(--gap) + 1.6em), var(--pp) calc(var(--gap) + 1.6em) var(--lh)),
+    repeating-linear-gradient(to right, var(--g) 0 1px, transparent 1px 1.6em);
   background-origin: padding-box, padding-box, padding-box, padding-box, content-box, content-box, content-box;
   background-clip: padding-box;
-  background-size: 28px 100%, calc(100% - 28px - round(down, 100% - 56px - .6em, 1.6em) - 1px) 100%, 100% 28px, 100% 64px, 100% 2.1em, 100% 2.1em, 1.6em 100%;
+  background-size: 28px 100%, calc(100% - 28px - round(down, 100% - 56px - .6em, 1.6em) - 1px) 100%, 100% 28px, 100% 64px, calc(100% + 1px) 100%, calc(100% + 1px) 100%, calc(100% + 1px) 100%;
   background-position: left 0 top 0, right 0 top 0, left 0 top 0, left 0 bottom 0, -.3em 0, -.3em 0, -.3em 0;
-  background-repeat: no-repeat, no-repeat, no-repeat, no-repeat, repeat, repeat, repeat;
+  background-repeat: no-repeat;
 }
 body.studio-b #readingScene .output:not(.vertical-writing):empty::before {
-  font: 400 1em/2.1 var(--sb-serif); letter-spacing: .6em; color: var(--sb-faint); padding: 0; white-space: pre-line;
+  font: 400 1em/var(--lh) var(--sb-serif); letter-spacing: .6em; color: var(--sb-faint); padding: 0; white-space: pre-line;
 }
 /* 章名也要對齊格子：同字級、上下各空一行 */
 body.studio-b #readingScene .output .manuscript-chapter {
-  display: block; min-height: 0; margin: 0; padding: 2.1em 0; font: 700 1em/2.1 var(--sb-serif); letter-spacing: .6em;
+  display: block; min-height: 0; margin: 0; padding: var(--lh) 0; font: 700 1em/var(--lh) var(--sb-serif); letter-spacing: .6em;
   border: 0; color: var(--sb-m1); white-space: pre-wrap;
 }
 body.studio-b #readingScene .output .manuscript-chapter::before,
@@ -340,7 +346,9 @@ body.studio-b #readingScene .output .manuscript-chapter-label { display: none; }
 /* 直排：同一套格子轉九十度，一行變成一欄，由右往左 */
 body.studio-b #readingScene .output.vertical-writing {
   --g: var(--sb-grid); --pp: var(--sb-paper);
-  line-height: 2.1 !important; letter-spacing: .6em !important; font-feature-settings: "fwid"; color: var(--sb-ink); background-color: var(--pp);
+  /* 行距取整數 px：瀏覽器以 1/64px 存行高，44.1px 這種值每行會少一點點，長篇累積下來字會偏出格子 */
+  --lh: round(nearest, 2.1em, 1px); --gap: calc((var(--lh) - 1.6em) / 2);
+  line-height: var(--lh) !important; letter-spacing: .6em !important; font-feature-settings: "fwid"; color: var(--sb-ink); background-color: var(--pp);
   /* 高度修成整格：上 28px+.3em、下 28px-.3em，中間剛好 N 格 */
   padding: 28px; padding-top: calc(28px + .3em); padding-bottom: calc(28px - .3em);
   /* app.js 會在行內把 height 設成視窗高度，這裡蓋過去改成整格（min-width 生成中要貼合文字，不動） */
@@ -350,16 +358,16 @@ body.studio-b #readingScene .output.vertical-writing {
     linear-gradient(var(--pp), var(--pp)),
     linear-gradient(var(--pp), var(--pp)),
     linear-gradient(var(--pp), var(--pp)),
-    linear-gradient(to left, transparent .25em, var(--g) .25em calc(.25em + 1px), transparent calc(.25em + 1px) calc(1.85em - 1px), var(--g) calc(1.85em - 1px) 1.85em, transparent 1.85em),
-    linear-gradient(to left, var(--pp) .25em, transparent .25em 1.85em, var(--pp) 1.85em),
-    linear-gradient(to bottom, var(--g) 0 1px, transparent 1px);
+    repeating-linear-gradient(to left, transparent 0 var(--gap), var(--g) var(--gap) calc(var(--gap) + 1px), transparent calc(var(--gap) + 1px) calc(calc(var(--gap) + 1.6em) - 1px), var(--g) calc(calc(var(--gap) + 1.6em) - 1px) calc(var(--gap) + 1.6em), transparent calc(var(--gap) + 1.6em) var(--lh)),
+    repeating-linear-gradient(to left, var(--pp) 0 var(--gap), transparent var(--gap) calc(var(--gap) + 1.6em), var(--pp) calc(var(--gap) + 1.6em) var(--lh)),
+    repeating-linear-gradient(to bottom, var(--g) 0 1px, transparent 1px 1.6em);
   background-origin: padding-box, padding-box, padding-box, padding-box, content-box, content-box, content-box;
   background-clip: padding-box;
-  background-size: 100% 28px, 100% 27px, 28px 100%, 28px 100%, 2.1em 100%, 2.1em 100%, 100% 1.6em;
+  background-size: 100% 28px, 100% 27px, 28px 100%, 28px 100%, 100% calc(100% + 1px), 100% calc(100% + 1px), 100% calc(100% + 1px);
   background-position: left 0 top 0, left 0 bottom 0, left 0 top 0, right 0 top 0, right 0 top -.3em, right 0 top -.3em, left 0 top -.3em;
-  background-repeat: no-repeat, no-repeat, no-repeat, no-repeat, repeat, repeat, repeat;
+  background-repeat: no-repeat;
 }
-body.studio-b #readingScene .output.vertical-writing .manuscript-chapter { padding: 0 2.1em; }
+body.studio-b #readingScene .output.vertical-writing .manuscript-chapter { padding: 0 var(--lh); }
 
 :root[data-theme="dark"] body.studio-b #readingScene .reading-scene-bg { opacity: .1; }
 
@@ -552,7 +560,7 @@ body.studio-b #stepSetup .outline-attach-actions .btn-small { flex: 1 1 0; width
 
 /* 直排空白提示：跟正文同字級、直書、落在格子裡 */
 body.studio-b #readingScene .output.vertical-writing:empty::before {
-  font: 400 1em/2.1 var(--sb-serif); letter-spacing: .6em; color: var(--sb-faint); padding: 0; margin: 0;
+  font: 400 1em/var(--lh) var(--sb-serif); letter-spacing: .6em; color: var(--sb-faint); padding: 0; margin: 0;
   writing-mode: vertical-rl; white-space: pre-line; display: block; text-shadow: none;
 }
 
@@ -659,6 +667,12 @@ body.studio-b #stepSetup .editorial-module .wsl-sub { grid-column: 1 / -1; margi
   body.studio-b .bookmark-nav-toggle { border-top: 1px solid rgba(255,255,255,.12) !important; }
   body.studio-b .settings-toggle { border-top: 1px solid rgba(255,255,255,.12) !important; }
   body.studio-b #dockToggle { top: 732px; right: 24px; }
+  /* 三段要接成一條：工具列高度固定剛好接到書架鈕；書架鈕、設定鈕往上多鋪一點深藍，字型或縮放造成的 1～2px 縫也不會露白 */
+  body.studio-b .floating-toolbar { height: 335px; }
+  body.studio-b #bookmarkNavToggle { box-shadow: 0 -6px 0 var(--sb-hb); overflow: visible; }
+  body.studio-b #settingsToggle { box-shadow: 0 -6px 0 var(--sb-hb), 0 14px 28px -16px rgba(0,0,0,.5); }
+  /* 書籤數量徽章收進按鈕內，不再被裁掉 */
+  body.studio-b .bookmark-nav-toggle .badge { top: 6px; right: 6px; }
 }
 body.studio-b .container .desk-scene { overflow: visible; }
 body.studio-b .container > header .pipeline-header { background: var(--sb-hb); }
