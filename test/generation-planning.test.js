@@ -232,7 +232,7 @@ test('工作坊依序載入規劃模組並快取到新版離線殼層', () => {
   const sw = fs.readFileSync(path.join(__dirname, '..', 'public', 'sw.js'), 'utf8');
 
   assert.match(html, /generation-planning\.js[\s\S]*app\.js/);
-  assert.match(sw, /const CACHE_VERSION\s*=\s*'v112'/);
+  assert.match(sw, /const CACHE_VERSION\s*=\s*'v113'/);
   assert.match(sw, /\.\/js\/generation-planning\.js/);
 });
 
@@ -260,7 +260,8 @@ test('完成章節後以 Flash 更新狀態表並在下一次續寫注入', () =
   assert.match(app, /const STORY_STATE_STORAGE_KEY\s*=\s*'novelStoryStateLedger'/);
   assert.match(app, /taskType:\s*'state'/);
   assert.match(app, /maxTokens:\s*3000/);
-  assert.match(app, /getStoryStateGuidance\(latestStory\)/);
+  assert.match(app, /getStoryStateGuidance\(latestStory, relevantText\)/);
+  assert.match(app, /getPriorTextGuidance\(latestStory, latestStory\.length - storyContext\.length, relevantText\)/);
   assert.match(app, /\$\{storyStateGuidance\}/);
   assert.match(app, /await refreshStoryStateLedger\(latestStory, signal\)/);
 });
@@ -481,4 +482,86 @@ test('全書因果審查：面板按鈕、忙碌檢查、費用確認並把章�
   assert.match(app, /outline: getAuditOutline\(\)/);
   assert.match(app, /priorFacts: facts/);
   assert.match(app, /function beginGeneration\(\) \{[\s\S]*?causalAuditController\.abort\(\)/);
+});
+
+// 以下測試資料取自《霜啼輪迴》實際出現的生成錯誤。
+test('前文原文檢索：視窗外舊章節的首次與最近出現原句會帶入續寫', () => {
+  const story = [
+    '第1章：冗餘資料', '他用拇指按住周硯白的徽章。讀取開始。周硯白當時在說話。',
+    '第3章：靜止領域', '「第五輪迴的錨點是一名普通班學生，代號『燈芯』。」第三輪迴在西翼第三訓練場。',
+    '第6章：龍鱗', '燈芯的感應半徑三十公尺。',
+    '第7章：核心', '最近章節的正文，燈芯不在這裡被提到也沒關係。'
+  ].join('\n');
+  const windowStart = story.indexOf('第7章');
+  const text = planning.buildPriorTextExcerpts({ storyText: story, windowStart, terms: ['燈芯', '周硯白', '不存在的名字'] });
+  assert.match(text, /【前文相關原文/);
+  assert.match(text, /第\d+章｜燈芯：「「第五輪迴的錨點是一名普通班學生，代號『燈芯』。」/);
+  assert.match(text, /燈芯：「燈芯的感應半徑三十公尺。」/, '同時帶入最近一次出現');
+  assert.match(text, /周硯白：「他用拇指按住周硯白的徽章。」/);
+  assert.match(text, /「第一次」/);
+  assert.doesNotMatch(text, /最近章節的正文/, '視窗內的章節不重複帶入');
+  assert.equal(planning.buildPriorTextExcerpts({ storyText: story, windowStart: 0, terms: ['燈芯'] }), '');
+  const tight = planning.buildPriorTextExcerpts({ storyText: story, windowStart, terms: ['燈芯', '周硯白'], budget: 40 });
+  assert.ok(tight.split('\n').filter(line => line.startsWith('第')).length === 1, tight);
+
+  assert.deepEqual(planning.selectRelevantTerms(['燈芯', '燈芯', '周硯白', '甲', '敖宸'], '本章大綱：燈芯與敖宸'), ['燈芯', '敖宸']);
+});
+
+test('全書設定詞典：新條目要有原文依據，人稱改變視為衝突，只帶入本章相關條目', () => {
+  const ch4 = '蘇晚照的筆停了。她抬起頭。蘇晚照把紙片放在桌面上，指尖按住陣圖中央。';
+  const parsed = planning.parseStoryBible(JSON.stringify({
+    bible: [
+      { name: '蘇晚照', kind: 'character', pronoun: '她', traits: '報社編輯，會用契約逼人說實話', firstChapter: 4, evidence: '蘇晚照的筆停了。' },
+      { name: '捏造者', kind: 'character', pronoun: '他', traits: '不存在', firstChapter: 4, evidence: '正文裡沒有這句' },
+      { name: '第三輪迴', kind: 'place', traits: '西翼第三訓練場', firstChapter: 1, evidence: '指尖按住陣圖中央' }
+    ],
+    bibleConflicts: [{ name: '第三輪迴', fixed: '西翼', issue: '地點改成東翼', evidence: '第三輪迴東翼出口' }]
+  }));
+  let { bible, conflicts } = planning.mergeStoryBible([], parsed.entries, ch4);
+  assert.deepEqual(bible.map(item => item.name), ['蘇晚照', '第三輪迴']);
+  assert.equal(conflicts.length, 0);
+
+  const ch7 = '如果蘇晚照還活著，他會設法把護目鏡送到沈硯舟手裡。';
+  ({ bible, conflicts } = planning.mergeStoryBible(bible, [{ name: '蘇晚照', kind: 'character', pronoun: '他', traits: '報社編輯', evidence: '他會設法把護目鏡送到' }], ch4 + ch7, ch7));
+  assert.equal(bible[0].pronoun, '她', '人稱不被悄悄覆寫');
+  assert.deepEqual(conflicts.map(item => item.name), ['蘇晚照']);
+  assert.match(conflicts[0].issue, /「她」變成「他」/);
+
+  const ch9 = '溫敘在第三輪迴東翼出口被刪除。';
+  const verified = planning.verifyBibleConflicts(bible, [
+    { name: '第三輪迴', fixed: '西翼', issue: '地點由西翼變成東翼', evidence: '第三輪迴東翼出口' },
+    { name: '第三輪迴', fixed: '北翼', issue: '詞典沒有這個片段', evidence: '第三輪迴東翼出口' },
+    { name: '第三輪迴', fixed: '西翼', issue: '新正文沒有這句', evidence: '捏造的新正文' },
+    { name: '不存在', fixed: '西翼', issue: '詞典沒有這一項', evidence: '第三輪迴東翼出口' }
+  ], ch9);
+  assert.deepEqual(verified.map(item => item.issue), ['地點由西翼變成東翼']);
+
+  const guidance = planning.formatStoryBibleGuidance(bible, '本章：蘇晚照去了檔案室');
+  assert.match(guidance, /蘇晚照（角色，她）：報社編輯，會用契約逼人說實話（第4章登場）/);
+  assert.doesNotMatch(guidance, /第三輪迴/, '本章沒出現的條目不帶入');
+  assert.equal(planning.formatStoryBibleGuidance(bible, '無關'), '');
+
+  const prompt = planning.buildStoryStatePrompt({ storyText: '正文', chapterCount: 4, previousBible: bible });
+  assert.match(prompt, /【全書設定詞典（上一版，固定屬性）】\n\[\{"name":"蘇晚照"/);
+  assert.match(prompt, /"bibleConflicts"/);
+});
+
+test('狀態表：物件持有人不會被大量登場人物擠掉', () => {
+  const quote = i => `第${i}位角色的原文依據`;
+  const records = [{ entity: '周硯白的徽章', kind: 'item', holder: '沈硯舟', evidence: '徽章收進了胸前的口袋' },
+    ...Array.from({ length: 40 }, (_, i) => ({ entity: `角色${i}`, kind: 'character', location: '學院', evidence: quote(i) }))];
+  const text = ['徽章收進了胸前的口袋', ...Array.from({ length: 40 }, (_, i) => quote(i))].join('。');
+  const { state } = planning.checkStoryContinuity(null, { entities: records }, text, text);
+  assert.ok(state.entities.some(item => item.entity === '周硯白的徽章'));
+});
+
+test('寫後機械檢查：常見簡體字轉繁體，偵測同段落的重複殘片', () => {
+  assert.equal(planning.fixSimplifiedChinese('眼神裡有某种放弃的平静'), '眼神裡有某種放棄的平靜');
+  assert.equal(planning.fixSimplifiedChinese('皇后在里長家門口'), '皇后在里長家門口', '繁體常用字不誤轉');
+
+  const glitch = '他抓住葉知寒的肩膀，讀取能力自動觸發。葉知寒的記憶湧入，比以往任何一次都他抓住葉知寒的肩膀，讀取能力自動觸發的瞬間，記憶湧入的速度更猛烈。';
+  const found = planning.findGenerationGlitches(glitch);
+  assert.equal(found.length, 1);
+  assert.match(found[0].snippet, /他抓住葉知寒的肩膀/);
+  assert.deepEqual(planning.findGenerationGlitches('他記得。他記得。\n像一條被點亮的河流。\n像一條被點亮的河流。'), [], '短句反覆與跨段落重複不算殘片');
 });

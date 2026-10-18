@@ -1201,6 +1201,10 @@
         else if (status === 'checked') panel.textContent = '未發現規則衝突：僅檢查已擷取狀態與原文依據，不代表全文保證無矛盾。';
         else if (status === 'checking') panel.textContent = '檢查中：正在整理本章狀態與原文依據。';
         else panel.textContent = '尚未檢查：完成章節後會整理故事狀態。';
+        if (status === 'checked' && Array.isArray(details.textIssues) && details.textIssues.length) {
+          panel.textContent += '\n\n疑似生成殘片（同一段落內短距離重複，正文未修改，請人工確認）：\n'
+            + details.textIssues.map(item => '• …' + item.snippet + '…').join('\n');
+        }
         if (details.coverage) panel.textContent += '\n' + details.coverage;
       }
 
@@ -1246,7 +1250,7 @@
         const matches = stored && stored.sourceFingerprint === globalThis.NovelGenerationPlanning.createStoryFingerprint(latestStory.trim());
         renderContinuityReport(matches && Array.isArray(stored.warnings) ? stored.warnings : [],
           matches ? stored.checkStatus || (stored.version >= 2 ? 'checked' : 'unchecked') : 'unchecked',
-          { coverage: getContinuityCoverage(latestStory, stored), issues: matches ? stored.issues : [] });
+          { coverage: getContinuityCoverage(latestStory, stored), issues: matches ? stored.issues : [], textIssues: matches ? stored.textIssues : [] });
         const audit = stored && stored.causalAudit;
         renderCausalAudit(audit && audit.sourceFingerprint === globalThis.NovelGenerationPlanning.createStoryFingerprint(latestStory.trim()) ? audit : null);
       }
@@ -1260,25 +1264,44 @@
         renderContinuityReport();
       }
 
-      function getStoryStateGuidance(storyText) {
+      // 與 refreshStoryStateLedger 相同：正文只是在已整理內容後追加（截斷接續、整理失敗後續寫）時，
+      // 上一版狀態仍適用，不應整份丟掉。
+      function readApplicableLedger(storyText) {
         const planner = globalThis.NovelGenerationPlanning;
-        if (!planner || typeof planner.createStoryFingerprint !== 'function') return '';
+        if (!planner || typeof planner.createStoryFingerprint !== 'function') return null;
         const stored = readStoryStateLedger();
-        if (!stored) return '';
-        // 與 refreshStoryStateLedger 相同：正文只是在已整理內容後追加（截斷接續、整理失敗後續寫）時，
-        // 上一版狀態仍適用，不應整份丟掉。
+        if (!stored) return null;
         const text = String(storyText || '');
         const storedLength = stored.sourceLength || Number(String(stored.sourceFingerprint || '').split(':')[0]);
         const applies = stored.sourceFingerprint === planner.createStoryFingerprint(text) ||
           (Number.isInteger(storedLength) && storedLength > 0 && storedLength <= text.length &&
            planner.createStoryFingerprint(text.slice(0, storedLength)) === stored.sourceFingerprint);
-        if (!applies) return '';
+        return applies ? stored : null;
+      }
+
+      // relevantText：本章大綱與最近正文；全書設定詞典只帶入其中出現的條目。
+      function getStoryStateGuidance(storyText, relevantText = '') {
+        const planner = globalThis.NovelGenerationPlanning;
+        const stored = readApplicableLedger(storyText);
+        if (!stored) return '';
         const warnings = Array.isArray(stored.warnings) ? stored.warnings : [];
         const issues = planner.getContinuityIssues(warnings, stored.issues);
         return planner.formatStoryStateGuidance(stored.state, { issues }) + (issues.length
           ? '\n【待確認項目：下列新舊值皆不是確定現況，須對照正文；不得新增情節替檢查報告補理由】\n'
             + issues.map(issue => `${issue.category === 'extraction' ? '摘要依據缺漏（不是已確認劇情矛盾）' : '疑似衝突待確認'}：${issue.message}`).join('\n') : '')
-          + planner.formatChapterNotesGuidance(stored.chapterNotes);
+          + planner.formatChapterNotesGuidance(stored.chapterNotes)
+          + (relevantText ? planner.formatStoryBibleGuidance(stored.bible, relevantText) : '');
+      }
+
+      // 前文原文檢索：續寫只帶最近幾章原文，本章相關名詞在更早章節的原句另外摘錄帶入（不花 API）。
+      function getPriorTextGuidance(storyText, windowStart, relevantText) {
+        const planner = globalThis.NovelGenerationPlanning;
+        if (!planner || typeof planner.buildPriorTextExcerpts !== 'function' || windowStart <= 0) return '';
+        const stored = readApplicableLedger(storyText);
+        const bibleNames = stored && Array.isArray(stored.bible) ? stored.bible.map(item => item && item.name) : [];
+        const canonNames = [...String(collectCharactersInfo().charactersInfo || '').matchAll(/【([^】]+)】/g)].map(match => match[1]);
+        const terms = planner.selectRelevantTerms([...canonNames, ...bibleNames], relevantText);
+        return planner.buildPriorTextExcerpts({ storyText, windowStart, terms });
       }
 
       async function refreshStoryStateLedger(storyText, signal, options = {}) {
@@ -1319,7 +1342,8 @@
           storyText: story,
           chapterCount: countChapters(story),
           characterCanon: collectCharactersInfo().charactersInfo,
-          notedChapters: (previous && Array.isArray(previous.chapterNotes) ? previous.chapterNotes : []).map(item => item.chapter)
+          notedChapters: (previous && Array.isArray(previous.chapterNotes) ? previous.chapterNotes : []).map(item => item.chapter),
+          previousBible: previous && previous.bible
         });
 
         try {
@@ -1346,6 +1370,18 @@
           const { state, warnings, issues } = planner.checkStoryContinuity(previous && previous.state, proposed, story,
             story.slice(analysisStart), collectCharactersInfo().charactersInfo,
             previous ? planner.getContinuityIssues(previous.warnings, previous.issues) : []);
+          // 全書設定詞典：合併新條目，固定屬性被新正文推翻時（逐字引句驗證）列為衝突，供寫後自檢重寫。
+          const addedText = story.slice(analysisStart);
+          const parsedBible = planner.parseStoryBible(raw);
+          const mergedBible = planner.mergeStoryBible(previous && previous.bible, parsedBible.entries, story, addedText);
+          const bibleConflicts = [...mergedBible.conflicts,
+            ...planner.verifyBibleConflicts(previous && previous.bible, parsedBible.conflicts, addedText)];
+          for (const item of bibleConflicts) {
+            const message = `${item.name}：疑似推翻全書設定 — ${item.issue}（設定：${item.fixed}；原文：${item.evidence}）`;
+            warnings.push(message);
+            issues.push({ category: 'conflict', code: 'bible_conflict', table: 'bible', entity: item.name, message });
+          }
+          const textIssues = planner.findGenerationGlitches(addedText);
           localStorage.setItem(STORY_STATE_STORAGE_KEY, JSON.stringify({
             version: 2,
             sourceLength: story.length,
@@ -1357,9 +1393,12 @@
             warnings,
             issues,
             chapterNotes: planner.mergeChapterNotes(previous && previous.chapterNotes, planner.parseChapterNotes(raw, countChapters(story))),
+            bible: mergedBible.bible,
+            bibleConflicts,
+            textIssues,
             checkStatus: 'checked'
           }));
-          renderContinuityReport(warnings, 'checked', { coverage: getContinuityCoverage(story), issues });
+          renderContinuityReport(warnings, 'checked', { coverage: getContinuityCoverage(story), issues, textIssues });
           if (!options.standalone) setGenerationStage('done');
           return state;
         } catch (err) {
@@ -7617,7 +7656,7 @@ ${shouldGenerateChapterByChapter ? '\n⚠️ 本次僅需創作第1章，後續�
           wasTruncated = shouldAutoResumeSegment(finishReasonMeta, story, lengthPlan, { isAlreadyComplete: false });
           
           if (story) {
-            latestStory = story.trim();
+            latestStory = globalThis.NovelGenerationPlanning.fixSimplifiedChinese(story.trim());
             resultDiv.textContent = latestStory;
             setStoryResumePending(latestStory, wasTruncated);
             
@@ -7823,7 +7862,7 @@ ${shouldGenerateChapterByChapter ? '\n⚠️ 本次僅需創作第1章，後續�
           else localStorage.setItem(STORY_STATE_STORAGE_KEY, ledgerBefore);
         } catch (_) {}
         restoreContinuityReport();
-        chapterRewriteGuidance = '\n\n【重寫本段：上一版違反人物設定，這次必須避免】\n'
+        chapterRewriteGuidance = '\n\n【重寫本段：上一版違反人物設定或全書設定，這次必須避免】\n'
           + conflicts.map(item => `• ${item.character}：${item.issue}（設定：${item.constraint}）`).join('\n')
           + '\n• 改寫事件經過或人物的選擇，使其符合設定；不得只換說法掩飾同一行為。';
         try {
@@ -7843,7 +7882,10 @@ ${shouldGenerateChapterByChapter ? '\n⚠️ 本次僅需創作第1章，後續�
       function getNewTextConflicts(newText) {
         const stored = readStoryStateLedger();
         const conflicts = stored && stored.state && Array.isArray(stored.state.characterConflicts) ? stored.state.characterConflicts : [];
-        return newText ? conflicts.filter(item => item && item.evidence && newText.includes(item.evidence)) : [];
+        // 全書設定詞典的固定屬性衝突（人稱、身分、所屬、固定地點）也走同一條退回重寫流程。
+        const bibleConflicts = stored && Array.isArray(stored.bibleConflicts)
+          ? stored.bibleConflicts.map(item => ({ character: item.name, issue: item.issue, constraint: item.fixed, evidence: item.evidence })) : [];
+        return newText ? [...conflicts, ...bibleConflicts].filter(item => item && item.evidence && newText.includes(item.evidence)) : [];
       }
 
       async function continueChapterWithResume(opts = {}) {
@@ -8099,7 +8141,9 @@ ${shouldGenerateChapterByChapter ? '\n⚠️ 本次僅需創作第1章，後續�
           && typeof globalThis.NovelGenerationPlanning.buildChapterOutlineGuidance === 'function'
           ? globalThis.NovelGenerationPlanning.buildChapterOutlineGuidance(activeOutline, continuationChapterNumber)
           : '';
-        const storyStateGuidance = getStoryStateGuidance(latestStory);
+        const relevantText = chapterOutlineGuidance + '\n' + storyContext.slice(-6000);
+        const storyStateGuidance = getStoryStateGuidance(latestStory, relevantText)
+          + getPriorTextGuidance(latestStory, latestStory.length - storyContext.length, relevantText);
         const diversityGuidance = getDiversityGuidance();
 
         let truncatedResumeHint = '';
@@ -8210,7 +8254,7 @@ ${continueWordReq}
           if (generationRevision !== storyStateRevision) return { ok: false, aborted: true };
 
           if (continuation) {
-              const cleaned = stripDuplicateBookTitleLines(baseStory, continuation);
+              const cleaned = globalThis.NovelGenerationPlanning.fixSimplifiedChinese(stripDuplicateBookTitleLines(baseStory, continuation));
               latestStory = baseStory + separator + cleaned;
               resultDiv.textContent = latestStory;
               persistStory(latestStory);

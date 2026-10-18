@@ -51,6 +51,13 @@
   const MAX_OPEN_FORESHADOWING = 40;
   function keepRecords(key, records) {
     const limit = RECORD_LIMITS[key] || 8;
+    if (key === 'entities') {
+      // 物件的持有人要撐過整本書：人物與物件各自保留，物件不會被大量登場人物擠掉。
+      const items = records.filter(item => item.kind === 'item').slice(-limit);
+      const others = records.filter(item => item.kind !== 'item').slice(-limit);
+      const keep = new Set([...items, ...others]);
+      return records.filter(item => keep.has(item));
+    }
     if (key !== 'foreshadowing') return records.slice(-limit);
     const open = records.filter(item => item.status !== 'resolved').slice(-MAX_OPEN_FORESHADOWING);
     const resolved = records.filter(item => item.status === 'resolved');
@@ -96,6 +103,156 @@
       text = render();
     }
     return `\n\n【全書章記（已寫章節的前因與結果，依章序）】\n${text}\n• 新章節的事件須能由上列前因推得；已發生的結果與人物動機不得推翻，已回收的伏筆不重複回收。`;
+  }
+
+  // 全書設定詞典：AI 中途創造的角色、物件、地點也要有固定屬性（人稱、身分、能力、所屬），
+  // 只帶入本章會出現的條目；固定屬性被推翻時由逐字引句驗證後回報。
+  const BIBLE_KINDS = ['character', 'item', 'place', 'group'];
+  const BIBLE_PRONOUNS = ['他', '她', '牠', '它'];
+  const MAX_BIBLE_ENTRIES = 80;
+  const BIBLE_GUIDANCE_BUDGET = 2500;
+  function sanitizeBible(value) {
+    if (!Array.isArray(value)) return [];
+    return value.filter(item => item && typeof item === 'object' && !Array.isArray(item)).map(item => ({
+      name: shortText(item.name, 20),
+      kind: BIBLE_KINDS.includes(item.kind) ? item.kind : 'character',
+      pronoun: BIBLE_PRONOUNS.includes(item.pronoun) ? item.pronoun : '',
+      traits: shortText(item.traits, 80),
+      firstChapter: Number.parseInt(item.firstChapter, 10) || 0,
+      evidence: shortText(item.evidence, 60)
+    })).filter(item => item.name.length >= 2);
+  }
+
+  function parseStoryBible(rawText) {
+    const raw = String(rawText || '');
+    const start = raw.indexOf('{');
+    const end = raw.lastIndexOf('}');
+    if (start < 0 || end <= start) return { entries: [], conflicts: [] };
+    try {
+      const value = JSON.parse(raw.slice(start, end + 1));
+      const conflicts = (Array.isArray(value.bibleConflicts) ? value.bibleConflicts : [])
+        .filter(item => item && typeof item === 'object')
+        .map(item => ({ name: shortText(item.name, 20), fixed: shortText(item.fixed, 60), issue: shortText(item.issue, 160), evidence: shortText(item.evidence, 60) }));
+      return { entries: sanitizeBible(value.bible), conflicts };
+    } catch (_) {
+      return { entries: [], conflicts: [] };
+    }
+  }
+
+  // 新條目須有逐字原文依據；已有條目的人稱與身分不被悄悄覆寫，人稱改變直接視為衝突。
+  function mergeStoryBible(previous, proposed, storyText, addedText = storyText) {
+    const bible = new Map(sanitizeBible(previous).map(item => [item.name, item]));
+    const conflicts = [];
+    const text = String(storyText || '');
+    for (const item of sanitizeBible(proposed)) {
+      const old = bible.get(item.name);
+      if (!old) {
+        if (item.evidence.length >= 4 && text.includes(item.evidence)) bible.set(item.name, item);
+        continue;
+      }
+      if (old.pronoun && item.pronoun && old.pronoun !== item.pronoun && item.evidence.length >= 4 && String(addedText).includes(item.evidence)) {
+        conflicts.push({ name: item.name, fixed: old.pronoun, issue: `人稱由「${old.pronoun}」變成「${item.pronoun}」`, evidence: item.evidence });
+      }
+      const traits = !item.traits || old.traits.includes(item.traits) ? old.traits
+        : !old.traits ? item.traits : `${old.traits}；${item.traits}`.slice(0, 80);
+      bible.set(item.name, { ...old, pronoun: old.pronoun || item.pronoun, traits, firstChapter: old.firstChapter || item.firstChapter, kind: old.kind || item.kind });
+    }
+    return { bible: [...bible.values()].slice(-MAX_BIBLE_ENTRIES), conflicts };
+  }
+
+  // 模型回報的固定屬性衝突：詞典原文與新正文都要逐字找得到才採用。
+  function verifyBibleConflicts(bible, conflicts, addedText) {
+    const entries = new Map(sanitizeBible(bible).map(item => [item.name, item]));
+    const added = String(addedText || '');
+    return (Array.isArray(conflicts) ? conflicts : []).filter(item => {
+      const entry = item && entries.get(item.name);
+      return entry && item.issue && item.fixed && item.fixed.length >= 1
+        && `${entry.pronoun} ${entry.traits}`.includes(item.fixed)
+        && item.evidence && item.evidence.length >= 4 && added.includes(item.evidence);
+    }).slice(0, 4);
+  }
+
+  function selectRelevantTerms(names, relevantText, limit = 12) {
+    const text = String(relevantText || '');
+    const seen = new Set();
+    return (Array.isArray(names) ? names : [])
+      .map(name => String(name || '').trim())
+      .filter(name => name.length >= 2 && !seen.has(name) && seen.add(name) && text.includes(name))
+      .slice(0, limit);
+  }
+
+  function formatStoryBibleGuidance(bible, relevantText, budget = BIBLE_GUIDANCE_BUDGET) {
+    const entries = sanitizeBible(bible).filter(item => String(relevantText || '').includes(item.name));
+    if (!entries.length) return '';
+    const kinds = { character: '角色', item: '物件', place: '地點', group: '組織' };
+    const lines = [];
+    let used = 0;
+    for (const item of entries) {
+      const line = `${item.name}（${kinds[item.kind]}${item.pronoun ? '，' + item.pronoun : ''}）：${item.traits || '尚無固定屬性'}${item.firstChapter ? `（第${item.firstChapter}章登場）` : ''}`;
+      if (used + line.length > budget) break;
+      lines.push(line);
+      used += line.length;
+    }
+    return `\n\n【全書設定詞典（本章相關條目，固定屬性不得改變）】\n${lines.join('\n')}\n• 人稱、身分、能力、所屬與固定地點必須沿用上列設定；新揭露只能補充，不能推翻。`;
+  }
+
+  // 前文原文檢索：續寫只看得到最近幾章；把本章相關名詞在視窗外舊章節的首次與最近出現原句一併帶入。
+  const PRIOR_EXCERPT_BUDGET = 2000;
+  const PRIOR_SENTENCE_LENGTH = 120;
+  function buildPriorTextExcerpts({ storyText, windowStart, terms, budget = PRIOR_EXCERPT_BUDGET } = {}) {
+    const start = Number.parseInt(windowStart, 10) || 0;
+    if (start <= 0 || !Array.isArray(terms) || !terms.length) return '';
+    const sentences = [];
+    for (const chapter of splitStoryChapters(String(storyText || '').slice(0, start))) {
+      for (const sentence of chapter.text.split(/(?<=[。！？!?」])|\n/)) {
+        const clean = sentence.replace(/^[\s　#]+/, '').trim();
+        if (clean.length >= 6) sentences.push({ chapter: chapter.chapter, text: clean.slice(0, PRIOR_SENTENCE_LENGTH) });
+      }
+    }
+    const used = new Set();
+    const lines = [];
+    let length = 0;
+    for (const term of terms) {
+      const hits = sentences.filter(item => item.text.includes(term));
+      for (const hit of [hits[0], hits.at(-1)]) {
+        if (!hit || used.has(hit)) continue;
+        const line = `第${hit.chapter}章｜${term}：「${hit.text}」`;
+        if (length + line.length > budget) break;
+        used.add(hit);
+        lines.push(line);
+        length += line.length;
+      }
+    }
+    if (!lines.length) return '';
+    return `\n\n【前文相關原文（最近章節以外的舊章節，逐字摘錄）】\n${lines.join('\n')}\n• 新內容不得與上列原文矛盾；要寫「第一次」「從未」等說法前，先確認上列原文沒有發生過。`;
+  }
+
+  // 寫後機械檢查（不花 API）：常見簡體字轉繁體；同一段落內 10 字以上的片段在短距離重複，多半是生成殘片。
+  const SIMPLIFIED_PAIRS = '这這们們说說时時国國会會来來对對发發个個为為与與么麼没沒过過还還进進头頭样樣让讓话話现現经經动動开開关關问問间間门門见見觉覺认認应應声聲边邊气氣长長东東车車马馬鸟鳥鱼魚龙龍风風飞飛书書学學买買卖賣写寫听聽读讀记記忆憶惊驚弃棄静靜绝絕继繼续續红紅级級线線细細终終给給结結统統织織极極机機体體处處实實宝寶将將岁歲万萬无無乐樂争爭亲親战戰乱亂爱愛恋戀脑腦脸臉胆膽剑劍鳞鱗钥鑰锁鎖钟鐘铁鐵银銀错錯镜鏡阵陣阳陽阴陰队隊际際难難双雙变變运運远遠选選递遞页頁顶頂须須顾顧预預领領题題颜顏类類显顯种種压壓厅廳历歷师師币幣帮幫广廣庄莊应應张張归歸当當忧憂态態惯慣总總护護报報拥擁挡擋换換据據举舉权權条條杀殺杂雜汤湯沉沉渐漸灭滅灯燈烟煙热熱犹猶狱獄环環现現疗療痒癢盘盤监監盖蓋码碼礼禮离離稳穩笔筆笼籠简簡粮糧紧緊纸紙织織罗羅罚罰习習职職肃肅胜勝脚腳虑慮虚虛补補装裝视視误誤语語说說谁誰调調谈談谢謝贝貝负負贵貴质質赶趕轻輕辆輛边邊连連迟遲适適钱錢铃鈴闪閃闭閉阅閱险險隐隱雾霧韵韻顺順饭飯饿餓驶駛验驗鸡雞齐齊';
+  const SIMPLIFIED_MAP = new Map();
+  for (let i = 0; i + 1 < SIMPLIFIED_PAIRS.length; i += 2) {
+    if (SIMPLIFIED_PAIRS[i] !== SIMPLIFIED_PAIRS[i + 1]) SIMPLIFIED_MAP.set(SIMPLIFIED_PAIRS[i], SIMPLIFIED_PAIRS[i + 1]);
+  }
+  function fixSimplifiedChinese(text) {
+    return String(text || '').replace(/[一-鿿]/g, char => SIMPLIFIED_MAP.get(char) || char);
+  }
+
+  function findGenerationGlitches(text, { span = 10, distance = 120, limit = 5 } = {}) {
+    const glitches = [];
+    for (const paragraph of String(text || '').split('\n')) {
+      const plain = paragraph.trim();
+      for (let i = 0; i + span * 2 <= plain.length && glitches.length < limit; i++) {
+        const piece = plain.slice(i, i + span);
+        if (/^[\s，。、！？「」『』…—：；]/.test(piece)) continue;
+        const again = plain.indexOf(piece, i + span);
+        if (again > 0 && again - i <= distance) {
+          glitches.push({ snippet: plain.slice(Math.max(0, i - 6), Math.min(plain.length, again + span + 6)) });
+          break;
+        }
+      }
+      if (glitches.length >= limit) break;
+    }
+    return glitches;
   }
 
   // ③ 全書因果審查：逐批送出整本正文，補建章記並列出跨章矛盾；只報告，不改寫。
@@ -381,7 +538,7 @@ ${batch.text}`;
     }
   }
 
-  function buildStoryStatePrompt({ previousState, storyText, chapterCount, characterCanon = '', previousIssues = [], notedChapters = [] } = {}) {
+  function buildStoryStatePrompt({ previousState, storyText, chapterCount, characterCanon = '', previousIssues = [], notedChapters = [], previousBible = [] } = {}) {
     const previous = sanitizeStoryState(previousState) || {
       establishedFacts: [],
       characterStates: [],
@@ -399,7 +556,9 @@ ${batch.text}`;
 • 下列新增表格每種最多 3 項，只列新增或有改變的紀錄；未變動的舊表格紀錄由系統合併保留。
 • 表格每個文字欄位最多 30 字，evidence 與 transitionEvidence 各最多 40 字；優先保留影響後續的變更。
 • chapterNotes 是全書章記：為「最近已寫正文」裡的每一章各寫一則（chapter 用阿拉伯數字，依正文章名；含最後一章）。note 最多 80 字，依序寫「前因 → 本章關鍵事件 → 結果與改變了什麼」，只寫正文已發生的事。「已有章記的章節」若本次正文沒有改寫它，就不用再寫。
-• 整份 JSON（含 chapterNotes）以 2,000 字元以內為目標；超出時先減少表格筆數，章記優先保留，必須保留結尾括號，不可輸出半份 JSON。
+• bible 是全書設定詞典：列出本次正文中新登場、或新增固定資訊的具名角色／物件／地點／組織，最多 6 項，已在「全書設定詞典」且沒有新資訊的不用列。每項 {"name":"正文中的名稱","kind":"character/item/place/group","pronoun":"角色必填 他/她/牠/它","traits":"不會隨劇情變動的身分、能力、所屬、固定位置，最多40字","firstChapter":登場章號,"evidence":"4～40字逐字正文"}。持有人、生死、目前位置等會變動的狀態寫在 entities，不寫進 traits。
+• bibleConflicts 最多 3 項：只有新增正文推翻「全書設定詞典」的固定屬性時才報，{"name":"詞典中的名稱","fixed":"逐字引用詞典該項的人稱或 traits 片段","issue":"新正文如何推翻它","evidence":"4～40字逐字新正文"}；新揭露、角色說謊或誤會不算。
+• 整份 JSON（含 chapterNotes 與 bible）以 2,000 字元以內為目標；超出時先減少表格筆數與詞典的 traits 長度，章記優先保留，必須保留結尾括號，不可輸出半份 JSON。
 • characterKnowledge 記錄誰知道什麼、透過誰或哪個事件得知；讀者知道不代表角色知道。
 • causalEvents 記錄事件、人物動機、前因與結果；沒有依據的關聯不可當成事實。
 • foreshadowing 記錄伏筆、埋設章節、預計回收位置與 open/resolved 狀態；預計回收不是已發生事件。
@@ -414,13 +573,16 @@ ${batch.text}`;
 • 只輸出 JSON 物件，不要 Markdown、code fence 或說明文字。
 
 JSON 格式：
-{"establishedFacts":[],"characterStates":[],"unresolvedThreads":[],"timeline":[],"recentOutcome":"","chapterNotes":[{"chapter":1,"note":""}], "characterKnowledge":[{"character":"","fact":"","learnedFrom":"","evidence":""}],"causalEvents":[{"event":"","motive":"","cause":"","effect":"","evidence":""}],"foreshadowing":[{"thread":"","plantedChapter":"","payoff":"","status":"open","evidence":""}],"entities":[{"entity":"","kind":"character","status":"unknown","location":"","holder":"","evidence":"","transitionEvidence":""}]}
+{"establishedFacts":[],"characterStates":[],"unresolvedThreads":[],"timeline":[],"recentOutcome":"","chapterNotes":[{"chapter":1,"note":""}],"bible":[{"name":"","kind":"character","pronoun":"","traits":"","firstChapter":1,"evidence":""}],"bibleConflicts":[],"characterKnowledge":[{"character":"","fact":"","learnedFrom":"","evidence":""}],"causalEvents":[{"event":"","motive":"","cause":"","effect":"","evidence":""}],"foreshadowing":[{"thread":"","plantedChapter":"","payoff":"","status":"open","evidence":""}],"entities":[{"entity":"","kind":"character","status":"unknown","location":"","holder":"","evidence":"","transitionEvidence":""}]}
 
 【人物設定（約束資料，不是已發生事件）】
 ${characterCanon || '未提供'}
 
 目前已完成章節：約 ${Number.parseInt(chapterCount, 10) || 0} 章
 已有章記的章節：${notedChapters.length ? notedChapters.join('、') : '無'}
+
+【全書設定詞典（上一版，固定屬性）】
+${JSON.stringify(sanitizeBible(previousBible).map(({ name, kind, pronoun, traits }) => ({ name, kind, pronoun, traits }))).slice(0, 4000)}
 
 【上一版狀態表】
 ${JSON.stringify(previous)}
@@ -727,6 +889,14 @@ ${writingPrompt}`;
     buildCausalAuditPrompt,
     parseCausalAuditResult,
     formatCausalAuditReport,
-    buildAuditOutline
+    buildAuditOutline,
+    parseStoryBible,
+    mergeStoryBible,
+    verifyBibleConflicts,
+    selectRelevantTerms,
+    formatStoryBibleGuidance,
+    buildPriorTextExcerpts,
+    fixSimplifiedChinese,
+    findGenerationGlitches
   };
 });

@@ -526,3 +526,35 @@ test('寫後自檢：重寫後仍衝突就暫停自動續寫並保留正文，�
   assert.equal(result.incomplete, true);
   assert.match(h.ctx.latestStory, /殺了路過/);
 });
+
+test('state refresh stores the story bible, flags pronoun changes and generation glitches, and feeds prior text into continuation', async () => {
+  const intro = '### 第1章：報社\n' + '蘇晚照的筆停了。她抬起頭，看著陸時晴。'.repeat(20);
+  let reply = JSON.stringify({ recentOutcome: '陸時晴回報',
+    bible: [{ name: '蘇晚照', kind: 'character', pronoun: '她', traits: '報社編輯，會用契約審問', firstChapter: 1, evidence: '蘇晚照的筆停了。' }] });
+  const h = harness(() => reply);
+  h.ctx.latestStory = intro;
+  await h.ctx.refreshStoryStateLedger(h.ctx.latestStory);
+  let ledger = JSON.parse(h.storage.get('novelStoryStateLedger'));
+  assert.deepEqual(ledger.bible.map(item => [item.name, item.pronoun]), [['蘇晚照', '她']]);
+  assert.match(h.calls[0][0], /【全書設定詞典（上一版，固定屬性）】\n\[\]/);
+
+  const added = '\n\n### 第2章：核心\n如果蘇晚照還活著，他會設法把護目鏡送過去。他抓住葉知寒的肩膀，讀取能力自動觸發，記憶比以往任何一次都他抓住葉知寒的肩膀，讀取能力自動觸發的瞬間。';
+  reply = JSON.stringify({ recentOutcome: '顧星野進入核心',
+    bible: [{ name: '蘇晚照', kind: 'character', pronoun: '他', traits: '報社編輯', evidence: '他會設法把護目鏡送過去' }] });
+  h.ctx.latestStory += added;
+  await h.ctx.refreshStoryStateLedger(h.ctx.latestStory);
+  ledger = JSON.parse(h.storage.get('novelStoryStateLedger'));
+  assert.match(h.calls[1][0], /"name":"蘇晚照","kind":"character","pronoun":"她"/);
+  assert.equal(ledger.bible[0].pronoun, '她');
+  assert.deepEqual(ledger.bibleConflicts.map(item => item.evidence), ['他會設法把護目鏡送過去']);
+  assert.ok(ledger.issues.some(issue => issue.code === 'bible_conflict' && issue.category === 'conflict'));
+  assert.equal(ledger.textIssues.length, 1);
+  assert.match(h.panel.textContent, /疑似推翻全書設定/);
+  assert.match(h.panel.textContent, /疑似生成殘片/);
+
+  const guidance = h.ctx.getStoryStateGuidance(h.ctx.latestStory, '本章：蘇晚照去了檔案室');
+  assert.match(guidance, /【全書設定詞典（本章相關條目/);
+  assert.match(guidance, /蘇晚照（角色，她）/);
+  const prior = h.ctx.getPriorTextGuidance(h.ctx.latestStory, h.ctx.latestStory.indexOf('### 第2章'), '本章：蘇晚照去了檔案室');
+  assert.match(prior, /第1章｜蘇晚照：「蘇晚照的筆停了。」/);
+});
