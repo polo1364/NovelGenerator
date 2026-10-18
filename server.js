@@ -9,13 +9,14 @@ require('dotenv').config();
 const fs = require('fs');
 const path = require('path');
 const express = require('express');
-const { Readable } = require('stream');
+const { Readable, pipeline } = require('stream');
 const { synthesizeEdgeTts, RECOMMENDED_VOICES } = require('./lib/edge-tts');
 const { analyzeDialogueRoles, splitTextIntoBlocks } = require('./lib/analyze-roles');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
 const DEEPSEEK_URL = process.env.DEEPSEEK_URL || 'https://api.deepseek.com/chat/completions';
+const MAX_CHAT_OUTPUT_TOKENS = 16384; // 與前端 doDeepSeekRequest 的上限一致
 
 // 故事 prompt 可能很長，放寬 JSON body 上限
 app.use(express.json({ limit: '8mb' }));
@@ -135,6 +136,15 @@ app.post('/api/chat', async (req, res) => {
   if (!Array.isArray(req.body?.messages) || req.body.messages.length === 0) {
     return res.status(400).json({ error: { message: '請求格式錯誤：缺少 messages' } });
   }
+  // 代理只服務本工坊：限定 DeepSeek 模型並限制單次輸出上限，避免金鑰被任意請求耗用
+  if (typeof req.body.model !== 'string' || !/^deepseek-[a-z0-9.-]+$/i.test(req.body.model)) {
+    return res.status(400).json({ error: { message: '請求格式錯誤：不支援的模型' } });
+  }
+  const maxTokens = Number(req.body.max_tokens);
+  if (req.body.max_tokens !== undefined && (!Number.isFinite(maxTokens) || maxTokens < 1)) {
+    return res.status(400).json({ error: { message: '請求格式錯誤：max_tokens 無效' } });
+  }
+  if (maxTokens > MAX_CHAT_OUTPUT_TOKENS) req.body.max_tokens = MAX_CHAT_OUTPUT_TOKENS;
 
   // 客戶端中斷（按下「停止生成」或關閉分頁）時，連帶中止上游請求
   const controller = new AbortController();
@@ -170,9 +180,14 @@ app.post('/api/chat', async (req, res) => {
     return res.end();
   }
 
-  // 將上游的 Web ReadableStream 串接到 Express 回應
+  // 將上游的 Web ReadableStream 串接到 Express 回應。
+  // 用 pipeline 接住串流錯誤：客戶端停止生成時上游會丟 AbortError，未處理會讓整個伺服器結束。
   try {
-    Readable.fromWeb(upstream.body).pipe(res);
+    pipeline(Readable.fromWeb(upstream.body), res, (err) => {
+      if (err && !controller.signal.aborted && err.name !== 'AbortError') {
+        console.error('[server] 轉發 DeepSeek 回應中斷:', err.message || err);
+      }
+    });
   } catch (err) {
     if (!res.headersSent) res.status(502);
     res.end();

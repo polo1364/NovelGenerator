@@ -152,10 +152,20 @@ test('prose requests first obtain one Flash plan and include priority rules', as
   assert.match(h.calls[1].prompt, /找到守衛/);
 });
 
-test('invalid plan stops before spending on prose', async () => {
+test('invalid plan is retried once and still stops before spending on prose', async () => {
   const h = requestHarness(() => ({ text: '{}' }));
   await assert.rejects(h.ctx.callDeepSeek('任務', null, 'model', { taskType: 'continuation' }), /章節計畫格式不完整/);
-  assert.equal(h.calls.length, 1);
+  assert.deepEqual(h.calls.map(c => c.options.taskType), ['plan', 'plan']);
+});
+
+test('a transient plan failure recovers on the second plan attempt', async () => {
+  const h = requestHarness(calls => {
+    if (calls.length === 1) throw new TypeError('NetworkError');
+    return { text: calls.length === 2 ? plan : '正文' };
+  });
+  assert.equal(await h.ctx.callDeepSeek('任務', null, 'model', { taskType: 'story' }), '正文');
+  assert.deepEqual(h.calls.map(c => c.options.taskType), ['plan', 'plan', 'story']);
+  assert.match(h.calls[2].prompt, /直接輸出小說正文/);
 });
 
 test('retrying prose reuses the same plan', async () => {

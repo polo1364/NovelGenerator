@@ -850,7 +850,7 @@
         // 最近一次用量
         if (lastEl) {
           if (lastUsage) {
-            lastEl.textContent = `最近一次：輸入 ${fmt(lastUsage.prompt)} + 輸出 ${fmt(lastUsage.completion)} ＝ ${fmt(lastUsage.total)} tokens`;
+            lastEl.textContent = `最近一次：輸入 ${fmt(lastUsage.prompt)} + 輸出 ${fmt(lastUsage.completion)} ＝ ${fmt(lastUsage.total)} tokens${lastUsage.estimated ? '（中途停止，依字數估算）' : ''}`;
           } else {
             lastEl.textContent = '最近一次：尚無資料';
           }
@@ -858,7 +858,7 @@
       }
 
       // 記錄一次 API 呼叫的用量
-      function recordUsage(usage, model) {
+      function recordUsage(usage, model, { estimated = false } = {}) {
         const previousCost = estimateUsageCost();
         usageStats.requests += 1;
         if (usage) {
@@ -877,7 +877,8 @@
             completion,
             total,
             cacheHit: breakdown.cacheHit,
-            period: deepSeekPricing.isPeakTime(billedAt) ? '尖峰' : '離峰'
+            period: deepSeekPricing.isPeakTime(billedAt) ? '尖峰' : '離峰',
+            estimated
           };
         } else {
           usageStats.estimatedCost = previousCost;
@@ -1080,13 +1081,24 @@
           }
         };
 
-        while (true) {
-          const { done, value } = await reader.read();
-          if (done) break;
-          buffer += decoder.decode(value, { stream: true });
-          const lines = buffer.split('\n');
-          buffer = lines.pop();
-          for (const line of lines) processLine(line);
+        try {
+          while (true) {
+            const { done, value } = await reader.read();
+            if (done) break;
+            buffer += decoder.decode(value, { stream: true });
+            const lines = buffer.split('\n');
+            buffer = lines.pop();
+            for (const line of lines) processLine(line);
+          }
+        } catch (err) {
+          // 停止或斷線時上游不會送出 usage，但已產出的內容仍可能計費：依字數估算記入用量。
+          if (gotContent) {
+            recordUsage(usage || {
+              prompt_tokens: Math.ceil(prompt.length / 1.5),
+              completion_tokens: Math.ceil(fullText.length / 1.5)
+            }, usedModel, { estimated: !usage });
+          }
+          throw err;
         }
         // 串流結束：flush 解碼器殘留位元組並處理最後一行
         buffer += decoder.decode();
@@ -1118,14 +1130,26 @@
           if (options.signal && options.signal.aborted) throw new DOMException('已停止生成', 'AbortError');
           setGenerationStage('plan');
           renderContinuityReport();
-          const rawPlan = await callDeepSeek(planner.buildChapterPlanPrompt(prompt), apiKey, 'deepseek-flash', {
-            taskType: 'plan', signal: options.signal, maxTokens: 1600, retries: 0
-          });
-          if ((options.signal && options.signal.aborted) || revision !== storyStateRevision) throw new DOMException('已停止生成', 'AbortError');
-          const plan = planner.parseChapterPlan(rawPlan);
-          if (!plan) throw new Error('章節計畫格式不完整，尚未生成正文；請重試。');
+          // 規劃失敗（格式不完整、截斷或暫時錯誤）再試一次；仍失敗才停止，不在沒有計畫時花正文費用。
+          let plan = null;
+          let planError = null;
+          for (let planAttempt = 0; planAttempt < 2 && !plan; planAttempt++) {
+            try {
+              const rawPlan = await callDeepSeek(planner.buildChapterPlanPrompt(prompt), apiKey, 'deepseek-flash', {
+                taskType: 'plan', signal: options.signal, maxTokens: 1600, retries: 0
+              });
+              if ((options.signal && options.signal.aborted) || revision !== storyStateRevision) throw new DOMException('已停止生成', 'AbortError');
+              plan = planner.parseChapterPlan(rawPlan);
+            } catch (err) {
+              if (err.name === 'AbortError' || isNonRetryable(err)) throw err;
+              planError = err;
+            }
+          }
+          if (!plan) throw new Error(planError ? `章節計畫取得失敗（${planError.message}），尚未生成正文；請重試。` : '章節計畫格式不完整，尚未生成正文；請重試。');
           setGenerationStage('story');
-          prompt += planner.buildContinuityRules() + '\n\n【本次章節計畫（不得凌駕設定與正文）】\n' + JSON.stringify(plan);
+          // 計畫接在原提示詞之後，需重申最後的輸出要求，避免模型把結尾的 JSON 當成要輸出的格式。
+          prompt += planner.buildContinuityRules() + '\n\n【本次章節計畫（不得凌駕設定與正文）】\n' + JSON.stringify(plan)
+            + '\n\n依上述設定與計畫，直接輸出小說正文（不要輸出計畫、表格或說明）：';
         }
         const maxRetries = typeof options.retries === 'number' ? options.retries : 2;
         let lastErr;
@@ -1235,7 +1259,15 @@
         const planner = globalThis.NovelGenerationPlanning;
         if (!planner || typeof planner.createStoryFingerprint !== 'function') return '';
         const stored = readStoryStateLedger();
-        if (!stored || stored.sourceFingerprint !== planner.createStoryFingerprint(storyText)) return '';
+        if (!stored) return '';
+        // 與 refreshStoryStateLedger 相同：正文只是在已整理內容後追加（截斷接續、整理失敗後續寫）時，
+        // 上一版狀態仍適用，不應整份丟掉。
+        const text = String(storyText || '');
+        const storedLength = stored.sourceLength || Number(String(stored.sourceFingerprint || '').split(':')[0]);
+        const applies = stored.sourceFingerprint === planner.createStoryFingerprint(text) ||
+          (Number.isInteger(storedLength) && storedLength > 0 && storedLength <= text.length &&
+           planner.createStoryFingerprint(text.slice(0, storedLength)) === stored.sourceFingerprint);
+        if (!applies) return '';
         const warnings = Array.isArray(stored.warnings) ? stored.warnings : [];
         const issues = planner.getContinuityIssues(warnings, stored.issues);
         return planner.formatStoryStateGuidance(stored.state, { issues }) + (issues.length
@@ -1295,7 +1327,12 @@
             onComplete: result => { finishReason = result.finishReason; }
           });
           if (controller.signal.aborted) throw new DOMException('已停止狀態整理', 'AbortError');
-          if (revision !== storyStateRevision || planner.createStoryFingerprint(latestStory.trim()) !== sourceFingerprint) return null;
+          if (revision !== storyStateRevision) return null;
+          if (planner.createStoryFingerprint(latestStory.trim()) !== sourceFingerprint) {
+            // 正文在整理期間被改動：結果不適用，面板不能停在「檢查中」。
+            renderContinuityReport([], 'unchecked', { coverage: getContinuityCoverage(latestStory) });
+            return null;
+          }
           if (finishReason === 'length') throw Object.assign(new Error('State output truncated'), { code: 'STATE_TRUNCATED' });
           const proposed = planner.parseStoryState(raw);
           if (!proposed) throw Object.assign(new Error('Invalid state JSON'), { code: 'STATE_JSON' });
@@ -1371,8 +1408,22 @@
         return currentAbortController.signal;
       }
 
-      function endGeneration() {
-        currentAbortController = null;
+      // 傳入 signal 時只釋放自己的鎖，避免舊流程收尾時清掉較新生成的中斷控制器。
+      function endGeneration(signal) {
+        if (!signal || (currentAbortController && currentAbortController.signal === signal)) {
+          currentAbortController = null;
+        }
+      }
+
+      // 任何生成相關流程（單次請求、自動逐章、系列、等待啟動的自動流程）進行中
+      function isGenerationBusy() {
+        return !!(currentAbortController || autoContinueRunning || seriesRunning || autoStartPending);
+      }
+
+      function rejectWhileGenerating() {
+        if (!isGenerationBusy()) return false;
+        showStatus('warning', '生成進行中，請先按「停止生成」再操作');
+        return true;
       }
 
       const stopGenerationBtn = document.getElementById('stopGenerationBtn');
@@ -7015,6 +7066,11 @@ ${n}
 
       // ==================== 生成故事 ====================
       generateBtn.addEventListener('click', async () => {
+        // 系列流程開下一集時本來就在忙碌中；其餘情況不可與進行中的生成並行
+        if (!generatingNextVolume && rejectWhileGenerating()) {
+          settleGenerate();
+          return;
+        }
         // 檢查離線狀態
         if (!navigator.onLine) {
           showStatus('error', '📴 目前為離線模式，無法生成故事。請連接網路後再試。');
@@ -7027,21 +7083,6 @@ ${n}
           return;
         }
         
-        hideStatus();
-        resultDiv.textContent = '';
-        chapterNavContainer.classList.remove('show');
-        chapterMatches = [];
-        localStorage.removeItem('savedStory');
-        if (!generatingNextVolume) clearStoryStateLedger();
-        latestStory = '';
-        // 全新故事（非系列接續下一集）才清空 series 狀態
-        if (!generatingNextVolume) {
-          storySeries = null;
-          seriesAborted = false; // 避免上次停止的旗標殘留導致新一輪自動生成立即中止
-          try { localStorage.removeItem('storySeries'); } catch (e) {}
-        }
-        downloadBtn.disabled = true;
-        continueBtn.disabled = true;
 
         const model = modelSelect.value;
         const theme = themeSelect.value.trim();
@@ -7067,6 +7108,44 @@ ${n}
         const emotionalTone = emotionalToneSelect.value.trim();
         const ending = endingSelect.value.trim();
         const diversityGuidance = getDiversityGuidance();
+
+        // 收集特殊元素
+        const selectedElements = [];
+        specialElementsContainer.querySelectorAll('.special-element-item.selected').forEach(item => {
+          const label = item.querySelector('.element-label').textContent;
+          selectedElements.push(label);
+        });
+
+        const hasAdvanced = narrative || era || pacing || rating || worldComplexity || emotionalTone || ending;
+        if (!theme && !setting && !charactersInfo && !style && !chapters && !length && !notes && !hasOutlineForGenerate && selectedElements.length === 0 && !hasAdvanced) {
+          // 完全沒有任何設定：提示並標記最常用的主題／背景欄位
+          [themeSelect, settingSelect].forEach(el => {
+            if (el && !el.value.trim()) {
+              el.classList.add('input-error');
+              setTimeout(() => el.classList.remove('input-error'), 1000);
+            }
+          });
+          showStatus('warning', '請至少設定一項（主題／背景／人物／特殊元素…），或使用各區塊的「🎲 隨機填充」');
+          settleGenerate();
+          return;
+        }
+
+        // 通過設定驗證後才清空目前作品，避免無效點擊讓既有故事消失
+        hideStatus();
+        resultDiv.textContent = '';
+        chapterNavContainer.classList.remove('show');
+        chapterMatches = [];
+        localStorage.removeItem('savedStory');
+        if (!generatingNextVolume) clearStoryStateLedger();
+        latestStory = '';
+        // 全新故事（非系列接續下一集）才清空 series 狀態
+        if (!generatingNextVolume) {
+          storySeries = null;
+          seriesAborted = false; // 避免上次停止的旗標殘留導致新一輪自動生成立即中止
+          try { localStorage.removeItem('storySeries'); } catch (e) {}
+        }
+        downloadBtn.disabled = true;
+        continueBtn.disabled = true;
 
         // ===== 結局軌道與系列分集 =====
         const endingKind = getEndingKind(ending);
@@ -7099,27 +7178,6 @@ ${n}
           }
         }
         
-        // 收集特殊元素
-        const selectedElements = [];
-        specialElementsContainer.querySelectorAll('.special-element-item.selected').forEach(item => {
-          const label = item.querySelector('.element-label').textContent;
-          selectedElements.push(label);
-        });
-
-        const hasAdvanced = narrative || era || pacing || rating || worldComplexity || emotionalTone || ending;
-        if (!theme && !setting && !charactersInfo && !style && !chapters && !length && !notes && !hasOutlineForGenerate && selectedElements.length === 0 && !hasAdvanced) {
-          // 完全沒有任何設定：提示並標記最常用的主題／背景欄位
-          [themeSelect, settingSelect].forEach(el => {
-            if (el && !el.value.trim()) {
-              el.classList.add('input-error');
-              setTimeout(() => el.classList.remove('input-error'), 1000);
-            }
-          });
-          showStatus('warning', '請至少設定一項（主題／背景／人物／特殊元素…），或使用各區塊的「🎲 隨機填充」');
-          settleGenerate();
-          return;
-        }
-
         // 外層保險：涵蓋 prompt 建構等前置階段，確保任何非預期錯誤都會在 finally 釋放
         // 系列自動流程等待中的 awaitableGenerate（generateDoneResolver），避免整條流程懸空。
         try {
@@ -7391,9 +7449,12 @@ ${shouldGenerateChapterByChapter ? '\n⚠️ 本次僅需創作第1章，後續�
             taskType: 'story',
             diversityMode: getDiversityMode(),
             maxTokens: tokensForChapterWords(lengthPlan.wordsPerChapter),
-            onChunk: (full) => { setResultStreaming(full); },
+            // 生成中途換書／清除時不可再覆蓋畫面
+            onChunk: (full) => { if (generationRevision === storyStateRevision) setResultStreaming(full); },
             onComplete: ({ finishReason }) => { finishReasonMeta = finishReason; }
           });
+          // 等待期間已換書或清除工作區：結果屬於舊作品，不可寫回
+          if (generationRevision !== storyStateRevision) return;
           receivedProse = true;
           wasTruncated = shouldAutoResumeSegment(finishReasonMeta, story, lengthPlan, { isAlreadyComplete: false });
           
@@ -7434,8 +7495,10 @@ ${shouldGenerateChapterByChapter ? '\n⚠️ 本次僅需創作第1章，後續�
             parseAndShowChapters(latestStory);
 
             // 截斷或本章字數不足時自動接續，再顯示完成狀態
+            let stateHandledByResume = false;
             if (wasTruncated || isCurrentChapterUnderTarget(lengthPlan, latestStory)) {
               const resumed = await doContinueGenerationWithAutoResume({ auto: true, truncatedResume: true });
+              if (generationRevision !== storyStateRevision) return;
               if (resumed.aborted) throw new DOMException('已停止生成', 'AbortError');
               if (!resumed.ok || resumed.incomplete) {
                 setGenerationStage('incomplete');
@@ -7448,10 +7511,13 @@ ${shouldGenerateChapterByChapter ? '\n⚠️ 本次僅需創作第1章，後續�
               const wc = countStoryWords(latestStory);
               const ch = countChapters(latestStory);
               if (ch > 0) updateGenerationProgress(ch, totalChaptersForProgress, wc);
+              // 接續流程完成本章時已做過狀態整理（失敗也已回報），不重複請求
+              stateHandledByResume = true;
             }
 
             if (userAborted || seriesAborted) throw new DOMException('已停止生成', 'AbortError');
-            await refreshStoryStateLedger(latestStory, signal);
+            if (!stateHandledByResume) await refreshStoryStateLedger(latestStory, signal);
+            if (generationRevision !== storyStateRevision) return;
             continueBtn.disabled = false;
             scheduleHideProgress(1000);
 
@@ -7477,12 +7543,17 @@ ${shouldGenerateChapterByChapter ? '\n⚠️ 本次僅需創作第1章，後續�
 
             // 自動連續生成：系列 → runAutoSeries；單本逐章 → runAutoContinue
             // （seriesRunning 為真時表示已在系列流程中，勿重複觸發，見錯誤10）
-            if (isAutoContinueEnabled() && countChapters(latestStory) >= 1 && !seriesRunning) {
-              if (isSeries) {
-                setTimeout(() => runAutoSeries(targetChapterCount), 600);
-              } else if (shouldGenerateChapterByChapter) {
-                setTimeout(() => runAutoContinue(targetChapterCount), 600);
-              }
+            // 排程到啟動之間以 autoStartPending 視為忙碌，避免空檔被手動操作插入
+            if (isAutoContinueEnabled() && countChapters(latestStory) >= 1 && !seriesRunning &&
+                (isSeries || shouldGenerateChapterByChapter)) {
+              const startRevision = storyStateRevision;
+              autoStartPending = true;
+              setTimeout(() => {
+                autoStartPending = false;
+                if (seriesAborted || userAborted || startRevision !== storyStateRevision) return;
+                if (isSeries) runAutoSeries(targetChapterCount);
+                else runAutoContinue(targetChapterCount);
+              }, 600);
             }
           } else {
             showStatus('error', '沒有獲得內容，請調整設定');
@@ -7525,7 +7596,7 @@ ${shouldGenerateChapterByChapter ? '\n⚠️ 本次僅需創作第1章，後續�
           hideGenerationProgress();
         } finally {
           if (generationRevision === storyStateRevision) {
-            endGeneration();
+            endGeneration(signal);
             generateBtn.disabled = false;
             streamAnchorStart = false;
             settleGenerate();
@@ -7537,8 +7608,10 @@ ${shouldGenerateChapterByChapter ? '\n⚠️ 本次僅需創作第1章，後續�
               });
             }
           } else if (currentAbortController && currentAbortController.signal === signal) {
-            endGeneration();
+            // 生成中途換書／清除：釋放自己的鎖與進度列，不碰新作品的狀態
+            endGeneration(signal);
             generateBtn.disabled = false;
+            hideGenerationProgress();
           }
         }
         } catch (outerErr) {
@@ -7557,10 +7630,13 @@ ${shouldGenerateChapterByChapter ? '\n⚠️ 本次僅需創作第1章，後續�
 
       // ==================== 繼續生成 ====================
       continueBtn.addEventListener('click', () => {
+        if (rejectWhileGenerating()) return;
         if (!confirmPeakPricing()) {
           showStatus('warning', '已取消尖峰時段生成；可於離峰時段再試。');
           return;
         }
+        // 使用者主動續寫：清掉先前按「停止」留下的旗標，否則截斷段落不會自動接續
+        seriesAborted = false;
         doContinueGenerationWithAutoResume();
       });
 
@@ -7914,16 +7990,22 @@ ${continueWordReq}
         const generationRevision = storyStateRevision;
         let contTruncated = false;
         let contFinishReason = null;
+        // 中斷時保留的串流內容也要比照成功路徑去除重複書名行
+        const mergePartial = (partial) => partial.startsWith(baseStory)
+          ? baseStory + separator + stripDuplicateBookTitleLines(baseStory, partial.slice(baseStory.length).replace(/^\s+/, ''))
+          : partial;
         try {
           const continuation = (await callDeepSeek(continuePrompt, null, model, {
             signal,
             taskType: 'continuation',
             diversityMode: getDiversityMode(),
             maxTokens: tokensForChapterWords(lengthPlan.wordsPerChapter),
-            onChunk: (full) => { setResultStreaming(baseStory + separator + full); },
+            onChunk: (full) => { if (generationRevision === storyStateRevision) setResultStreaming(baseStory + separator + full); },
             onComplete: ({ finishReason }) => { contFinishReason = finishReason; }
           })).trim();
-          
+          // 等待期間已換書或清除工作區：續寫屬於舊作品，不可寫回
+          if (generationRevision !== storyStateRevision) return { ok: false, aborted: true };
+
           if (continuation) {
               const cleaned = stripDuplicateBookTitleLines(baseStory, continuation);
               latestStory = baseStory + separator + cleaned;
@@ -8021,6 +8103,7 @@ ${continueWordReq}
           }
           if (genResult.ok && !contTruncated && !isCurrentChapterUnderTarget(lengthPlan, latestStory)) {
             await refreshStoryStateLedger(latestStory, signal);
+            if (generationRevision !== storyStateRevision) return { ok: false, aborted: true };
           }
           if (genResult.ok) scheduleHideProgress(1000);
         } catch (err) {
@@ -8029,7 +8112,8 @@ ${continueWordReq}
             // 已停止：保留已串流的續寫內容
             const partial = resultDiv.textContent.trim();
             if (partial && partial.length > baseStory.length) {
-              latestStory = partial;
+              latestStory = mergePartial(partial);
+              resultDiv.textContent = latestStory;
               if (!genResult.ok) setStoryResumePending(latestStory, true);
               persistStory(latestStory);
               updateWordCount(latestStory);
@@ -8048,7 +8132,8 @@ ${continueWordReq}
             const partial = resultDiv.textContent.trim();
             const partialAdded = partial && partial.length > baseStory.length;
             if (partialAdded) {
-              latestStory = partial;
+              latestStory = mergePartial(partial);
+              resultDiv.textContent = latestStory;
               setStoryResumePending(latestStory, true);
               setGenerationStage('incomplete');
               persistStory(latestStory);
@@ -8077,7 +8162,7 @@ ${continueWordReq}
           }
         } finally {
           if (generationRevision === storyStateRevision) {
-            endGeneration();
+            endGeneration(signal);
             // 如果故事未完結（或為系列非最終集）才重新啟用按鈕
             const finalDone = !contTruncated && isActiveStoryComplete(targetChapters) && isFinalVol;
             if (!finalDone) {
@@ -8085,8 +8170,9 @@ ${continueWordReq}
             }
             generateBtn.disabled = false;
           } else if (currentAbortController && currentAbortController.signal === signal) {
-            endGeneration();
+            endGeneration(signal);
             generateBtn.disabled = false;
+            hideGenerationProgress();
           }
         }
         return genResult;
@@ -8099,6 +8185,7 @@ ${continueWordReq}
       }
 
       let autoContinueRunning = false;
+      let autoStartPending = false; // 首章完成後、自動流程排程啟動前的空檔也算忙碌
       const AUTO_CHAPTER_DELAY_MS = 1200;
       const AUTO_CONTINUE_MAX_FAILS = 3;
 
@@ -8355,7 +8442,11 @@ ${continueWordReq}
         const dN = document.getElementById('seriesNextVol');
         const dV = document.getElementById('seriesDownloadVol');
         const dA = document.getElementById('seriesDownloadAll');
-        if (dN) dN.addEventListener('click', () => { startNextVolume(); });
+        if (dN) dN.addEventListener('click', () => {
+          if (rejectWhileGenerating()) return;
+          seriesAborted = false; // 使用者主動開下一集：不沿用先前停止留下的旗標
+          startNextVolume();
+        });
         if (dV) dV.addEventListener('click', downloadActiveVolume);
         if (dA) dA.addEventListener('click', downloadWholeSeries);
       }
@@ -9566,6 +9657,8 @@ ${continueWordReq}
       
       // 載入書籤內容
       function loadBookmarkContent(bm) {
+        // 生成中換書會讓進行中的結果寫進另一本書（含系列書櫃資料），一律先停止
+        if (rejectWhileGenerating()) return false;
         clearStoryStateLedger();
         // 系列書：還原 storySeries 與作用中集（番外含在所屬集 content 內）
         if (bm && bm.kind === 'series' && Array.isArray(bm.volumes) && bm.volumes.length) {
@@ -10077,12 +10170,12 @@ ${continueWordReq}
 
       document.getElementById('bookDetailRead').addEventListener('click', () => {
         if (!shelfCurrentBm) return;
-        loadBookmarkContent(shelfCurrentBm);
+        if (loadBookmarkContent(shelfCurrentBm) === false) return;
         closeBookshelf();
       });
       document.getElementById('bookDetailFlip').addEventListener('click', () => {
         if (!shelfCurrentBm) return;
-        loadBookmarkContent(shelfCurrentBm);
+        if (loadBookmarkContent(shelfCurrentBm) === false) return;
         closeBookshelf();
         setTimeout(() => { if (!bookReaderBtn.disabled) bookReaderBtn.click(); }, 220);
       });
@@ -11749,7 +11842,8 @@ ${continueWordReq}
           wordsPerChapter = targetTotal;
         }
         const effective = wordsPerChapter || defaultPerChapter;
-        const minPerChapter = Math.max(1500, Math.round(effective * 0.88));
+        // 1500 字下限只適用一般章節；短章（每章 < 約 1,700 字）不可讓下限超過目標，否則範圍倒置
+        const minPerChapter = Math.min(effective, Math.max(1500, Math.round(effective * 0.88)));
         const maxPerChapter = Math.round(effective * 1.12);
         return { targetChapters, targetTotal, wordsPerChapter: effective, minPerChapter, maxPerChapter };
       }
@@ -13640,6 +13734,7 @@ ${currentOutline.slice(0, 1600)}
       if (retitleBtn) {
         retitleBtn.addEventListener('click', async () => {
           if (!currentOutline) { showStatus('error', '請先生成大綱'); return; }
+          if (rejectWhileGenerating()) return;
           if (!confirmPeakPricing()) {
             showStatus('warning', '已取消尖峰時段生成；可於離峰時段再試。');
             return;
@@ -13665,7 +13760,7 @@ ${currentOutline.slice(0, 1600)}
               showStatus('error', '取書名失敗：' + err.message);
             }
           } finally {
-            endGeneration();
+            endGeneration(signal);
             retitleBtn.disabled = false;
           }
         });
@@ -13699,6 +13794,7 @@ ${currentOutline.slice(0, 1600)}
       regenerateOutlineBtn.addEventListener('click', generateOutline);
 
       async function generateOutline() {
+        if (rejectWhileGenerating()) return;
         if (!confirmPeakPricing()) {
           showStatus('warning', '已取消尖峰時段生成；可於離峰時段再試。');
           return;
@@ -13835,7 +13931,7 @@ ${currentOutline.slice(0, 1600)}
             showStatus('error', '大綱生成失敗：' + err.message);
           }
         } finally {
-          endGeneration();
+          endGeneration(signal);
         }
       }
 
@@ -14770,6 +14866,7 @@ ${currentOutline.slice(0, 1600)}
       }
 
       function resetWorkspace() {
+        if (rejectWhileGenerating()) return;
         if (!latestStory && !(resultDiv && resultDiv.textContent.trim())) {
           showStatus('info', '目前沒有可清除的生成結果');
           return;
