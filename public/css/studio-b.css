@@ -297,50 +297,69 @@ body.studio-b #readingScene .manuscript-footer { background: var(--sb-sf); borde
 body.studio-b #readingScene .manuscript-footer-actions #manuscriptContinue:not(:disabled) { background: var(--sb-m5); border-color: var(--sb-m5); color: var(--sb-on); }
 
 /* ---------- 原稿紙：每個字落在一格 ----------
- * 每格寬 1em（中文全形字剛好一格），行高 1.5em：上方 0.25em、下方 0.25em 是行與行之間的間隔帶。
- * 右側 padding 用 round() 把內容寬度修成 1em 的整數倍，最後一格才會完整。 */
+ * 照原型：格子邊長 1.6em，字置中，格子四周各留 0.3em。
+ * letter-spacing .6em 讓每個字前進 1.6em；格線往左（直排往上）退 0.3em，字就落在格子正中。
+ * 行距 2.1em：格子 1.6em，上下各 0.25em 是行與行之間的空白。
+ * 內容寬度修成 1.6em 的整數倍，最後一格才會完整。 */
 body.studio-b #readingScene .output:not(.vertical-writing) {
   --g: var(--sb-grid); --pp: var(--sb-paper);
-  line-height: 1.5 !important; letter-spacing: 0 !important; text-align: left !important; font-feature-settings: "fwid";
+  line-height: 2.1 !important; letter-spacing: .6em !important; text-align: left !important; font-feature-settings: "fwid";
   color: var(--sb-ink); background-color: var(--pp);
   padding: 28px 28px 64px;
-  padding-right: calc(100% - 28px - round(down, 100% - 56px, 1em));
+  padding-left: calc(28px + .3em);
+  padding-right: calc(100% - 28px - .3em - round(down, 100% - 56px - .6em, 1.6em));
+  /* 空白時也鋪滿整個稿紙視窗；高度一定是整行，格子不會被切半 */
+  min-height: calc(92px + round(down, 100% - 92px, 2.1em));
+  /* 格子用一格一格重複鋪的圖層（比 repeating-gradient 穩，不會掉線）；鋪出 padding 的部分用紙色蓋掉 */
   background-image:
-    linear-gradient(to bottom, var(--g) 0 1px, transparent 1px calc(1em - 1px), var(--g) calc(1em - 1px) 1em, transparent 1em),
-    linear-gradient(to bottom, transparent 0 1em, var(--pp) 1em),
-    linear-gradient(to right, var(--g) 0 1px, transparent 1px),
-    linear-gradient(to left, var(--g) 0 1px, transparent 1px);
-  background-size: 100% 1.5em, 100% 1.5em, 1em 100%, 100% 100%;
-  background-position: 0 .25em, 0 .25em, 0 0, 0 0;
-  background-repeat: repeat, repeat, repeat, no-repeat;
-  background-origin: content-box; background-clip: content-box;
+    linear-gradient(var(--pp), var(--pp)),
+    linear-gradient(var(--pp), var(--pp)),
+    linear-gradient(var(--pp), var(--pp)),
+    linear-gradient(var(--pp), var(--pp)),
+    linear-gradient(to bottom, transparent .25em, var(--g) .25em calc(.25em + 1px), transparent calc(.25em + 1px) calc(1.85em - 1px), var(--g) calc(1.85em - 1px) 1.85em, transparent 1.85em),
+    linear-gradient(to bottom, var(--pp) .25em, transparent .25em 1.85em, var(--pp) 1.85em),
+    linear-gradient(to right, var(--g) 0 1px, transparent 1px);
+  background-origin: padding-box, padding-box, padding-box, padding-box, content-box, content-box, content-box;
+  background-clip: padding-box;
+  background-size: 28px 100%, calc(100% - 28px - round(down, 100% - 56px - .6em, 1.6em) - 1px) 100%, 100% 28px, 100% 64px, 100% 2.1em, 100% 2.1em, 1.6em 100%;
+  background-position: left 0 top 0, right 0 top 0, left 0 top 0, left 0 bottom 0, -.3em 0, -.3em 0, -.3em 0;
+  background-repeat: no-repeat, no-repeat, no-repeat, no-repeat, repeat, repeat, repeat;
 }
 body.studio-b #readingScene .output:not(.vertical-writing):empty::before {
-  font: 400 1em/1.5 var(--sb-serif); letter-spacing: 0; color: var(--sb-faint); padding: 0; white-space: pre-line;
+  font: 400 1em/2.1 var(--sb-serif); letter-spacing: .6em; color: var(--sb-faint); padding: 0; white-space: pre-line;
 }
 /* 章名也要對齊格子：同字級、上下各空一行 */
 body.studio-b #readingScene .output .manuscript-chapter {
-  display: block; min-height: 0; margin: 0; padding: 1.5em 0; font: 700 1em/1.5 var(--sb-serif); letter-spacing: 0;
+  display: block; min-height: 0; margin: 0; padding: 2.1em 0; font: 700 1em/2.1 var(--sb-serif); letter-spacing: .6em;
   border: 0; color: var(--sb-m1); white-space: pre-wrap;
 }
 body.studio-b #readingScene .output .manuscript-chapter::before,
 body.studio-b #readingScene .output .manuscript-chapter::after,
 body.studio-b #readingScene .output .manuscript-chapter-label { display: none; }
 
-/* 直排：格線轉九十度，一行變成一欄，由右往左 */
+/* 直排：同一套格子轉九十度，一行變成一欄，由右往左 */
 body.studio-b #readingScene .output.vertical-writing {
   --g: var(--sb-grid); --pp: var(--sb-paper);
-  line-height: 1.5 !important; letter-spacing: 0 !important; font-feature-settings: "fwid"; color: var(--sb-ink); background-color: var(--pp);
+  line-height: 2.1 !important; letter-spacing: .6em !important; font-feature-settings: "fwid"; color: var(--sb-ink); background-color: var(--pp);
+  /* 高度修成整格：上 28px+.3em、下 28px-.3em，中間剛好 N 格 */
+  padding: 28px; padding-top: calc(28px + .3em); padding-bottom: calc(28px - .3em);
+  /* app.js 會在行內把 height 設成視窗高度，這裡蓋過去改成整格（min-width 生成中要貼合文字，不動） */
+  height: calc(56px + round(down, 100% - 56px, 1.6em)) !important;
   background-image:
-    linear-gradient(to left, var(--g) 0 1px, transparent 1px calc(1em - 1px), var(--g) calc(1em - 1px) 1em, transparent 1em),
-    linear-gradient(to left, transparent 0 1em, var(--pp) 1em),
+    linear-gradient(var(--pp), var(--pp)),
+    linear-gradient(var(--pp), var(--pp)),
+    linear-gradient(var(--pp), var(--pp)),
+    linear-gradient(var(--pp), var(--pp)),
+    linear-gradient(to left, transparent .25em, var(--g) .25em calc(.25em + 1px), transparent calc(.25em + 1px) calc(1.85em - 1px), var(--g) calc(1.85em - 1px) 1.85em, transparent 1.85em),
+    linear-gradient(to left, var(--pp) .25em, transparent .25em 1.85em, var(--pp) 1.85em),
     linear-gradient(to bottom, var(--g) 0 1px, transparent 1px);
-  background-size: 1.5em 100%, 1.5em 100%, 100% 1em;
-  background-position: right .25em top 0, right .25em top 0, 0 0;
-  background-repeat: repeat;
-  background-origin: content-box; background-clip: content-box;
+  background-origin: padding-box, padding-box, padding-box, padding-box, content-box, content-box, content-box;
+  background-clip: padding-box;
+  background-size: 100% 28px, 100% 27px, 28px 100%, 28px 100%, 2.1em 100%, 2.1em 100%, 100% 1.6em;
+  background-position: left 0 top 0, left 0 bottom 0, left 0 top 0, right 0 top 0, right 0 top -.3em, right 0 top -.3em, left 0 top -.3em;
+  background-repeat: no-repeat, no-repeat, no-repeat, no-repeat, repeat, repeat, repeat;
 }
-body.studio-b #readingScene .output.vertical-writing .manuscript-chapter { padding: 0 1.5em; }
+body.studio-b #readingScene .output.vertical-writing .manuscript-chapter { padding: 0 2.1em; }
 
 :root[data-theme="dark"] body.studio-b #readingScene .reading-scene-bg { opacity: .1; }
 
@@ -533,7 +552,7 @@ body.studio-b #stepSetup .outline-attach-actions .btn-small { flex: 1 1 0; width
 
 /* 直排空白提示：跟正文同字級、直書、落在格子裡 */
 body.studio-b #readingScene .output.vertical-writing:empty::before {
-  font: 400 1em/1.5 var(--sb-serif); letter-spacing: 0; color: var(--sb-faint); padding: 0; margin: 0;
+  font: 400 1em/2.1 var(--sb-serif); letter-spacing: .6em; color: var(--sb-faint); padding: 0; margin: 0;
   writing-mode: vertical-rl; white-space: pre-line; display: block; text-shadow: none;
 }
 
