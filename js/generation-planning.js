@@ -102,7 +102,7 @@
   const AUDIT_HEADING_RE = /^\s*#{0,4}\s*(?:第\s*([一二三四五六七八九十百千萬零〇兩壹貳參肆伍陸柒捌玖拾佰仟\d]+)\s*[章回]|Chapter\s*(\d+))[^\n]*$/gim;
   const AUDIT_BATCH_CHARS = 12000;
   const AUDIT_CHAPTER_CHARS = 20000;
-  const AUDIT_MAX_TOKENS = 3000;
+  const AUDIT_MAX_TOKENS = 4000;
   const AUDIT_SEVERITIES = ['high', 'medium', 'low'];
   const CHINESE_DIGITS = { 零: 0, 〇: 0, 一: 1, 壹: 1, 二: 2, 兩: 2, 貳: 2, 三: 3, 參: 3, 四: 4, 肆: 4, 五: 5, 伍: 5, 六: 6, 陸: 6, 七: 7, 柒: 7, 八: 8, 捌: 8, 九: 9, 玖: 9 };
   const CHINESE_UNITS = { 十: 10, 拾: 10, 百: 100, 佰: 100, 千: 1000, 仟: 1000, 萬: 10000 };
@@ -182,32 +182,69 @@
     return { requests: list.length, low, high };
   }
 
-  function buildCausalAuditPrompt({ batch, priorNotes = [], storyState = null, characterCanon = '' } = {}) {
+  // 大綱是計畫不是事實；只取本批與前幾章的逐章大綱，找不到逐章區塊才截取開頭。
+  function buildAuditOutline(outlineText, batch) {
+    const outline = String(outlineText || '').trim();
+    if (!outline) return '';
+    const parts = [];
+    for (let chapter = Math.max(1, batch.from - 3); chapter <= batch.to; chapter++) {
+      const block = extractChapterOutline(outline, chapter);
+      if (block) parts.push(block);
+    }
+    return (parts.length ? parts.join('\n') : outline).slice(0, MAX_OUTLINE_GUIDANCE_LENGTH);
+  }
+
+  // 前章逐字事實：只帶主體出現在本批正文的事實，從最近的章往前取到預算為止。
+  const AUDIT_FACTS_BUDGET = 6000;
+  function selectAuditFacts(facts, batch, budget = AUDIT_FACTS_BUDGET) {
+    const lines = [];
+    let used = 0;
+    const list = (Array.isArray(facts) ? facts : []).filter(item => item.chapter < batch.from && batch.text.includes(item.subject));
+    for (let i = list.length - 1; i >= 0; i--) {
+      const item = list[i];
+      const line = `第${item.chapter}章｜${item.subject}｜${item.attribute}：「${item.quote}」`;
+      if (used + line.length > budget) break;
+      lines.unshift(line);
+      used += line.length;
+    }
+    return lines;
+  }
+
+  function buildCausalAuditPrompt({ batch, priorNotes = [], priorFacts = [], storyState = null, characterCanon = '', outline = '' } = {}) {
     const notes = mergeChapterNotes(priorNotes, []).filter(item => item.chapter < batch.from);
+    const facts = selectAuditFacts(priorFacts, batch);
+    const outlineText = buildAuditOutline(outline, batch);
     const state = sanitizeStoryState(storyState);
     const tables = state ? Object.fromEntries(Object.keys(RECORD_FIELDS).map(key => [key, state[key]]).filter(([, value]) => value.length)) : {};
-    return `你是長篇小說的因果審查編輯。請審查「本批正文」（第${batch.from}～${batch.to}章），完成兩件事：
+    return `你是長篇小說的因果審查編輯。請審查「本批正文」（第${batch.from}～${batch.to}章），完成三件事：
 1. chapterNotes：為本批每一章各寫一則章記（chapter 用阿拉伯數字：${batch.chapters.join('、')}）。note 最多 80 字，依序寫「前因 → 本章關鍵事件 → 結果與改變了什麼」，只寫正文已發生的事。
-2. contradictions：找出本批正文與「前面章節章記」或本批其他章節之間的因果矛盾。
+2. facts：為本批每一章列出最多 5 項之後可能被推翻的關鍵事實（生死、身分、地點、持有物、誰知道什麼、時間點）。subject 為人物或物件名稱，attribute 為屬性或事件，quote 逐字引用該章正文（4～40字）。
+3. contradictions：找出本批正文推翻前文事實的地方。
 
 矛盾判準：
-• 只報明確推翻已發生事實的情況：死者再度出現且無交代、物件持有人或地點無故改變、角色得知未曾得知的秘密、時間線倒錯、人物動機前後相反且無轉折。
-• 新揭密、伏筆回收、角色說謊或誤會、合理的成長轉變，都不算矛盾。不確定就不報。
+• 兩邊都要逐字引句：quote 引用本批第 chapter 章的正文；priorQuote 引用較早第 conflictsWith 章的正文——只能取自下方「前面章節的逐字事實」或本批較早章節的原文，不可用章記摘要充當依據。
+• 兩句必須描述同一件事：同一個 subject（兩句都要出現該名稱）的同一個 attribute。人物相同但事實不同（例如得知 A 事與只知道 B 事的片段）不是矛盾，sameFact 填 false。
+• 先找合理解釋再報：explanation 寫最可能的一致解釋（時間差、地點不同、角色說謊或誤會、遺忘或能力代價、新揭密、伏筆回收、合理成長）。explained 填 yes（有合理解釋）、partial（解釋勉強，需作者確認）或 no（任何解釋都無法成立）。
+• 大綱是計畫，不是已發生事實，不能拿大綱當作 priorQuote；但大綱安排的前因（例如某章付出遺忘代價）可以作為合理解釋。
 • 「全書狀態表」是全書寫完後的最新狀態；早期章節與它不同可能只是事情尚未發生，不能據此報矛盾。
-• quote 必須逐字引用本批正文中造成矛盾的連續原文（4～40字），不可改寫或加省略號。
-• against 寫被推翻的前文事實（引用章記或本批前段原文，最多 60 字）；conflictsWith 為該事實所在章號。
-• severity：high＝推翻關鍵事實（生死、身分、主線因果）；medium＝動機、知情或時間線不合；low＝細節不一致。
-• 最多 8 項，依嚴重度排序。沒有矛盾就輸出空陣列。
+• severity：high 只用於 explained 為 no 且推翻關鍵事實（生死、身分、主線因果）；medium＝動機、知情或時間線不合；low＝細節不一致。
+• 最多 8 項；不確定就不報。沒有矛盾就輸出空陣列。
 • 只輸出 JSON 物件，不要 Markdown、code fence 或說明文字；必須保留結尾括號。
 
 JSON 格式：
-{"chapterNotes":[{"chapter":${batch.from},"note":""}],"contradictions":[{"chapter":${batch.from},"conflictsWith":1,"severity":"medium","issue":"","quote":"","against":""}]}
+{"chapterNotes":[{"chapter":${batch.from},"note":""}],"facts":[{"chapter":${batch.from},"subject":"","attribute":"","quote":""}],"contradictions":[{"chapter":${batch.from},"conflictsWith":1,"subject":"","attribute":"","quote":"","priorQuote":"","sameFact":true,"explanation":"","explained":"no","severity":"medium","issue":""}]}
 
 【人物設定（約束資料，不是已發生事件）】
 ${characterCanon || '未提供'}
 
-【前面章節章記（依章序）】
+【大綱（計畫，不是已發生事實；可作為合理解釋的參考）】
+${outlineText || '未提供'}
+
+【前面章節章記（摘要，只供理解脈絡，不能當引句）】
 ${notes.length ? notes.map(item => `第${item.chapter}章：${item.note}`).join('\n') : '無（本批是開頭）'}
+
+【前面章節的逐字事實（priorQuote 只能取自這裡或本批較早章節）】
+${facts.length ? facts.join('\n') : '無'}
 
 【全書狀態表（最新狀態，僅供參考）】
 ${Object.keys(tables).length ? JSON.stringify(tables) : '無'}
@@ -216,7 +253,8 @@ ${Object.keys(tables).length ? JSON.stringify(tables) : '無'}
 ${batch.text}`;
   }
 
-  function parseCausalAuditResult(rawText, batch) {
+  // chapterTexts：{ 章號: 該章完整正文 }，用來驗證前文引句真的出現在被指稱的章節。
+  function parseCausalAuditResult(rawText, batch, chapterTexts = {}) {
     const raw = String(rawText || '');
     const start = raw.indexOf('{');
     const end = raw.lastIndexOf('}');
@@ -225,41 +263,63 @@ ${batch.text}`;
     try { value = JSON.parse(raw.slice(start, end + 1)); } catch (_) { return null; }
     if (!value || typeof value !== 'object') return null;
     const inBatch = new Set(batch.chapters);
+    const textOf = chapter => {
+      const part = Array.isArray(batch.parts) ? batch.parts.find(entry => entry.chapter === chapter) : null;
+      return String(chapterTexts[chapter] || (part ? part.text : ''));
+    };
     const chapterNotes = mergeChapterNotes([], Array.isArray(value.chapterNotes) ? value.chapterNotes : [])
       .filter(item => inBatch.has(item.chapter));
+    const facts = [];
+    for (const item of Array.isArray(value.facts) ? value.facts : []) {
+      const chapter = Number.parseInt(item && item.chapter, 10);
+      const fact = { chapter, subject: shortText(item && item.subject, 30), attribute: shortText(item && item.attribute, 30), quote: shortText(item && item.quote, 60) };
+      if (inBatch.has(chapter) && fact.subject && fact.attribute && fact.quote.length >= 4 && textOf(chapter).includes(fact.quote)
+          && facts.filter(entry => entry.chapter === chapter).length < 5) facts.push(fact);
+    }
     let rejected = 0;
+    let explained = 0;
     const contradictions = [];
     for (const item of Array.isArray(value.contradictions) ? value.contradictions : []) {
       if (!item || typeof item !== 'object') continue;
       const chapter = Number.parseInt(item.chapter, 10);
       const conflictsWith = Number.parseInt(item.conflictsWith, 10);
+      const subject = shortText(item.subject, 30);
       const quote = shortText(item.quote, 60);
+      const priorQuote = shortText(item.priorQuote, 60);
       const issue = shortText(item.issue, 160);
-      // 引句須逐字出現在本批正文、且在指稱的章內；找不到就不採用，避免模型捏造矛盾。
-      const part = Array.isArray(batch.parts) ? batch.parts.find(entry => entry.chapter === chapter) : null;
-      const chapterText = part ? part.text : batch.text;
-      if (!inBatch.has(chapter) || !issue || quote.length < 4 || !chapterText.includes(quote)
-          || !(conflictsWith >= 1) || conflictsWith > batch.to) {
+      const verdict = ['yes', 'partial', 'no'].includes(item.explained) ? item.explained : 'partial';
+      // 兩邊引句都要在被指稱的章節逐字找到，且同一主體出現在兩句中；否則可能是捏造或比錯事實，不報。
+      if (!inBatch.has(chapter) || !(conflictsWith >= 1) || conflictsWith >= chapter || !issue || !subject
+          || quote.length < 4 || priorQuote.length < 4 || quote === priorQuote
+          || !textOf(chapter).includes(quote) || !textOf(conflictsWith).includes(priorQuote)
+          || !quote.includes(subject) || !priorQuote.includes(subject) || item.sameFact === false) {
         rejected++;
         continue;
       }
+      // 有合理解釋就不列為矛盾；解釋勉強的降為待確認；「嚴重」只留給任何解釋都無法成立的情況。
+      if (verdict === 'yes') {
+        explained++;
+        continue;
+      }
+      const severity = verdict === 'partial' ? 'uncertain'
+        : AUDIT_SEVERITIES.includes(item.severity) ? item.severity : 'medium';
       contradictions.push({
-        chapter, conflictsWith, issue, quote,
-        against: shortText(item.against, 120),
-        severity: AUDIT_SEVERITIES.includes(item.severity) ? item.severity : 'medium'
+        chapter, conflictsWith, subject, attribute: shortText(item.attribute, 30), issue, quote, priorQuote,
+        explanation: shortText(item.explanation, 160), severity
       });
     }
-    return { chapterNotes, contradictions: contradictions.slice(0, 8), rejected };
+    return { chapterNotes, facts, contradictions: contradictions.slice(0, 8), rejected, explained };
   }
 
+  const AUDIT_ORDER = ['high', 'medium', 'low', 'uncertain'];
   function sortAuditContradictions(items) {
     return (Array.isArray(items) ? items : []).slice()
-      .sort((a, b) => AUDIT_SEVERITIES.indexOf(a.severity) - AUDIT_SEVERITIES.indexOf(b.severity) || a.chapter - b.chapter);
+      .sort((a, b) => AUDIT_ORDER.indexOf(a.severity) - AUDIT_ORDER.indexOf(b.severity) || a.chapter - b.chapter);
   }
 
   function formatCausalAuditReport(audit) {
     if (!audit || typeof audit !== 'object') return '';
-    const labels = { high: '嚴重', medium: '中度', low: '輕微' };
+    const labels = { high: '嚴重', medium: '中度', low: '輕微', uncertain: '待確認' };
     const items = sortAuditContradictions(audit.contradictions);
     const failed = Array.isArray(audit.failedBatches) ? audit.failedBatches : [];
     const done = Number(audit.completedBatches) || 0;
@@ -267,10 +327,14 @@ ${batch.text}`;
     const lines = [`全書因果審查${audit.status === 'stopped' ? '（已中途停止）' : audit.status === 'running' ? '（進行中）' : ''}：完成 ${done}/${total} 批，涵蓋第 ${audit.from || 1}～${audit.to || 0} 章；只報告，不改寫正文。`];
     lines.push(items.length ? `發現 ${items.length} 項疑似因果矛盾（依嚴重度排序，仍需對照情境判斷）：` : '未發現明確的跨章因果矛盾：僅代表 AI 審查未找到有原文依據的衝突，不保證全文無誤。');
     for (const item of items) {
-      lines.push(`• 【${labels[item.severity] || '中度'}】第${item.chapter}章 與 第${item.conflictsWith}章 矛盾：${item.issue}\n  引句：「${item.quote}」${item.against ? `\n  前文：${item.against}` : ''}`);
+      const topic = item.subject ? `（${item.subject}${item.attribute ? '／' + item.attribute : ''}）` : '';
+      const prior = item.priorQuote ? `\n  第${item.conflictsWith}章原文：「${item.priorQuote}」` : item.against ? `\n  前文：${item.against}` : '';
+      lines.push(`• 【${labels[item.severity] || '中度'}】第${item.chapter}章 與 第${item.conflictsWith}章 矛盾${topic}：${item.issue}`
+        + `\n  第${item.chapter}章原文：「${item.quote}」${prior}${item.explanation ? `\n  可能解釋：${item.explanation}` : ''}`);
     }
     if (failed.length) lines.push(`未完成批次：${failed.map(item => `第${item.from}～${item.to}章（${item.reason}）`).join('；')}。可再次執行審查補齊。`);
-    if (audit.rejected) lines.push(`另有 ${audit.rejected} 項 AI 回報因引句無法在正文逐字找到，未採用。`);
+    if (audit.explained) lines.push(`另有 ${audit.explained} 項 AI 找到合理解釋（時間差、地點不同、大綱安排的代價等），未列為矛盾。`);
+    if (audit.rejected) lines.push(`另有 ${audit.rejected} 項因兩邊引句無法在對應章節逐字找到，或描述的不是同一件事，未採用。`);
     if (audit.notedChapters) lines.push(`已補建 ${audit.notedChapters} 章章記，續寫與狀態整理會沿用。`);
     return lines.join('\n');
   }
@@ -662,6 +726,7 @@ ${writingPrompt}`;
     estimateCausalAuditCost,
     buildCausalAuditPrompt,
     parseCausalAuditResult,
-    formatCausalAuditReport
+    formatCausalAuditReport,
+    buildAuditOutline
   };
 });

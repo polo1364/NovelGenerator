@@ -1437,6 +1437,13 @@
       }
 
       // ③ 全書因果審查：逐批送 Flash，補建章記並列出跨章矛盾；只報告，不改寫正文。
+      // 與續寫相同：系列取該集大綱，否則用全書大綱。
+      function getAuditOutline() {
+        if (!currentOutline) return '';
+        const total = storySeries && storySeries.totalVolumes > 1 ? storySeries.totalVolumes : 1;
+        return getOutlineForVolumeIndex(storySeries ? storySeries.activeVolumeIndex : 0, total) || currentOutline;
+      }
+
       async function runCausalAudit() {
         if (rejectWhileGenerating()) return;
         if (manualStoryCheck || storyStateController || causalAuditController) return;
@@ -1447,11 +1454,13 @@
           renderContinuityReport([], 'unchecked', { coverage: '正文至少需要 200 字才可進行全書因果審查。' });
           return;
         }
-        const batches = planner.planCausalAuditBatches(planner.splitStoryChapters(story));
+        const chapters = planner.splitStoryChapters(story);
+        const chapterTexts = Object.fromEntries(chapters.map(item => [item.chapter, item.text]));
+        const batches = planner.planCausalAuditBatches(chapters);
         const estimate = planner.estimateCausalAuditCost(batches, deepSeekPricing);
         const chapterTotal = batches.reduce((sum, batch) => sum + batch.chapters.length, 0);
         if (!confirm(`全書因果審查會從第 1 章逐批送出全文（共 ${chapterTotal} 章、${story.length.toLocaleString()} 字），補建章記並列出跨章矛盾；只報告，不改寫正文。\n`
-          + `預估 ${estimate.requests} 次 Flash 請求，約 $${estimate.low.toFixed(4)} – $${estimate.high.toFixed(4)}（本機估算，非實際帳單；尖峰價格另行確認）。\n`
+          + `預估 ${estimate.requests} 次 Flash 請求（每次最多輸出 4,000 tokens），約 $${estimate.low.toFixed(4)} – $${estimate.high.toFixed(4)}（本機估算，非實際帳單；尖峰價格另行確認）。\n`
           + '失敗批次不自動重試；可隨時按「停止審查」，已完成的批次會保留。是否繼續？')) return;
         if (!confirmPeakPricing()) return;
 
@@ -1468,8 +1477,9 @@
         const stored = readStoryStateLedger();
         const characterCanon = collectCharactersInfo().charactersInfo;
         let notes = [];
+        let facts = [];
         const audit = { status: 'running', completedBatches: 0, totalBatches: batches.length, from: batches[0].from, to: batches.at(-1).to,
-          contradictions: [], failedBatches: [], rejected: 0, notedChapters: 0, updatedAt: new Date().toISOString() };
+          contradictions: [], failedBatches: [], rejected: 0, explained: 0, notedChapters: 0, updatedAt: new Date().toISOString() };
         const stale = () => revision !== storyStateRevision || planner.createStoryFingerprint(latestStory.trim()) !== sourceFingerprint;
         let stopReason = '';
         try {
@@ -1480,6 +1490,8 @@
             const prompt = planner.buildCausalAuditPrompt({
               batch, characterCanon,
               priorNotes: planner.mergeChapterNotes(ledger.chapterNotes, notes),
+              priorFacts: facts,
+              outline: getAuditOutline(),
               storyState: ledger.state
             });
             let finishReason = null;
@@ -1487,10 +1499,10 @@
             let result = null;
             try {
               const raw = await callDeepSeek(prompt, null, 'deepseek-flash', {
-                taskType: 'state', signal: controller.signal, maxTokens: 3000, retries: 0,
+                taskType: 'state', signal: controller.signal, maxTokens: 4000, retries: 0,
                 onComplete: value => { finishReason = value.finishReason; }
               });
-              result = finishReason === 'length' ? null : planner.parseCausalAuditResult(raw, batch);
+              result = finishReason === 'length' ? null : planner.parseCausalAuditResult(raw, batch, chapterTexts);
               if (!result) reason = finishReason === 'length' ? '回應被截斷' : 'JSON 格式錯誤';
             } catch (err) {
               if (err.name === 'AbortError') { stopReason = '已停止'; break; }
@@ -1501,7 +1513,9 @@
             if (result) {
               notes = planner.mergeChapterNotes(notes, result.chapterNotes);
               audit.contradictions.push(...result.contradictions);
+              facts = facts.concat(result.facts);
               audit.rejected += result.rejected;
+              audit.explained += result.explained;
             } else {
               audit.failedBatches.push({ from: batch.from, to: batch.to, reason });
             }

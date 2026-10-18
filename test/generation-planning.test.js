@@ -232,7 +232,7 @@ test('工作坊依序載入規劃模組並快取到新版離線殼層', () => {
   const sw = fs.readFileSync(path.join(__dirname, '..', 'public', 'sw.js'), 'utf8');
 
   assert.match(html, /generation-planning\.js[\s\S]*app\.js/);
-  assert.match(sw, /const CACHE_VERSION\s*=\s*'v111'/);
+  assert.match(sw, /const CACHE_VERSION\s*=\s*'v112'/);
   assert.match(sw, /\.\/js\/generation-planning\.js/);
 });
 
@@ -380,39 +380,91 @@ test('全書因果審查：切章、分批、估價與章號解析', () => {
   assert.ok(estimate.low > 0 && estimate.high > estimate.low);
 });
 
-test('全書因果審查：prompt 帶前章章記，結果只採逐字引句', () => {
-  const chapters = [{ chapter: 3, text: '## 第3章\n死去的守門人走進酒館，向旅人揮手。' }, { chapter: 4, text: '## 第4章\n旅人收下鑰匙。' }];
-  const [batch] = planning.planCausalAuditBatches(chapters);
-  const prompt = planning.buildCausalAuditPrompt({ batch, priorNotes: [{ chapter: 2, note: '守門人被殺' }, { chapter: 3, note: '舊三' }], characterCanon: '角色1：【旅人】' });
-  assert.match(prompt, /第3～4章/);
-  assert.match(prompt, /第2章：守門人被殺/);
-  assert.doesNotMatch(prompt, /舊三/);
-  assert.match(prompt, /死去的守門人走進酒館/);
-  assert.match(prompt, /"contradictions"/);
+// 使用者以《冗餘資料》實測時的三個誤報，加上一個真正的矛盾。
+const auditChapterTexts = {
+  2: '## 第2章\n守門人倒在城門下，再也沒有醒來。',
+  3: '## 第3章\n敖宸的巢穴在禁區深處需破譯才能進入。',
+  4: '## 第4章\n沈硯舟讀取錄音筆得知裴玄齡與龍族蒐集迴路。',
+  5: '## 第5章\n夜裡，錨點的指定程序剛啟動。',
+  6: '## 第6章\n沈硯舟拼出座標，代價是遺忘顧星野殺人的片段。',
+  7: '## 第7章\n這件事只有沈硯舟透過讀取能力知道片段。六小時後被指定為錨點的人是她。敖宸在圖書館現身。',
+  8: '## 第8章\n守門人笑著替旅人倒酒。'
+};
+const auditBatch = () => planning.planCausalAuditBatches([7, 8].map(chapter => ({ chapter, text: auditChapterTexts[chapter] })))[0];
 
+test('全書因果審查：prompt 帶前章章記、逐字事實與大綱，並說明大綱不是事實', () => {
+  const batch = auditBatch();
+  const outline = '第6章：拼座標\n沈硯舟付出遺忘代價。\n第7章：錨點\n沈硯舟只剩片段記憶。\n第1章：開頭\n不相干';
+  const prompt = planning.buildCausalAuditPrompt({ batch, outline,
+    priorNotes: [{ chapter: 4, note: '沈硯舟得知迴路' }, { chapter: 7, note: '舊七' }],
+    priorFacts: [{ chapter: 4, subject: '沈硯舟', attribute: '知情', quote: '沈硯舟讀取錄音筆得知裴玄齡與龍族蒐集迴路' },
+      { chapter: 3, subject: '路人甲', attribute: '地點', quote: '路人甲在碼頭' }] });
+  assert.match(prompt, /第7～8章/);
+  assert.match(prompt, /第4章：沈硯舟得知迴路/);
+  assert.doesNotMatch(prompt, /舊七/);
+  assert.match(prompt, /第4章｜沈硯舟｜知情：「沈硯舟讀取錄音筆得知裴玄齡與龍族蒐集迴路」/);
+  assert.doesNotMatch(prompt, /路人甲在碼頭/, '主體沒出現在本批的事實不帶入');
+  assert.match(prompt, /沈硯舟付出遺忘代價/);
+  assert.doesNotMatch(prompt, /不相干/, '只帶本批與前三章的逐章大綱');
+  assert.match(prompt, /大綱是計畫，不是已發生事實/);
+  assert.match(prompt, /"priorQuote"/);
+  assert.match(prompt, /"explanation"/);
+  assert.match(prompt, /"facts"/);
+});
+
+test('全書因果審查：三個誤報實例不會報出，真正的矛盾仍會報出', () => {
+  const batch = auditBatch();
   const raw = JSON.stringify({
-    chapterNotes: [{ chapter: 3, note: '守門人復活' }, { chapter: 4, note: '拿到鑰匙' }, { chapter: 9, note: '不在本批' }],
+    chapterNotes: [{ chapter: 7, note: '錨點指定' }, { chapter: 8, note: '守門人倒酒' }, { chapter: 9, note: '不在本批' }],
+    facts: [
+      { chapter: 7, subject: '敖宸', attribute: '地點', quote: '敖宸在圖書館現身' },
+      { chapter: 8, subject: '守門人', attribute: '生死', quote: '捏造的事實句子' }
+    ],
     contradictions: [
-      { chapter: 3, conflictsWith: 2, severity: 'high', issue: '第2章已死的守門人再出現', quote: '死去的守門人走進酒館', against: '守門人被殺' },
-      { chapter: 4, conflictsWith: 2, severity: 'low', issue: '引句在別章', quote: '死去的守門人走進酒館' },
-      { chapter: 3, conflictsWith: 1, severity: 'weird', issue: '捏造引句', quote: '這句不存在於正文' },
-      { chapter: 4, conflictsWith: 2, severity: 'weird', issue: '未知嚴重度改為中度', quote: '旅人收下鑰匙' }
+      // 誤報一：同一人物、不同事實；且大綱第6章安排了遺忘代價
+      { chapter: 7, conflictsWith: 4, subject: '沈硯舟', attribute: '知情', quote: '只有沈硯舟透過讀取能力知道片段', priorQuote: '沈硯舟讀取錄音筆得知裴玄齡與龍族蒐集迴路',
+        sameFact: false, explained: 'yes', explanation: '第6章拼座標時遺忘了片段', severity: 'high', issue: '知情範圍前後不一' },
+      { chapter: 7, conflictsWith: 4, subject: '沈硯舟', attribute: '知情', quote: '只有沈硯舟透過讀取能力知道片段', priorQuote: '沈硯舟讀取錄音筆得知裴玄齡與龍族蒐集迴路',
+        sameFact: true, explained: 'yes', explanation: '大綱第6章的遺忘代價', severity: 'high', issue: '知情範圍前後不一' },
+      // 誤報二：時間差
+      { chapter: 7, conflictsWith: 5, subject: '指定', attribute: '錨點時間', quote: '六小時後被指定為錨點', priorQuote: '指定程序剛啟動',
+        sameFact: true, explained: 'yes', explanation: '程序啟動六小時後才完成指定', severity: 'medium', issue: '時間不一致' },
+      // 誤報三：地點不同（兩句主體不同）
+      { chapter: 7, conflictsWith: 3, subject: '敖宸', attribute: '位置', quote: '敖宸在圖書館現身', priorQuote: '巢穴在禁區深處需破譯',
+        sameFact: true, explained: 'no', severity: 'high', issue: '敖宸位置矛盾' },
+      // 前文引句不在指稱的章節
+      { chapter: 8, conflictsWith: 4, subject: '守門人', attribute: '生死', quote: '守門人笑著替旅人倒酒', priorQuote: '守門人倒在城門下',
+        sameFact: true, explained: 'no', severity: 'high', issue: '章號錯' },
+      // 真正的矛盾
+      { chapter: 8, conflictsWith: 2, subject: '守門人', attribute: '生死', quote: '守門人笑著替旅人倒酒', priorQuote: '守門人倒在城門下，再也沒有醒來',
+        sameFact: true, explained: 'no', explanation: '', severity: 'high', issue: '已死的守門人再出現' },
+      // 解釋勉強：降為待確認，不能是嚴重
+      { chapter: 8, conflictsWith: 2, subject: '守門人', attribute: '生死', quote: '守門人笑著替旅人倒酒', priorQuote: '守門人倒在城門下',
+        sameFact: true, explained: 'partial', explanation: '可能只是昏迷', severity: 'high', issue: '生死待確認' }
     ]
   });
-  const result = planning.parseCausalAuditResult('```json\n' + raw + '\n```', batch);
-  assert.deepEqual(result.chapterNotes.map(item => item.chapter), [3, 4]);
-  assert.equal(result.contradictions.length, 2);
-  assert.equal(result.contradictions[0].severity, 'high');
-  assert.equal(result.contradictions[1].severity, 'medium');
-  assert.equal(result.rejected, 2);
+  const result = planning.parseCausalAuditResult('```json\n' + raw + '\n```', batch, auditChapterTexts);
+  assert.deepEqual(result.chapterNotes.map(item => item.chapter), [7, 8]);
+  assert.deepEqual(result.facts, [{ chapter: 7, subject: '敖宸', attribute: '地點', quote: '敖宸在圖書館現身' }]);
+  assert.equal(result.explained, 2);
+  assert.equal(result.rejected, 3);
+  assert.deepEqual(result.contradictions.map(item => [item.chapter, item.conflictsWith, item.severity]), [[8, 2, 'high'], [8, 2, 'uncertain']]);
+  for (const text of ['沈硯舟', '指定', '敖宸']) {
+    assert.ok(!result.contradictions.some(item => item.subject === text), `${text} 的誤報不應報出`);
+  }
+  assert.equal(result.contradictions[0].priorQuote, '守門人倒在城門下，再也沒有醒來');
   assert.equal(planning.parseCausalAuditResult('壞掉的 JSON', batch), null);
 
-  const report = planning.formatCausalAuditReport({ status: 'stopped', completedBatches: 1, totalBatches: 2, from: 1, to: 4,
-    contradictions: [result.contradictions[1], result.contradictions[0]], failedBatches: [{ from: 5, to: 6, reason: '回應被截斷' }], rejected: 2, notedChapters: 2 });
+  const report = planning.formatCausalAuditReport({ status: 'stopped', completedBatches: 1, totalBatches: 2, from: 1, to: 8,
+    contradictions: result.contradictions.slice().reverse(), failedBatches: [{ from: 9, to: 10, reason: '回應被截斷' }],
+    rejected: result.rejected, explained: result.explained, notedChapters: 2 });
   assert.match(report, /已中途停止/);
-  assert.match(report, /• 【嚴重】第3章 與 第2章 矛盾[\s\S]*• 【中度】第4章/);
-  assert.match(report, /引句：「死去的守門人走進酒館」/);
-  assert.match(report, /第5～6章（回應被截斷）/);
+  assert.match(report, /• 【嚴重】第8章 與 第2章 矛盾（守門人／生死）[\s\S]*• 【待確認】第8章/);
+  assert.match(report, /第8章原文：「守門人笑著替旅人倒酒」\n  第2章原文：「守門人倒在城門下，再也沒有醒來」/);
+  assert.match(report, /可能解釋：可能只是昏迷/);
+  assert.match(report, /第9～10章（回應被截斷）/);
+  assert.match(report, /另有 2 項 AI 找到合理解釋/);
+  assert.match(report, /另有 3 項因兩邊引句/);
   assert.match(report, /已補建 2 章章記/);
   assert.match(planning.formatCausalAuditReport({ completedBatches: 1, totalBatches: 1, contradictions: [] }), /未發現明確的跨章因果矛盾/);
 });
@@ -425,5 +477,8 @@ test('全書因果審查：面板按鈕、忙碌檢查、費用確認並把章�
   assert.match(html, /id="causalAuditReport"/);
   assert.match(app, /async function runCausalAudit\(\)[\s\S]*?rejectWhileGenerating\(\)[\s\S]*?planner\.estimateCausalAuditCost\(batches, deepSeekPricing\)[\s\S]*?confirm\(/);
   assert.match(app, /chapterNotes: planner\.mergeChapterNotes\(base\.chapterNotes, notes\)/);
+  assert.match(app, /planner\.parseCausalAuditResult\(raw, batch, chapterTexts\)/);
+  assert.match(app, /outline: getAuditOutline\(\)/);
+  assert.match(app, /priorFacts: facts/);
   assert.match(app, /function beginGeneration\(\) \{[\s\S]*?causalAuditController\.abort\(\)/);
 });
