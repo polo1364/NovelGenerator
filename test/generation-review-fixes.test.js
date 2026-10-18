@@ -91,7 +91,7 @@ test('aborted stream records an estimated usage instead of nothing', async () =>
 
 test('an older flow ending cannot release a newer generation lock', () => {
   const ctx = { AbortController, autoContinueRunning: false, seriesRunning: false, autoStartPending: false,
-    storyStateController: null, showStatus: () => {} };
+    storyStateController: null, causalAuditController: null, showStatus: () => {} };
   vm.createContext(ctx);
   vm.runInContext(between('let currentAbortController = null;', 'const stopGenerationBtn'), ctx);
   const older = ctx.beginGeneration();

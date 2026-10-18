@@ -1182,6 +1182,7 @@
       const STORY_STATE_STORAGE_KEY = 'novelStoryStateLedger';
       let storyStateRevision = 0;
       let storyStateController = null;
+      let causalAuditController = null;
 
       function renderContinuityReport(warnings = [], status = 'unchecked', details = {}) {
         const panel = typeof document !== 'undefined' ? document.getElementById('continuityReport') : null;
@@ -1246,12 +1247,16 @@
         renderContinuityReport(matches && Array.isArray(stored.warnings) ? stored.warnings : [],
           matches ? stored.checkStatus || (stored.version >= 2 ? 'checked' : 'unchecked') : 'unchecked',
           { coverage: getContinuityCoverage(latestStory, stored), issues: matches ? stored.issues : [] });
+        const audit = stored && stored.causalAudit;
+        renderCausalAudit(audit && audit.sourceFingerprint === globalThis.NovelGenerationPlanning.createStoryFingerprint(latestStory.trim()) ? audit : null);
       }
 
       function clearStoryStateLedger() {
         storyStateRevision++;
         if (storyStateController) storyStateController.abort();
+        if (causalAuditController) causalAuditController.abort();
         try { localStorage.removeItem(STORY_STATE_STORAGE_KEY); } catch (_) {}
+        renderCausalAudit(null);
         renderContinuityReport();
       }
 
@@ -1379,7 +1384,7 @@
       let chapterRewriteGuidance = '';
 
       async function retryStoryContinuity() {
-        if (manualStoryCheck || storyStateController || currentAbortController || seriesRunning || autoContinueRunning) return;
+        if (manualStoryCheck || storyStateController || causalAuditController || currentAbortController || seriesRunning || autoContinueRunning) return;
         const story = latestStory.trim();
         if (story.length < 200) {
           renderContinuityReport([], 'unchecked', { coverage: '正文至少需要 200 字才可重新檢查。' });
@@ -1402,12 +1407,142 @@
         }
       }
 
+      function renderCausalAudit(audit) {
+        const panel = typeof document !== 'undefined' ? document.getElementById('causalAuditReport') : null;
+        if (!panel) return;
+        panel.hidden = !audit;
+        panel.textContent = audit ? globalThis.NovelGenerationPlanning.formatCausalAuditReport(audit) : '';
+      }
+
+      // 把審查補建的章記寫回狀態表；舊書沒有狀態表時建立一份只含章記的紀錄（不宣稱已整理狀態）。
+      function saveCausalAuditLedger(story, notes, audit) {
+        const planner = globalThis.NovelGenerationPlanning;
+        const sourceFingerprint = planner.createStoryFingerprint(story);
+        const stored = readStoryStateLedger();
+        const storedLength = stored && (stored.sourceLength || Number(String(stored.sourceFingerprint || '').split(':')[0]));
+        const applies = stored && (stored.sourceFingerprint === sourceFingerprint ||
+          (Number.isInteger(storedLength) && storedLength > 0 && storedLength <= story.length &&
+           planner.createStoryFingerprint(story.slice(0, storedLength)) === stored.sourceFingerprint));
+        const base = applies ? stored : {
+          version: 2, sourceLength: story.length, analysisStart: 0, sourceFingerprint,
+          chapterCount: countChapters(story), updatedAt: new Date().toISOString(),
+          state: null, warnings: [], issues: [], chapterNotes: [], checkStatus: 'unchecked'
+        };
+        localStorage.setItem(STORY_STATE_STORAGE_KEY, JSON.stringify({
+          ...base,
+          chapterNotes: planner.mergeChapterNotes(base.chapterNotes, notes),
+          causalAudit: { ...audit, sourceFingerprint }
+        }));
+        return base;
+      }
+
+      // ③ 全書因果審查：逐批送 Flash，補建章記並列出跨章矛盾；只報告，不改寫正文。
+      async function runCausalAudit() {
+        if (rejectWhileGenerating()) return;
+        if (manualStoryCheck || storyStateController || causalAuditController) return;
+        const planner = globalThis.NovelGenerationPlanning;
+        const story = latestStory.trim();
+        if (story.length < 200) {
+          renderCausalAudit(null);
+          renderContinuityReport([], 'unchecked', { coverage: '正文至少需要 200 字才可進行全書因果審查。' });
+          return;
+        }
+        const batches = planner.planCausalAuditBatches(planner.splitStoryChapters(story));
+        const estimate = planner.estimateCausalAuditCost(batches, deepSeekPricing);
+        const chapterTotal = batches.reduce((sum, batch) => sum + batch.chapters.length, 0);
+        if (!confirm(`全書因果審查會從第 1 章逐批送出全文（共 ${chapterTotal} 章、${story.length.toLocaleString()} 字），補建章記並列出跨章矛盾；只報告，不改寫正文。\n`
+          + `預估 ${estimate.requests} 次 Flash 請求，約 $${estimate.low.toFixed(4)} – $${estimate.high.toFixed(4)}（本機估算，非實際帳單；尖峰價格另行確認）。\n`
+          + '失敗批次不自動重試；可隨時按「停止審查」，已完成的批次會保留。是否繼續？')) return;
+        if (!confirmPeakPricing()) return;
+
+        const controller = new AbortController();
+        causalAuditController = controller;
+        const revision = storyStateRevision;
+        const sourceFingerprint = planner.createStoryFingerprint(story);
+        const button = document.getElementById('causalAuditBtn');
+        const cancel = document.getElementById('causalAuditCancel');
+        const retry = document.getElementById('continuityRetry');
+        if (button) { button.disabled = true; button.textContent = '審查中…'; }
+        if (retry) retry.disabled = true;
+        if (cancel) cancel.hidden = false;
+        const stored = readStoryStateLedger();
+        const characterCanon = collectCharactersInfo().charactersInfo;
+        let notes = [];
+        const audit = { status: 'running', completedBatches: 0, totalBatches: batches.length, from: batches[0].from, to: batches.at(-1).to,
+          contradictions: [], failedBatches: [], rejected: 0, notedChapters: 0, updatedAt: new Date().toISOString() };
+        const stale = () => revision !== storyStateRevision || planner.createStoryFingerprint(latestStory.trim()) !== sourceFingerprint;
+        let stopReason = '';
+        try {
+          renderCausalAudit(audit);
+          for (const batch of batches) {
+            if (controller.signal.aborted) { stopReason = '已停止'; break; }
+            const ledger = readStoryStateLedger() || stored || {};
+            const prompt = planner.buildCausalAuditPrompt({
+              batch, characterCanon,
+              priorNotes: planner.mergeChapterNotes(ledger.chapterNotes, notes),
+              storyState: ledger.state
+            });
+            let finishReason = null;
+            let reason = '';
+            let result = null;
+            try {
+              const raw = await callDeepSeek(prompt, null, 'deepseek-flash', {
+                taskType: 'state', signal: controller.signal, maxTokens: 3000, retries: 0,
+                onComplete: value => { finishReason = value.finishReason; }
+              });
+              result = finishReason === 'length' ? null : planner.parseCausalAuditResult(raw, batch);
+              if (!result) reason = finishReason === 'length' ? '回應被截斷' : 'JSON 格式錯誤';
+            } catch (err) {
+              if (err.name === 'AbortError') { stopReason = '已停止'; break; }
+              reason = getContinuityFailureMessage(err);
+              if (isNonRetryable(err)) { audit.failedBatches.push({ from: batch.from, to: batch.to, reason }); stopReason = reason; break; }
+            }
+            if (stale()) { stopReason = '正文或故事已變更，結果未保存'; break; }
+            if (result) {
+              notes = planner.mergeChapterNotes(notes, result.chapterNotes);
+              audit.contradictions.push(...result.contradictions);
+              audit.rejected += result.rejected;
+            } else {
+              audit.failedBatches.push({ from: batch.from, to: batch.to, reason });
+            }
+            audit.completedBatches++;
+            audit.notedChapters = notes.length;
+            audit.updatedAt = new Date().toISOString();
+            // 每批都寫回：中途停止或重新整理頁面時，已完成的章記仍可沿用。
+            saveCausalAuditLedger(story, notes, { ...audit, status: audit.completedBatches === batches.length ? 'done' : 'stopped' });
+            renderCausalAudit(audit);
+          }
+          audit.status = audit.completedBatches === batches.length ? 'done' : 'stopped';
+          if (stopReason && !stale() && !audit.failedBatches.some(item => item.reason === stopReason)) {
+            const next = batches[audit.completedBatches];
+            if (next) audit.failedBatches.push({ from: next.from, to: batches.at(-1).to, reason: stopReason });
+          }
+          if (!stale()) {
+            if (audit.completedBatches) saveCausalAuditLedger(story, notes, audit);
+            restoreContinuityReport();
+            renderCausalAudit(audit);
+          } else {
+            renderCausalAudit(null);
+            showStatus('warning', `全書因果審查已中止：${stopReason || '正文或故事已變更'}`);
+          }
+        } catch (error) {
+          console.warn('全書因果審查未完成：', getContinuityFailureMessage(error));
+          renderCausalAudit({ ...audit, status: 'stopped' });
+        } finally {
+          if (causalAuditController === controller) causalAuditController = null;
+          if (button) { button.disabled = false; button.textContent = '全書因果審查'; }
+          if (retry) retry.disabled = false;
+          if (cancel) cancel.hidden = true;
+        }
+      }
+
       // 全域中斷控制器：用於「停止生成」
       let currentAbortController = null;
       let userAborted = false;
 
       function beginGeneration() {
         if (storyStateController) storyStateController.abort();
+        if (causalAuditController) causalAuditController.abort();
         currentAbortController = new AbortController();
         userAborted = false;
         return currentAbortController.signal;
@@ -1447,6 +1582,10 @@
       document.getElementById('continuityRetry')?.addEventListener('click', retryStoryContinuity);
       document.getElementById('continuityCancel')?.addEventListener('click', () => {
         if (manualStoryCheck && storyStateController) storyStateController.abort();
+      });
+      document.getElementById('causalAuditBtn')?.addEventListener('click', runCausalAudit);
+      document.getElementById('causalAuditCancel')?.addEventListener('click', () => {
+        if (causalAuditController) causalAuditController.abort();
       });
 
       // ==================== 載入已儲存的故事 ====================

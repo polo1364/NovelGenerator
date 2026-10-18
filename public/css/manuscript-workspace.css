@@ -4,6 +4,10 @@
 #readingScene .continuity-actions button { min-height: 48px; min-width: 96px; padding: 10px 16px; }
 #readingScene #continuityRetry { background: #c29a6c; color: #242721; border: 1px solid #94714a; border-radius: 3px; }
 #readingScene #continuityRetry:disabled { opacity: .55; cursor: wait; }
+#readingScene #causalAuditBtn { background: #e7dcc4; color: #242721; border: 1px solid #94714a; border-radius: 3px; }
+#readingScene #causalAuditBtn:disabled { opacity: .55; cursor: wait; }
+#readingScene #causalAuditReport { white-space: pre-line; overflow-wrap: anywhere; margin-top: 10px; color: #4b473e; font-size: 13px; line-height: 1.8; }
+[data-theme="dark"] #readingScene #causalAuditReport { color: #d4c9b5; }
 #readingScene .continuity-actions button[hidden] { display: none; }
 #readingScene .continuity-actions span { color: var(--ms-ink, #292825); font-size: 12px; line-height: 1.6; }
 #readingScene {

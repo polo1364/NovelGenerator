@@ -232,7 +232,7 @@ test('工作坊依序載入規劃模組並快取到新版離線殼層', () => {
   const sw = fs.readFileSync(path.join(__dirname, '..', 'public', 'sw.js'), 'utf8');
 
   assert.match(html, /generation-planning\.js[\s\S]*app\.js/);
-  assert.match(sw, /const CACHE_VERSION\s*=\s*'v110'/);
+  assert.match(sw, /const CACHE_VERSION\s*=\s*'v111'/);
   assert.match(sw, /\.\/js\/generation-planning\.js/);
 });
 
@@ -351,4 +351,79 @@ test('寫後自檢：新內容有已驗證的人物設定衝突時退回重寫�
   assert.match(app, /continueChapterWithResume\(\{ \.\.\.opts, rewriteAttempt: true \}\)/);
   assert.match(app, /result\.conflictUnresolved = true/);
   assert.match(app, /\$\{storyStateGuidance\}\$\{chapterRewriteGuidance\}/);
+});
+
+test('全書因果審查：切章、分批、估價與章號解析', () => {
+  assert.equal(planning.parseChapterNumber('12'), 12);
+  assert.equal(planning.parseChapterNumber('十二'), 12);
+  assert.equal(planning.parseChapterNumber('二十'), 20);
+  assert.equal(planning.parseChapterNumber('一百零五'), 105);
+  assert.equal(planning.parseChapterNumber('X'), 0);
+
+  const story = '# 書名\n\n## 第一章 城門\n' + '甲'.repeat(5000) + '\n## 第2章 河岸\n' + '乙'.repeat(5000) + '\n## 第二章 重複章號\n' + '丙'.repeat(5000);
+  const chapters = planning.splitStoryChapters(story);
+  assert.deepEqual(chapters.map(item => item.chapter), [1, 2, 3]);
+  assert.match(chapters[0].text, /^## 第一章 城門/);
+  assert.deepEqual(planning.splitStoryChapters('沒有章名的正文'), [{ chapter: 1, text: '沒有章名的正文' }]);
+  assert.deepEqual(planning.splitStoryChapters(''), []);
+
+  const batches = planning.planCausalAuditBatches(chapters, 12000);
+  assert.deepEqual(batches.map(batch => batch.chapters), [[1, 2], [3]]);
+  assert.equal(batches[0].from, 1);
+  assert.equal(batches[0].to, 2);
+  const huge = planning.planCausalAuditBatches([{ chapter: 1, text: '長'.repeat(50000) }]);
+  assert.ok(huge[0].length < 21000 && /中段略/.test(huge[0].text));
+
+  const pricing = require(path.join(__dirname, '..', 'public', 'js', 'deepseek-pricing.js'));
+  const estimate = planning.estimateCausalAuditCost(batches, pricing, new Date('2026-09-12T00:00:00Z'));
+  assert.equal(estimate.requests, 2);
+  assert.ok(estimate.low > 0 && estimate.high > estimate.low);
+});
+
+test('全書因果審查：prompt 帶前章章記，結果只採逐字引句', () => {
+  const chapters = [{ chapter: 3, text: '## 第3章\n死去的守門人走進酒館，向旅人揮手。' }, { chapter: 4, text: '## 第4章\n旅人收下鑰匙。' }];
+  const [batch] = planning.planCausalAuditBatches(chapters);
+  const prompt = planning.buildCausalAuditPrompt({ batch, priorNotes: [{ chapter: 2, note: '守門人被殺' }, { chapter: 3, note: '舊三' }], characterCanon: '角色1：【旅人】' });
+  assert.match(prompt, /第3～4章/);
+  assert.match(prompt, /第2章：守門人被殺/);
+  assert.doesNotMatch(prompt, /舊三/);
+  assert.match(prompt, /死去的守門人走進酒館/);
+  assert.match(prompt, /"contradictions"/);
+
+  const raw = JSON.stringify({
+    chapterNotes: [{ chapter: 3, note: '守門人復活' }, { chapter: 4, note: '拿到鑰匙' }, { chapter: 9, note: '不在本批' }],
+    contradictions: [
+      { chapter: 3, conflictsWith: 2, severity: 'high', issue: '第2章已死的守門人再出現', quote: '死去的守門人走進酒館', against: '守門人被殺' },
+      { chapter: 4, conflictsWith: 2, severity: 'low', issue: '引句在別章', quote: '死去的守門人走進酒館' },
+      { chapter: 3, conflictsWith: 1, severity: 'weird', issue: '捏造引句', quote: '這句不存在於正文' },
+      { chapter: 4, conflictsWith: 2, severity: 'weird', issue: '未知嚴重度改為中度', quote: '旅人收下鑰匙' }
+    ]
+  });
+  const result = planning.parseCausalAuditResult('```json\n' + raw + '\n```', batch);
+  assert.deepEqual(result.chapterNotes.map(item => item.chapter), [3, 4]);
+  assert.equal(result.contradictions.length, 2);
+  assert.equal(result.contradictions[0].severity, 'high');
+  assert.equal(result.contradictions[1].severity, 'medium');
+  assert.equal(result.rejected, 2);
+  assert.equal(planning.parseCausalAuditResult('壞掉的 JSON', batch), null);
+
+  const report = planning.formatCausalAuditReport({ status: 'stopped', completedBatches: 1, totalBatches: 2, from: 1, to: 4,
+    contradictions: [result.contradictions[1], result.contradictions[0]], failedBatches: [{ from: 5, to: 6, reason: '回應被截斷' }], rejected: 2, notedChapters: 2 });
+  assert.match(report, /已中途停止/);
+  assert.match(report, /• 【嚴重】第3章 與 第2章 矛盾[\s\S]*• 【中度】第4章/);
+  assert.match(report, /引句：「死去的守門人走進酒館」/);
+  assert.match(report, /第5～6章（回應被截斷）/);
+  assert.match(report, /已補建 2 章章記/);
+  assert.match(planning.formatCausalAuditReport({ completedBatches: 1, totalBatches: 1, contradictions: [] }), /未發現明確的跨章因果矛盾/);
+});
+
+test('全書因果審查：面板按鈕、忙碌檢查、費用確認並把章記寫回狀態表', () => {
+  const app = fs.readFileSync(path.join(__dirname, '..', 'public', 'js', 'app.js'), 'utf8');
+  const html = fs.readFileSync(path.join(__dirname, '..', 'public', 'index.html'), 'utf8');
+  assert.match(html, /id="causalAuditBtn"[^>]*>全書因果審查</);
+  assert.match(html, /id="causalAuditCancel"[^>]*hidden/);
+  assert.match(html, /id="causalAuditReport"/);
+  assert.match(app, /async function runCausalAudit\(\)[\s\S]*?rejectWhileGenerating\(\)[\s\S]*?planner\.estimateCausalAuditCost\(batches, deepSeekPricing\)[\s\S]*?confirm\(/);
+  assert.match(app, /chapterNotes: planner\.mergeChapterNotes\(base\.chapterNotes, notes\)/);
+  assert.match(app, /function beginGeneration\(\) \{[\s\S]*?causalAuditController\.abort\(\)/);
 });
