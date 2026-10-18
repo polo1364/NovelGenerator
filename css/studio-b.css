@@ -318,6 +318,7 @@ body.studio-b #readingScene .output:not(.vertical-writing) {
    * 重複鋪小圖塊時，瀏覽器會把圖塊對齊到實體像素，Windows 縮放 125%／150% 時線會消失、越往後越偏。
    * 鋪出 padding 的部分用紙色蓋掉。 */
   background-image:
+    repeating-linear-gradient(to bottom, transparent 0 var(--gap), var(--g) var(--gap) calc(var(--gap) + 1.6em), transparent calc(var(--gap) + 1.6em) var(--lh)),
     linear-gradient(var(--pp), var(--pp)),
     linear-gradient(var(--pp), var(--pp)),
     linear-gradient(var(--pp), var(--pp)),
@@ -325,10 +326,11 @@ body.studio-b #readingScene .output:not(.vertical-writing) {
     repeating-linear-gradient(to bottom, transparent 0 var(--gap), var(--g) var(--gap) calc(var(--gap) + 1px), transparent calc(var(--gap) + 1px) calc(calc(var(--gap) + 1.6em) - 1px), var(--g) calc(calc(var(--gap) + 1.6em) - 1px) calc(var(--gap) + 1.6em), transparent calc(var(--gap) + 1.6em) var(--lh)),
     repeating-linear-gradient(to bottom, var(--pp) 0 var(--gap), transparent var(--gap) calc(var(--gap) + 1.6em), var(--pp) calc(var(--gap) + 1.6em) var(--lh)),
     repeating-linear-gradient(to right, var(--g) 0 1px, transparent 1px 1.6em);
-  background-origin: padding-box, padding-box, padding-box, padding-box, content-box, content-box, content-box;
+  /* 第一層是格子最右邊那條線：放在遮罩上面，小數像素時才不會被紙色蓋掉 */
+  background-origin: content-box, padding-box, padding-box, padding-box, padding-box, content-box, content-box, content-box;
   background-clip: padding-box;
-  background-size: 28px 100%, calc(100% - 28px - round(down, 100% - 56px - .6em, 1.6em) - 1px) 100%, 100% 28px, 100% 64px, calc(100% + 1px) 100%, calc(100% + 1px) 100%, calc(100% + 1px) 100%;
-  background-position: left 0 top 0, right 0 top 0, left 0 top 0, left 0 bottom 0, -.3em 0, -.3em 0, -.3em 0;
+  background-size: 1px 100%, 28px 100%, calc(100% - 28px - round(down, 100% - 56px - .6em, 1.6em)) 100%, 100% 28px, 100% 64px, calc(100% + 1px) 100%, calc(100% + 1px) 100%, calc(100% + 1px) 100%;
+  background-position: right .3em top 0, left 0 top 0, right 0 top 0, left 0 top 0, left 0 bottom 0, -.3em 0, -.3em 0, -.3em 0;
   background-repeat: no-repeat;
 }
 body.studio-b #readingScene .output:not(.vertical-writing):empty::before {
@@ -365,6 +367,7 @@ body.studio-b #readingScene .output.vertical-writing {
   /* app.js 會在行內把 height 設成視窗高度，這裡蓋過去改成整格（min-width 生成中要貼合文字，不動） */
   height: calc(56px + round(down, 100% - 56px, 1.6em)) !important;
   background-image:
+    repeating-linear-gradient(to left, transparent 0 var(--gap), var(--g) var(--gap) calc(var(--gap) + 1.6em), transparent calc(var(--gap) + 1.6em) var(--lh)),
     linear-gradient(var(--pp), var(--pp)),
     linear-gradient(var(--pp), var(--pp)),
     linear-gradient(var(--pp), var(--pp)),
@@ -372,10 +375,11 @@ body.studio-b #readingScene .output.vertical-writing {
     repeating-linear-gradient(to left, transparent 0 var(--gap), var(--g) var(--gap) calc(var(--gap) + 1px), transparent calc(var(--gap) + 1px) calc(calc(var(--gap) + 1.6em) - 1px), var(--g) calc(calc(var(--gap) + 1.6em) - 1px) calc(var(--gap) + 1.6em), transparent calc(var(--gap) + 1.6em) var(--lh)),
     repeating-linear-gradient(to left, var(--pp) 0 var(--gap), transparent var(--gap) calc(var(--gap) + 1.6em), var(--pp) calc(var(--gap) + 1.6em) var(--lh)),
     repeating-linear-gradient(to bottom, var(--g) 0 1px, transparent 1px 1.6em);
-  background-origin: padding-box, padding-box, padding-box, padding-box, content-box, content-box, content-box;
+  /* 第一層是格子最下面那條線：放在遮罩上面，小數像素時才不會被紙色蓋掉 */
+  background-origin: content-box, padding-box, padding-box, padding-box, padding-box, content-box, content-box, content-box;
   background-clip: padding-box;
-  background-size: 100% 28px, 100% 27px, 28px 100%, 28px 100%, 100% calc(100% + 1px), 100% calc(100% + 1px), 100% calc(100% + 1px);
-  background-position: left 0 top 0, left 0 bottom 0, left 0 top 0, right 0 top 0, right 0 top -.3em, right 0 top -.3em, left 0 top -.3em;
+  background-size: 100% 1px, 100% 28px, 100% 28px, 28px 100%, 28px 100%, 100% calc(100% + 1px), 100% calc(100% + 1px), 100% calc(100% + 1px);
+  background-position: right 0 bottom .3em, left 0 top 0, left 0 bottom 0, left 0 top 0, right 0 top 0, right 0 top -.3em, right 0 top -.3em, left 0 top -.3em;
   background-repeat: no-repeat;
 }
 body.studio-b #readingScene .output.vertical-writing .manuscript-chapter { padding: 0 var(--lh); }
