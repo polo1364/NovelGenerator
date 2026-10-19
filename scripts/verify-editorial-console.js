@@ -231,7 +231,8 @@ async function verifyModalAndFocus(client) {
   ));
   await client.evaluate("document.querySelector('#specialElementsContainer .special-element-item').click()");
   await poll('special-element checkbox feedback', async () => client.evaluate(
-    "getComputedStyle(document.querySelector('#specialElementsContainer .special-element-item.selected .checkbox-custom')).backgroundColor === 'rgb(30, 119, 116)'"
+    // 勾選後的方框要換成這個視窗的主色（與「完成」按鈕同色），不能維持空白
+    "(() => { const box = getComputedStyle(document.querySelector('#specialElementsContainer .special-element-item.selected .checkbox-custom')).backgroundColor; return box !== 'rgba(0, 0, 0, 0)' && box === getComputedStyle(document.querySelector('#specialElementsModal .btn-primary')).backgroundColor; })()"
   ));
   const searchFocus = await collectKeyboardFocus(client, '#elementSearch');
   await client.evaluate("document.querySelector('#dramaComboToggle').click()");
@@ -351,7 +352,7 @@ async function run() {
     const modal = await verifyModalAndFocus(client);
     assert.equal(modal.pickerOverflow, 'auto');
     assert.equal(modal.gridOverflow, 'visible');
-    assert.match(modal.checkbox.background, /^rgb\(30, 119, 116\)$/);
+    assert.notEqual(modal.checkbox.background, 'rgba(0, 0, 0, 0)', 'selected special element must fill its checkbox');
     assert.notEqual(modal.checkbox.transform, 'none');
     for (const focus of [modal.searchFocus, modal.countFocus]) {
       assert.equal(focus.matches, true, `focus-visible must match after keyboard focus: ${JSON.stringify(focus)}`);

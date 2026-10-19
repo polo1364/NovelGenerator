@@ -847,3 +847,76 @@ body.studio-b #outlineModal button.btn-primary:not(.modal-close):not(:disabled):
 
 /* 長篇分段的 placeholder 高度用 Studio B 的行高（整行倍數，格線才對得上） */
 body.studio-b #readingScene .output:not(.vertical-writing) .manuscript-chunk { contain-intrinsic-size: auto calc(var(--lh) * 30); }
+
+/* =================== ①–④ 設定視窗：與主頁、右側工具列視窗同風格 ===================
+ * 深藍標題列（左側是卡片同色圖示）、白底內容、輸入框與按鈕同主頁，主色沿用各卡片：故事藍／進階紫／特殊琥珀／人物玫瑰。 */
+body.studio-b .workspace-modal { background: var(--sb-sf); color: var(--sb-ink); font-family: var(--sb-sans); box-shadow: -24px 0 50px -24px rgba(10, 18, 26, .45); }
+body.studio-b .workspace-modal .modal-header {
+  background: var(--sb-hb) !important; color: var(--sb-hbfg); border-bottom: 0; padding: calc(14px + env(safe-area-inset-top, 0px)) 12px 14px 20px;
+  display: flex; align-items: center; justify-content: space-between; gap: 10px; box-shadow: none;
+}
+body.studio-b .workspace-modal .modal-title { color: var(--sb-hbfg) !important; font: 500 16px var(--sb-sans); letter-spacing: .02em; display: inline-flex; align-items: center; gap: 10px; background: none; -webkit-text-fill-color: currentColor; }
+body.studio-b .workspace-modal .modal-title::before {
+  font-family: "Material Symbols Outlined"; font-size: 18px; width: 30px; height: 30px; border-radius: 8px; display: grid; place-items: center;
+  background: var(--c); color: #fff; letter-spacing: 0; font-weight: 400;
+}
+body.studio-b .workspace-modal--story .modal-title::before { content: "menu_book"; }
+body.studio-b .workspace-modal--advanced .modal-title::before { content: "tune"; }
+body.studio-b .workspace-modal--special .modal-title::before { content: "auto_awesome"; }
+body.studio-b .workspace-modal--character .modal-title::before { content: "groups"; }
+body.studio-b .workspace-modal .modal-close {
+  width: 44px; height: 44px; min-width: 44px; border-radius: 10px; border: 0; background: transparent; color: var(--sb-hbmut); font-size: 18px;
+  display: grid; place-items: center; box-shadow: none; transform: none; padding: 0;
+}
+body.studio-b .workspace-modal .modal-close:hover { background: rgba(255, 255, 255, .12); color: var(--sb-hbfg); }
+body.studio-b .workspace-modal .modal-body { background: var(--sb-sf); padding: 18px 20px 20px; }
+
+/* 標籤、說明文字 */
+body.studio-b .workspace-modal label, body.studio-b .workspace-modal .char-field-label, body.studio-b .workspace-modal .se-head-title,
+body.studio-b .workspace-modal .section-title { color: var(--sb-mut); font: 500 12.5px var(--sb-sans); letter-spacing: .04em; }
+body.studio-b .workspace-modal .se-head-title, body.studio-b .workspace-modal .section-title { color: var(--sb-ink); font-size: 14px; }
+body.studio-b .workspace-modal :is(.char-hint, .per-chapter-hint, .input-group-desc, .drama-hint) {
+  background: var(--cs); color: var(--sb-ink); border: 0; border-left: 3px solid var(--c); border-radius: 0 8px 8px 0; font-size: 12.5px; line-height: 1.7;
+}
+
+/* 輸入框、下拉、可輸入選單（combo） */
+body.studio-b .workspace-modal :is(select, input:not([type=checkbox]):not([type=radio]):not([type=range]), textarea, .combo-input) {
+  background-color: var(--sb-sf); color: var(--sb-ink); border: 1px solid var(--sb-line); border-radius: 10px; min-height: 44px; box-shadow: none; font-family: var(--sb-sans); font-size: 14px;
+}
+/* 鍵盤焦點維持無障礙藍色 3px 外框（全站一致） */
+body.studio-b .workspace-modal :is(select, input, textarea, .combo-input, button):focus-visible { outline: 3px solid #2e5fae; outline-offset: 2px; border-color: #2e5fae; box-shadow: none; }
+body.studio-b .workspace-modal :is(input[type=checkbox], input[type=radio]) { accent-color: var(--c); }
+body.studio-b .workspace-modal .combo-toggle { border: 0; background: transparent; color: var(--sb-mut); }
+body.studio-b .workspace-modal .combo-menu { background: var(--sb-sf); border: 1px solid var(--sb-line); border-radius: 10px; box-shadow: 0 16px 34px -18px rgba(10, 18, 26, .4); }
+
+/* 按鈕：主要（完成）＝卡片主色實心；其他＝白底線框 */
+body.studio-b .workspace-modal :is(.btn-primary, .btn-outline, .se-clear-btn, .char-tab) {
+  background-image: none; box-shadow: none; transform: none; text-shadow: none; border-radius: 10px; min-height: 44px; font: 500 13.5px var(--sb-sans);
+}
+body.studio-b .workspace-modal :is(.btn-outline, .se-clear-btn, .char-tab) { background-color: var(--sb-sf); color: var(--sb-ink); border: 1px solid var(--sb-line); }
+body.studio-b .workspace-modal :is(.btn-outline, .se-clear-btn, .char-tab):not(:disabled):hover { border-color: var(--c); color: var(--c); background-color: var(--sb-sf); }
+body.studio-b .workspace-modal .btn-primary, body.studio-b .workspace-modal .char-tab.active { background-color: var(--c); border: 1px solid var(--c); color: #fff; }
+body.studio-b .workspace-modal .btn-primary:not(:disabled):hover, body.studio-b .workspace-modal .char-tab.active:hover { color: #fff; filter: brightness(1.08); background-color: var(--c); }
+body.studio-b .workspace-modal .btn-primary { padding: 0 26px; }
+body.studio-b .workspace-modal .workspace-modal-footer { background: var(--sb-sf); border-top: 1px solid var(--sb-line); box-shadow: none; }
+
+/* 人物卡 */
+body.studio-b .workspace-modal .character-row { background: var(--sb-sf); border: 1px solid var(--sb-line); border-radius: 12px; box-shadow: none; }
+body.studio-b .workspace-modal .char-index { color: var(--c); font-weight: 700; }
+body.studio-b .workspace-modal :is(.char-random-btn, .char-ai-btn, .char-remove-btn) { background-image: none; background-color: var(--sb-sf); border: 1px solid var(--sb-line); color: var(--sb-mut); border-radius: 10px; box-shadow: none; }
+body.studio-b .workspace-modal .char-ai-btn { background-color: var(--c); border-color: var(--c); color: #fff; }
+
+/* 特殊元素：白底小卡，選中＝主色淡底＋主色框 */
+body.studio-b .workspace-modal .special-elements-panel, body.studio-b .workspace-modal .special-elements-head,
+body.studio-b .workspace-modal .character-rules-note { background: var(--sb-sf); border: 1px solid var(--sb-line); border-radius: 12px; box-shadow: none; }
+body.studio-b .workspace-modal .selected-count { background: var(--c); color: #fff; border-radius: 999px; padding: 2px 10px; font: 500 12px var(--sb-sans); }
+body.studio-b .workspace-modal .special-element-item { background: var(--sb-sf); border: 1px solid var(--sb-line); border-radius: 10px; box-shadow: none; color: var(--sb-ink); transform: none; }
+body.studio-b .workspace-modal .special-element-item:hover { border-color: var(--c); }
+body.studio-b .workspace-modal .special-element-item.selected { background: var(--cs); border-color: var(--c); color: var(--sb-ink); }
+body.studio-b .workspace-modal .special-element-item .checkbox-custom { border-color: var(--sb-line); border-radius: 5px; background: var(--sb-sf); }
+body.studio-b .workspace-modal .special-element-item.selected .checkbox-custom { background: var(--c); border-color: var(--c); }
+/* 特殊元素視窗：搜尋列、分類列、戲劇化開關、自訂規則區塊改用同一套中性底色 */
+body.studio-b .workspace-modal :is(.special-elements-controls, .element-category-tabs-bar) { background: var(--sb-sf2); background-image: none; border-bottom: 1px solid var(--sb-line); }
+body.studio-b .workspace-modal .drama-combo { border: 1px solid var(--sb-line); border-radius: 10px; background: var(--sb-sf); }
+body.studio-b .workspace-modal .character-rules-note::before { display: none; }
+body.studio-b .workspace-modal .character-rules-note .section-title::before { background: var(--cs); color: var(--c); box-shadow: none; }
