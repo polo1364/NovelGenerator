@@ -7196,8 +7196,35 @@ ${n}
         themeSelect.value = choose(themes, themeSelect.value);
         settingSelect.value = choose(settingsData, settingSelect.value);
         styleSelect.value = choose(stylesArr, styleSelect.value);
+        // 故事深度：副主題、次要舞台避開主選項；核心問題與支線從通用題庫抽
+        const [subThemeEl, secondarySettingEl, coreQuestionEl, subplotsEl] = storyDepthEls;
+        if (subThemeEl) subThemeEl.value = choose(themes.filter(value => value !== themeSelect.value), subThemeEl.value);
+        if (secondarySettingEl) secondarySettingEl.value = choose(settingsData.filter(value => value !== settingSelect.value), secondarySettingEl.value);
+        if (coreQuestionEl) coreQuestionEl.value = choose(CORE_QUESTION_POOL, coreQuestionEl.value);
+        if (subplotsEl) {
+          const pool = SUBPLOT_POOL.slice();
+          subplotsEl.value = Array.from({ length: 2 }, () => pool.splice(Math.floor(random() * pool.length), 1)[0]).join('\n');
+        }
         saveSettingsToLocal();
       }
+      const CORE_QUESTION_POOL = [
+        '復仇之後，他還剩下什麼？', '為了守護一個人，可以背叛全世界嗎？', '真相與安穩，只能選一個時該怎麼選？',
+        '被命運選中的人，能不能拒絕自己的命運？', '力量越大，是否就越不自由？', '一個人能否真正擺脫過去？',
+        '正義若需要犧牲無辜，還算正義嗎？', '愛一個人，是成全還是佔有？', '當所有人都說你錯了，你還堅持嗎？',
+        '活下去和活得像自己，哪個更重要？', '原諒傷害自己的人，是軟弱還是強大？', '贏了全部卻失去初心，算不算贏？',
+        '家人與理想衝突時該忠於誰？', '謊言能不能保護一個人一輩子？', '平凡人能否改變不公平的規則？',
+        '記憶消失之後，這個人還是原來的他嗎？'
+      ];
+      const SUBPLOT_POOL = [
+        '感情線：與關鍵人物從互相看不順眼到彼此信任，中段因誤會分開', '陰謀線：身邊信任的人暗中另有目的，後段揭露',
+        '成長線：主角的致命弱點在中段造成重大損失，結局前克服', '身世線：主角身世之謎分三次揭露，最後一次改變立場',
+        '友情線：夥伴因理念不同決裂，最終在危機中重新並肩', '對手線：勢均力敵的對手多次交鋒，最後成為意外的助力',
+        '師徒線：導師的過去與主角現在的困境互相呼應，中段導師退場', '家族線：家人的期待與主角的選擇衝突，結局前和解或決裂',
+        '寶物線：一件關鍵物品幾度易手，每次易手都改變局勢', '復仇線：配角的復仇計畫與主線交錯，結局前收束',
+        '救贖線：曾犯錯的人物尋求彌補，付出真實代價', '懸疑線：一樁舊案的線索散落各章，結局前真相大白'
+      ];
+      if (storyDepthEls[0]) attachCombobox(storyDepthEls[0], themes);
+      if (storyDepthEls[1]) attachCombobox(storyDepthEls[1], settingsData);
 
       // ==================== 智能浮動章節導航 ====================
 
@@ -15045,7 +15072,7 @@ ${currentOutline.slice(0, 1600)}
       if (randomStoryElementsBtn) {
         randomStoryElementsBtn.addEventListener('click', () => {
           randomizeStoryElements();
-          showStatus('success', '已隨機填充主題、背景與風格');
+          showStatus('success', '已隨機填充主題、背景、風格與故事深度');
           updateWorkspaceSummary();
         });
       }
