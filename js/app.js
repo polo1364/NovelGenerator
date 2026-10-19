@@ -1641,11 +1641,20 @@
         if (causalAuditController) causalAuditController.abort();
       });
 
+      // 長篇手稿：整份純文字一放進去就要排字幾萬字（字型分批到達時還會重排好幾次），頁面會卡住。
+      // 先不排版，等手稿模組把它分成章節區塊（只排畫面附近的章節）再顯示；最多等 1.5 秒。
+      function holdManuscriptLayout(text) {
+        if (!text || text.length < 8000 || resultDiv.classList.contains('vertical-writing')) return;
+        resultDiv.classList.add('awaiting-layout');
+        setTimeout(() => resultDiv.classList.remove('awaiting-layout'), 1500);
+      }
+
       // ==================== 載入已儲存的故事 ====================
       const savedStory = (localStorage.getItem('savedStory') || '').replace(/\uFFFD/g, '');
       if (savedStory) {
         latestStory = savedStory;
         resultDiv.textContent = savedStory;
+        holdManuscriptLayout(savedStory);
         restoreContinuityReport();
         // 直接用 getElementById 確保獲取正確的元素
         document.getElementById('downloadBtn').disabled = false;
@@ -7050,10 +7059,18 @@ ${n}
         }
       }
 
-      // 閱讀進度追蹤
+      // 閱讀進度追蹤：每個畫面最多算一次；手稿不在畫面上時不量測（量測會強迫整份手稿重新排版）
+      let readingProgressFrame = 0;
       window.addEventListener('scroll', () => {
-        if (!resultDiv.textContent) return;
-        
+        if (readingProgressFrame) return;
+        readingProgressFrame = requestAnimationFrame(() => { readingProgressFrame = 0; updateReadingProgress(); });
+      }, { passive: true });
+      function updateReadingProgress() {
+        if (!latestStory) return;
+        const scene = document.getElementById('readingScene');
+        const sceneRect = scene ? scene.getBoundingClientRect() : null;
+        if (sceneRect && (sceneRect.bottom < 0 || sceneRect.top > window.innerHeight)) return;
+
         const rect = resultDiv.getBoundingClientRect();
         const windowHeight = window.innerHeight;
         const docHeight = resultDiv.offsetHeight;
@@ -7067,7 +7084,7 @@ ${n}
         
         // 自動更新當前章節高亮
         updateCurrentChapter();
-      });
+      }
 
       function updateCurrentChapter() {
         if (chapterMatches.length === 0) return;
@@ -7077,15 +7094,17 @@ ${n}
         const resultTop = resultRect.top + window.scrollY;
         
         let currentChapterIdx = 0;
-        
+        // 全文只取一次（手稿拆成很多節點時，每次讀 textContent 都要重組整份字串）
+        const textContent = resultDiv.textContent;
+        const resultHeight = resultDiv.offsetHeight;
+
         for (let i = 0; i < chapterMatches.length; i++) {
           const chapterTitle = chapterMatches[i].title;
-          const textContent = resultDiv.textContent;
           const chapterIndex = textContent.indexOf(chapterTitle);
           
           // 估算章節在頁面中的位置
           const ratio = chapterIndex / textContent.length;
-          const estimatedPos = resultTop + (resultDiv.offsetHeight * ratio);
+          const estimatedPos = resultTop + (resultHeight * ratio);
           
           if (scrollY >= estimatedPos - 100) {
             currentChapterIdx = i;
@@ -9825,8 +9844,8 @@ ${continueWordReq}
         // 更新徽章
         updateBookmarkBadge();
         
-        // 同步更新書櫃
-        if (typeof renderBookshelf === 'function') renderBookshelf();
+        // 同步更新書櫃：只在書櫃開著時重畫；關著時等打開（openBookshelf 會重畫）再畫，載入頁面時才不會白畫 27 本封面
+        if (typeof renderBookshelf === 'function' && document.getElementById('bookshelfModal')?.classList.contains('open')) renderBookshelf();
         
         bookmarkList.innerHTML = '';
 
@@ -14721,31 +14740,81 @@ ${currentOutline.slice(0, 1600)}
           measure.style.height = rect.height + 'px';
           measure.style.fontSize = fontSize + 'px';
 
-          const fits = (html) => { measure.innerHTML = html; return measure.scrollHeight <= measure.clientHeight && measure.scrollWidth <= measure.clientWidth; };
+          // 逐段量測：已排進本頁的段落留在量測框裡，只改最後一段的文字，
+          // 不必每次把整頁 HTML 重新解析排版（長篇切換版型才不會卡住）。分頁結果與逐頁重排相同。
+          measure.replaceChildren();
+          const overflows = () => measure.scrollHeight > measure.clientHeight || measure.scrollWidth > measure.clientWidth;
+          const probe = (type) => {
+            const el = document.createElement(type === 'title' ? 'h3' : 'p');
+            if (type === 'title') el.className = 'book-chapter';
+            measure.appendChild(el);
+            return el;
+          };
+          // 文字已整段放進 el 且溢出時，二分搜尋最後一個仍在量測框內的字（只讀位置，不改 DOM）
+          const estimateFit = (el, chars, start) => {
+            const node = el.firstChild;
+            if (!node) return 0;
+            const box = measure.getBoundingClientRect();
+            const right = box.left + measure.clientWidth + 0.5, bottom = box.top + measure.clientHeight + 0.5;
+            const units = [0];
+            for (let i = start; i < chars.length; i++) units.push(units[units.length - 1] + chars[i].length);
+            const range = document.createRange();
+            const inside = (i) => {
+              range.setStart(node, units[i]); range.setEnd(node, units[i + 1]);
+              const r = range.getBoundingClientRect();
+              return r.bottom <= bottom && r.right <= right && r.left >= box.left - 0.5 && r.top >= box.top - 0.5;
+            };
+            let lo = 0, hi = chars.length - start;
+            while (lo < hi) { const mid = Math.ceil((lo + hi) / 2); if (inside(mid - 1)) lo = mid; else hi = mid - 1; }
+            return lo;
+          };
           let current = '';
           let offset = 0, pageStart = 0;
           const pushPage = () => {
             if (current) { pages.push(current); pageOffsets.push(pageStart); current = ''; pageStart = offset; }
+            measure.replaceChildren();
           };
 
           for (const b of blocks) {
             const chars = Array.from(b.text);
             const html = b.type === 'title' ? titleHtml : pHtml;
             let start = 0;
-            if (b.type === 'title' && current && !fits(current + html(b.text))) pushPage();
+            if (b.type === 'title' && current) {
+              const el = probe(b.type);
+              el.textContent = b.text;
+              const fitsHere = !overflows();
+              el.remove();
+              if (!fitsHere) pushPage();
+            }
             while (start < chars.length) {
               const rest = chars.slice(start).join('');
-              if (fits(current + html(rest))) {
+              const el = probe(b.type);
+              el.textContent = rest;
+              if (!overflows()) {
                 current += html(rest); offset += chars.length - start; break;
               }
-              // 二分搜尋可容納的最長文字；無標點的單句與長標題也能跨頁。
-              let low = 0, high = chars.length - start;
-              while (low < high) {
-                const mid = Math.ceil((low + high) / 2);
-                if (fits(current + html(chars.slice(start, start + mid).join('')))) low = mid;
-                else high = mid - 1;
+              // 找可容納的最長文字（無標點的單句與長標題也能跨頁）：先用字元位置估算，不必重排，
+              // 再逐字前後驗證到「再多一字就溢出」為止，結果與逐次二分搜尋相同。
+              let low = estimateFit(el, chars, start);
+              el.textContent = chars.slice(start, start + low).join('');
+              if (overflows()) {
+                // 估多了（多半是段落下邊距把最後一行擠出去）：在 0..low-1 二分搜尋
+                let lo = 0, hi = low - 1;
+                while (lo < hi) {
+                  const mid = Math.ceil((lo + hi) / 2);
+                  el.textContent = chars.slice(start, start + mid).join('');
+                  if (!overflows()) lo = mid; else hi = mid - 1;
+                }
+                low = lo;
+                el.textContent = chars.slice(start, start + low).join('');
+              } else {
+                while (start + low < chars.length) {
+                  el.textContent = chars.slice(start, start + low + 1).join('');
+                  if (overflows()) break;
+                  low++;
+                }
               }
-              if (!low && current) { pushPage(); continue; }
+              if (!low && current) { el.remove(); pushPage(); continue; }
               const count = Math.max(1, low);
               current += html(chars.slice(start, start + count).join(''));
               offset += count; start += count;
@@ -14967,9 +15036,26 @@ ${currentOutline.slice(0, 1600)}
           clearTimeout(resizeTimer);
           resizeTimer = setTimeout(() => { if (overlay.classList.contains('open')) { const anchor = currentAnchor(); applyReaderMode(); reflowReader(anchor); } }, 200);
         });
+        // 字型分批載入時會連續觸發，合併成一次重排
+        let fontReflowTimer = null;
         if (document.fonts) document.fonts.addEventListener('loadingdone', () => {
-          if (overlay.classList.contains('open')) reflowReader();
+          clearTimeout(fontReflowTimer);
+          fontReflowTimer = setTimeout(() => { if (overlay.classList.contains('open')) reflowReader(); }, 250);
         });
+        // 打開版型選單時，先把各版型字體裡這本書會用到的字載好，切換後就不會再因字型載入重排一次
+        let readerFontsPrefetched = false;
+        function prefetchReaderFonts() {
+          if (readerFontsPrefetched || !document.fonts || !document.fonts.load) return;
+          readerFontsPrefetched = true;
+          const chars = [...new Set(Array.from(latestStory || ''))].join('');
+          for (const family of ['"Cactus Classical Serif"', '"Noto Serif TC"', '"LXGW WenKai TC"', '"Noto Sans TC"']) {
+            document.fonts.load(`${fontSize}px ${family}`, chars).catch(() => {});
+          }
+        }
+        if (modeSelect) {
+          modeSelect.addEventListener('pointerdown', prefetchReaderFonts);
+          modeSelect.addEventListener('focus', prefetchReaderFonts);
+        }
 
         openBtn.addEventListener('click', () => { if (!openBtn.disabled) open(); });
         closeBtn.addEventListener('click', close);

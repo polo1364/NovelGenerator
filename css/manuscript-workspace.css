@@ -153,3 +153,8 @@ body.manuscript-in-view #bookmarkNavToggle { background: #3e4339; box-shadow: no
 @media (prefers-reduced-motion: reduce) {
   #readingScene *, #readingScene *::before, #readingScene *::after { animation: none !important; transition: none !important; scroll-behavior: auto !important; }
 }
+
+/* 長篇手稿分段：每章一個區塊，只排版畫面附近的章節（placeholder 高度是整行的倍數，稿紙格線不會錯位） */
+#readingScene .output:not(.vertical-writing) .manuscript-chunk { display: block; content-visibility: auto; contain-intrinsic-size: auto calc(2.05em * 30); }
+/* 載入長篇時先不排字，等分段完成（最多 1.5 秒）再顯示 */
+#readingScene .output.awaiting-layout { content-visibility: hidden; contain-intrinsic-size: auto 560px; }

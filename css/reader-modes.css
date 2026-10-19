@@ -68,7 +68,8 @@
 #bookReaderOverlay[data-reader-mode="guji"] .book-page-inner { width: round(down, 100%, 1lh); margin-left: auto;
   background: repeating-linear-gradient(to left, transparent 0 calc(1lh - 1px), #a8321f55 calc(1lh - 1px) 1lh); }
 #bookReaderOverlay[data-reader-mode="guji"] :is(.book-page, .book-measure) p { margin: 0; text-indent: 2em; text-align: start; }
-#bookReaderOverlay[data-reader-mode="guji"] :is(.book-page, .book-measure) .book-chapter { font-size: 1.15em; margin: 0 0 0 1em; padding: 0; border: 0; text-align: start; letter-spacing: .2em; }
+/* 章名跟正文同字級，每行剛好一欄寬，後面的欄才會落在朱絲欄之間；章名後空一欄 */
+#bookReaderOverlay[data-reader-mode="guji"] :is(.book-page, .book-measure) .book-chapter { font-size: 1em; line-height: inherit; margin: 0 0 0 1lh; padding: 0; border: 0; text-align: start; letter-spacing: .2em; }
 /* 藏書印 */
 #bookReaderOverlay[data-reader-mode="guji"] .book-page.right::after { content: "藏\A書"; white-space: pre; position: absolute; bottom: 34px; left: 82px; z-index: 3; width: 34px; height: 34px; border: 2px solid var(--reader-chapter); color: var(--reader-chapter); font: 700 12px/1.15 var(--reader-font); text-align: center; padding-top: 2px; box-sizing: border-box; transform: rotate(-5deg); opacity: .8; background: #efe4cccc; }
 #bookReaderOverlay[data-reader-mode="guji"] :is(#bookPrev, #bookNext) { transform: scaleX(-1); }

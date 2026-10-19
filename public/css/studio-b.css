@@ -849,3 +849,6 @@ body.studio-b #outlineModal button.btn-primary:not(.modal-close):not(:disabled):
     position: fixed; right: 92px; top: 84px; bottom: auto; max-height: calc(100vh - 108px); transform: none; transition: opacity .2s, visibility .2s;
   }
 }
+
+/* 長篇分段的 placeholder 高度用 Studio B 的行高（整行倍數，格線才對得上） */
+body.studio-b #readingScene .output:not(.vertical-writing) .manuscript-chunk { contain-intrinsic-size: auto calc(var(--lh) * 30); }

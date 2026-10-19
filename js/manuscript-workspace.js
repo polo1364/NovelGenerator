@@ -63,6 +63,28 @@
     if (last < text.length) target.append(document.createTextNode(text.slice(last)));
   }
 
+  // 長篇分段：每章（過長的章再於換行處切開）放進一個區塊，區塊用 content-visibility: auto，
+  // 瀏覽器只排畫面附近的章節，數萬字的手稿載入時才不會整份排字。textContent 不變。
+  const CHUNK_CHARS = 4000;
+  function chunkEl(parent) {
+    const el = document.createElement('span');
+    el.className = 'manuscript-chunk';
+    parent.append(el);
+    return el;
+  }
+  function appendChunkedText(parent, text, chunk) {
+    let from = 0;
+    while (text.length - from > CHUNK_CHARS) {
+      const cut = text.indexOf('\n', from + CHUNK_CHARS);
+      if (cut < 0) break;
+      appendText(chunk, text.slice(from, cut + 1));
+      chunk = chunkEl(parent);
+      from = cut + 1;
+    }
+    appendText(chunk, text.slice(from));
+    return chunk;
+  }
+
   function activeChapter() {
     const headings = [...result.querySelectorAll('.manuscript-chapter')];
     if (!headings.length) return;
@@ -70,7 +92,9 @@
     let active = 0;
     // 直排由右往左讀：章名的右緣進到視窗右側就算讀到了
     headings.forEach((heading, i) => {
-      const rect = heading.getBoundingClientRect();
+      // 還沒排版的章節：用所在區塊的位置，不為了讀章名位置強迫整段排版
+      const skipped = heading.checkVisibility && !heading.checkVisibility({ contentVisibilityAuto: true });
+      const rect = (skipped ? heading.closest('.manuscript-chunk') || heading : heading).getBoundingClientRect();
       if (isVertical() ? rect.right >= box.right - 60 : rect.top <= box.top + 60) active = i;
     });
     index.querySelectorAll('button').forEach((button, i) => button.setAttribute('aria-current', String(i === active)));
@@ -83,15 +107,17 @@
     const text = result.textContent;
     const valid = chapters.filter(chapter => chapter.fullLine && text.slice(chapter.index, chapter.index + chapter.fullLine.length) === chapter.fullLine);
     if (!valid.length) {
-      // 沒有章名也要把半形字包成一格
-      if (!result.querySelector('.manuscript-hw') && text.match(HALF_WIDTH)) {
+      // 沒有章名也要把半形字包成一格、長文分段
+      if (!result.querySelector('.manuscript-hw, .manuscript-chunk') && (text.match(HALF_WIDTH) || text.length > CHUNK_CHARS)) {
         const fragment = document.createDocumentFragment();
-        appendText(fragment, text);
+        appendChunkedText(fragment, text, chunkEl(fragment));
         result.replaceChildren(fragment);
       }
+      result.classList.remove('awaiting-layout');
       return;
     }
     const fragment = document.createDocumentFragment();
+    let chunk = chunkEl(fragment);
     let start = 0;
     valid.forEach((chapter, i) => {
       const before = text.slice(start, chapter.index);
@@ -99,10 +125,11 @@
         const bookTitle = document.createElement('span');
         bookTitle.className = 'manuscript-markdown';
         bookTitle.textContent = before;
-        fragment.append(bookTitle);
+        chunk.append(bookTitle);
       } else {
-        appendText(fragment, before);
+        chunk = appendChunkedText(fragment, before, chunk);
       }
+      if (chunk.childNodes.length) chunk = chunkEl(fragment);
       const heading = document.createElement('span');
       heading.className = 'manuscript-chapter';
       heading.setAttribute('role', 'heading');
@@ -126,7 +153,7 @@
         heading.append(label);
       }
       appendText(heading, title.slice(chapterLabel.length));
-      fragment.append(heading);
+      chunk.append(heading);
       start = chapter.index + chapter.fullLine.length;
       const space = text.slice(start).match(/^[\t \r\n]+/)?.[0] || '';
       if (space) {
@@ -137,9 +164,10 @@
         start += space.length;
       }
     });
-    appendText(fragment, text.slice(start));
+    appendChunkedText(fragment, text.slice(start), chunk);
     const position = [viewport.scrollTop, viewport.scrollLeft];
     result.replaceChildren(fragment);
+    result.classList.remove('awaiting-layout');
     [viewport.scrollTop, viewport.scrollLeft] = position;
     activeChapter();
   }
