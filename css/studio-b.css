@@ -920,3 +920,8 @@ body.studio-b .workspace-modal :is(.special-elements-controls, .element-category
 body.studio-b .workspace-modal .drama-combo { border: 1px solid var(--sb-line); border-radius: 10px; background: var(--sb-sf); }
 body.studio-b .workspace-modal .character-rules-note::before { display: none; }
 body.studio-b .workspace-modal .character-rules-note .section-title::before { background: var(--cs); color: var(--c); box-shadow: none; }
+
+/* 自訂規則：原本被上方特殊元素清單擠到只剩標題（輸入框被裁掉）。規則區不縮、輸入框有足夠高度；清單改為自己縮小並在框內捲動 */
+body.studio-b #specialElementsModal .character-rules-note { flex: none; overflow: visible; padding: 14px 16px; }
+body.studio-b #specialElementsModal .character-rules-note textarea#notes { display: block; width: 100%; min-height: 110px; resize: vertical; margin-top: 10px; padding: 10px 12px; line-height: 1.7; box-sizing: border-box; }
+body.studio-b #specialElementsModal .special-elements-panel { flex: 1 1 auto; min-height: 260px; }
