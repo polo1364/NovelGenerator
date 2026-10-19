@@ -1,0 +1,513 @@
+<title>翻書閱讀版型</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Noto+Serif+TC:wght@400;700;900&family=Noto+Sans+TC:wght@400;500;900&family=LXGW+WenKai+TC:wght@400;700&family=Cactus+Classical+Serif&family=Cormorant+Garamond:ital,wght@0,500;1,500&family=JetBrains+Mono:wght@400;500&display=swap">
+<style>
+/* Layout: one full-screen reader; each 版型 is its own visual world (tokens on #reader.s-*), pages paginated with CSS columns (vertical-rl for 線裝古籍). */
+:root {
+  --serif: "Noto Serif TC", "Songti TC", serif;
+  --sans: "Noto Sans TC", "PingFang TC", sans-serif;
+  --kai: "LXGW WenKai TC", "Kaiti TC", "Noto Serif TC", serif;
+  --classic: "Cactus Classical Serif", "Noto Serif TC", serif;
+  --latin: "Cormorant Garamond", Georgia, serif;
+  --mono: "JetBrains Mono", ui-monospace, monospace;
+  --fs: 19px; --lead: 1;
+  color-scheme: light;
+}
+html, body { height: 100%; }
+body { margin: 0; background: #1d2a33; font-family: var(--sans); overflow: hidden; }
+button, select, input { font: inherit; }
+:focus-visible { outline: 2px solid var(--ac, #3b6fd6); outline-offset: 2px; }
+
+/* ---------- reader shell (shared structure, styled by tokens) ---------- */
+#reader { position: fixed; inset: 0; display: grid; grid-template-rows: auto 1fr auto; background: var(--room); color: var(--ink); transition: background .4s; }
+.bar { display: flex; align-items: center; gap: 10px; padding: calc(10px + env(safe-area-inset-top, 0px)) max(16px, env(safe-area-inset-right, 0px)) 10px max(16px, env(safe-area-inset-left, 0px)); background: var(--bar); color: var(--bar-ink); border-bottom: 1px solid var(--bar-line); flex-wrap: wrap; position: relative; z-index: 5; }
+.bar .ttl { display: grid; line-height: 1.25; min-width: 0; flex: 1 1 160px; }
+.bar .ttl small { font: 500 10.5px var(--mono); letter-spacing: .16em; opacity: .65; }
+.bar .ttl b { font: 700 15px var(--serif); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.modes { display: flex; gap: 2px; padding: 3px; border-radius: 12px; background: var(--chip); flex-wrap: wrap; }
+.modes button { border: 0; background: none; color: inherit; min-height: 40px; padding: 0 12px; border-radius: 9px; cursor: pointer; font-size: 13px; opacity: .78; white-space: nowrap; }
+.modes button[aria-pressed="true"] { background: var(--ac); color: var(--ac-ink); opacity: 1; font-weight: 500; }
+.tools { display: flex; gap: 6px; align-items: center; margin-left: auto; }
+.tb { min-width: 44px; min-height: 44px; border-radius: 10px; border: 1px solid var(--bar-line); background: transparent; color: inherit; cursor: pointer; display: inline-grid; place-items: center; padding: 0 10px; font-size: 13px; }
+.tb:hover { background: var(--chip); }
+.fsv { font: 500 12px var(--mono); min-width: 40px; text-align: center; opacity: .8; }
+
+.stage { position: relative; display: grid; grid-template-columns: 56px 1fr 56px; align-items: center; min-height: 0; padding-inline: max(8px, env(safe-area-inset-left, 0px)) max(8px, env(safe-area-inset-right, 0px)); overflow: hidden; }
+.nav { width: 44px; height: 44px; border-radius: 50%; border: 1px solid var(--bar-line); background: var(--nav); color: var(--ink2); cursor: pointer; font-size: 20px; justify-self: center; z-index: 3; }
+.nav:disabled { opacity: .25; cursor: default; }
+#stageInner { position: relative; height: 100%; display: grid; place-items: center; min-width: 0; }
+#bg { position: absolute; inset: 0; width: 100%; height: 100%; pointer-events: none; }
+
+.book { position: relative; background: var(--paper); color: var(--ink); box-sizing: border-box; }
+.vp { position: absolute; overflow: hidden; }
+.flow { position: relative; font-size: var(--fs); line-height: calc(var(--lh) * var(--lead)); font-family: var(--body); color: var(--ink); text-align: justify; }
+.flow p { margin: 0; text-indent: 2em; }
+.flow h2 { break-before: column; margin: 0; font-weight: 700; }
+.flow h2:first-child { break-before: auto; }
+.flow .pull, .flow .deck, .flow .kicker, .flow .ornament, .flow .seal { display: none; }
+.head, .folio { position: absolute; font-size: 11px; color: var(--sub); white-space: nowrap; }
+.fx { position: absolute; inset: 0; pointer-events: none; }
+
+.foot { display: flex; align-items: center; gap: 14px; padding: 10px max(16px, env(safe-area-inset-right, 0px)) calc(12px + env(safe-area-inset-bottom, 0px)) max(16px, env(safe-area-inset-left, 0px)); color: var(--sub); font-size: 12.5px; background: var(--bar); border-top: 1px solid var(--bar-line); }
+.prog { flex: 1; height: 4px; border-radius: 2px; background: var(--chip); position: relative; overflow: hidden; }
+.prog i { position: absolute; inset: 0 auto 0 0; background: var(--ac); border-radius: 2px; transition: width .3s; }
+.ticks { position: absolute; inset: 0; }
+.ticks b { position: absolute; top: -2px; width: 2px; height: 8px; background: var(--sub); opacity: .5; }
+.pg { font-family: var(--mono); font-variant-numeric: tabular-nums; white-space: nowrap; }
+
+/* panels */
+.panel { position: absolute; z-index: 8; top: 8px; width: min(300px, calc(100% - 32px)); max-height: calc(100% - 16px); overflow: auto; background: var(--panel); color: var(--panel-ink); border: 1px solid var(--bar-line); border-radius: 14px; box-shadow: 0 24px 50px -24px rgba(0,0,0,.55); padding: 14px; box-sizing: border-box; }
+#toc { left: 16px; }
+#set { right: 16px; }
+.panel h3 { margin: 0 0 10px; font: 500 13px var(--sans); letter-spacing: .08em; opacity: .7; display: flex; justify-content: space-between; align-items: center; }
+.panel h3 button { border: 0; background: none; color: inherit; font-size: 16px; min-width: 36px; min-height: 36px; cursor: pointer; }
+#toc ol { list-style: none; margin: 0; padding: 0; display: grid; gap: 2px; }
+#toc li button { width: 100%; text-align: left; border: 0; background: none; color: inherit; min-height: 44px; border-radius: 10px; padding: 0 10px; cursor: pointer; display: flex; gap: 10px; align-items: center; }
+#toc li button:hover, #toc li button[aria-current="true"] { background: var(--chip); }
+#toc li span { font: 500 11px var(--mono); opacity: .6; }
+.row { display: grid; gap: 6px; margin-bottom: 12px; font-size: 12.5px; }
+.row > span { opacity: .7; }
+.seg { display: flex; gap: 2px; padding: 3px; border-radius: 10px; background: var(--chip); }
+.seg button { flex: 1; border: 0; background: none; color: inherit; min-height: 38px; border-radius: 8px; cursor: pointer; font-size: 12.5px; }
+.seg button[aria-pressed="true"] { background: var(--ac); color: var(--ac-ink); }
+input[type=range] { width: 100%; accent-color: var(--ac); }
+
+/* turn animations (each style picks one) */
+@keyframes slideL { from { transform: translateX(28px); opacity: .2; } }
+@keyframes slideR { from { transform: translateX(-28px); opacity: .2; } }
+@keyframes rise { from { transform: translateY(18px); opacity: 0; } }
+@keyframes dissolve { from { opacity: 0; filter: blur(3px); } }
+@keyframes flash { 0% { background: #000; opacity: 1; } 35% { background: #fff; opacity: 1; } 100% { opacity: 0; } }
+@keyframes sweepN { from { background-position: 100% 0; opacity: 1; } to { background-position: -40% 0; opacity: 0; } }
+@keyframes sweepP { from { background-position: -40% 0; opacity: 1; } to { background-position: 100% 0; opacity: 0; } }
+@media (prefers-reduced-motion: reduce) { .vp, .fx { animation: none !important; } }
+
+/* ======================= 01 線裝古籍 ======================= */
+.s-guji { --room: #2b2420; --bar: #231d19; --bar-ink: #eadfca; --bar-line: rgba(234,223,202,.14); --chip: rgba(234,223,202,.1); --nav: #3a312a;
+  --paper: #efe4cc; --ink: #2a211b; --ink2: #eadfca; --sub: #8a5a3c; --ac: #a8321f; --ac-ink: #fff7ea; --panel: #f4ead6; --panel-ink: #2a211b;
+  --body: var(--classic); --lh: 1.9; }
+.s-guji .book { box-shadow: 0 30px 60px -30px rgba(0,0,0,.7), inset 0 0 60px rgba(120,80,40,.18);
+  background-image: radial-gradient(circle at 20% 30%, rgba(160,120,70,.08), transparent 40%), radial-gradient(circle at 80% 70%, rgba(160,120,70,.07), transparent 45%); }
+.s-guji .book::before { content: ""; position: absolute; inset: 22px; border: 3px double var(--ac); pointer-events: none; }
+.s-guji .vp { background-image: repeating-linear-gradient(to left, transparent 0 calc(var(--colw) - 1px), rgba(168,50,31,.45) calc(var(--colw) - 1px) var(--colw)); }
+.s-guji .flow { writing-mode: vertical-rl; text-align: start; letter-spacing: .06em; position: absolute; top: 0; right: 0; }
+.s-guji .flow p { text-indent: 2em; }
+.s-guji .flow h2 { font: 700 1.15em var(--classic); margin-left: 1lh; margin-right: 0; letter-spacing: .2em; color: var(--ac); }
+.s-guji .flow h2 + p { margin-right: 0; }
+.s-guji .flow .seal { display: inline-block; writing-mode: horizontal-tb; width: 2.2em; height: 2.2em; border: 2px solid var(--ac); color: var(--ac); font: 700 .75em/1.05 var(--classic); text-align: center; padding-top: .15em; box-sizing: border-box; transform: rotate(-4deg); margin: .3em 0 .6em; text-indent: 0; letter-spacing: 0; opacity: .85; }
+.seal-mark { display: none; }
+.s-guji .seal-mark { display: block; position: absolute; top: 34px; right: 34px; width: 34px; height: 34px; border: 2px solid var(--ac); color: var(--ac); font: 700 12px/1.1 var(--classic); text-align: center; padding-top: 3px; box-sizing: border-box; transform: rotate(-5deg); opacity: .85; z-index: 2; background: rgba(239,228,204,.6); }
+.s-guji .banxin { position: absolute; left: 22px; top: 22px; bottom: 22px; width: 40px; border-right: 1px solid var(--ac); display: flex; flex-direction: column; align-items: center; justify-content: space-between; padding: 12px 0; writing-mode: vertical-rl; font: 13px var(--classic); color: var(--ac); letter-spacing: .3em; }
+.s-guji .banxin .fish { font-size: 18px; letter-spacing: 0; }
+.s-guji .head, .s-guji .folio { display: none; }
+.s-guji.t-next .vp { animation: slideR .35s ease-out; }
+.s-guji.t-prev .vp { animation: slideL .35s ease-out; }
+
+/* ======================= 02 精裝典藏 ======================= */
+.s-hard { --room: #3a1f1c; --bar: #2c1715; --bar-ink: #f3e3c4; --bar-line: rgba(243,227,196,.14); --chip: rgba(243,227,196,.1); --nav: #4a2925;
+  --paper: #f6eedc; --ink: #2b2420; --ink2: #f3e3c4; --sub: #8b6f4e; --ac: #b8893a; --ac-ink: #2c1715; --panel: #f8f0e0; --panel-ink: #2b2420;
+  --body: var(--serif); --lh: 1.95; }
+.s-hard #reader, .s-hard { background: radial-gradient(ellipse at 50% 40%, #5a3029, #2a1514 70%); }
+.s-hard .book { border-radius: 4px 4px 4px 4px; box-shadow: 0 40px 70px -30px rgba(0,0,0,.8), 0 0 0 10px #5b1f1c, 0 0 0 11px #c39a52;
+  background: linear-gradient(90deg, var(--paper) 0 calc(50% - 26px), #e2d5b8 calc(50% - 4px), #cdbf9f 50%, #e2d5b8 calc(50% + 4px), var(--paper) calc(50% + 26px)); }
+.s-hard.single .book { background: var(--paper); }
+.s-hard .book::after { content: ""; position: absolute; bottom: -34px; left: 62%; width: 14px; height: 54px; background: #8e1f2b; clip-path: polygon(0 0, 100% 0, 100% 100%, 50% 80%, 0 100%); }
+.s-hard .flow h2 { text-align: center; font: 700 1.5em/1.5 var(--serif); padding-top: 3.2em; letter-spacing: .12em; }
+.s-hard .flow .kicker { display: block; text-align: center; font: italic 500 1.05em var(--latin); color: var(--ac); letter-spacing: .3em; text-indent: 0; margin-top: 0; }
+.s-hard .flow .ornament { display: block; text-align: center; color: var(--ac); font-size: 1.2em; text-indent: 0; margin: .6em 0 1.4em; letter-spacing: 1em; }
+.s-hard .flow .ornament + p { text-indent: 0; }
+.s-hard .flow .ornament + p::first-letter { float: left; font: 900 3.1em/1 var(--serif); margin: .08em .12em 0 0; color: #7d1d22; }
+.s-hard .head { top: 34px; font: italic 500 13px var(--latin); letter-spacing: .14em; }
+.s-hard .folio { bottom: 30px; font: 500 13px var(--latin); }
+.s-hard .fx { background: linear-gradient(100deg, transparent 30%, rgba(80,50,20,.22) 48%, rgba(255,255,255,.35) 52%, transparent 70%) no-repeat; background-size: 60% 100%; opacity: 0; }
+.s-hard.t-next .fx { animation: sweepN .55s ease-out; }
+.s-hard.t-prev .fx { animation: sweepP .55s ease-out; }
+
+/* ======================= 03 文學月刊 ======================= */
+.s-mag { --room: #e9e6df; --bar: #fbfaf7; --bar-ink: #16181d; --bar-line: #d8d4ca; --chip: #ecebe6; --nav: #fbfaf7;
+  --paper: #fbfaf7; --ink: #1c1d21; --ink2: #1c1d21; --sub: #6a6c72; --ac: #1f47b8; --ac-ink: #fff; --panel: #fff; --panel-ink: #16181d;
+  --body: var(--serif); --lh: 1.85; }
+.s-mag .book { box-shadow: 0 1px 0 #cfcac0, 0 22px 40px -28px rgba(0,0,0,.4); }
+.s-mag .flow { font-size: calc(var(--fs) * .86); column-rule: 1px solid #d9d5cc; }
+.s-mag .flow h2 { font: 900 2.1em/1.15 var(--sans); letter-spacing: -.01em; margin: .2em 0 .5em; column-span: none; }
+.s-mag .flow .kicker { display: block; font: 900 4.2em/1 var(--sans); color: var(--ac); text-indent: 0; letter-spacing: -.04em; }
+.s-mag .flow .kicker small { display: block; font: 500 .2em var(--mono); letter-spacing: .3em; color: var(--sub); margin-top: .6em; }
+.s-mag .flow .deck { display: block; font: 500 1.02em/1.7 var(--sans); color: var(--sub); text-indent: 0; padding-bottom: .9em; margin-bottom: .9em; border-bottom: 3px solid var(--ink); }
+.s-mag .flow .pull { display: block; font: 700 1.35em/1.5 var(--serif); color: var(--ac); text-indent: 0; margin: .8em 0; padding: .5em 0; border-top: 1px solid var(--ac); border-bottom: 1px solid var(--ac); break-inside: avoid; }
+.s-mag .flow .deck + p::first-letter { font: 900 1.05em var(--sans); color: var(--ac); }
+.s-mag .head { top: 26px; font: 500 10.5px var(--mono); letter-spacing: .2em; text-transform: uppercase; }
+.s-mag .folio { bottom: 22px; font: 500 11px var(--mono); }
+.s-mag.t-next .vp { animation: slideL .3s ease-out; }
+.s-mag.t-prev .vp { animation: slideR .3s ease-out; }
+
+/* ======================= 04 星夜微光 ======================= */
+.s-night { --room: #070b1a; --bar: rgba(7,11,26,.6); --bar-ink: #d9dcf0; --bar-line: rgba(217,220,240,.12); --chip: rgba(217,220,240,.08); --nav: rgba(20,26,52,.7);
+  --paper: transparent; --ink: #e8e2d0; --ink2: #d9dcf0; --sub: #8a90b8; --ac: #e8c27a; --ac-ink: #1a1408; --panel: #11173a; --panel-ink: #e1e4f5;
+  --body: var(--serif); --lh: 2.05; }
+.s-night { background: radial-gradient(ellipse at 50% 120%, #1c2552, #070b1a 65%); }
+.s-night .book { background: radial-gradient(ellipse at 50% 45%, rgba(232,194,122,.08), transparent 65%); }
+.s-night .flow { text-shadow: 0 0 14px rgba(232,194,122,.18); letter-spacing: .03em; }
+.s-night .flow h2 { text-align: center; font: 400 1.35em/1.6 var(--serif); letter-spacing: .5em; color: var(--ac); padding: 2.2em 0 1.4em; }
+.s-night .flow .ornament { display: block; text-align: center; color: var(--ac); text-indent: 0; letter-spacing: .8em; opacity: .7; margin-bottom: 1.2em; }
+.s-night .head { top: 18px; left: 50% !important; transform: translateX(-50%); font: 400 11px var(--serif); letter-spacing: .5em; opacity: .6; }
+.s-night .folio { bottom: 16px; left: 50% !important; transform: translateX(-50%); font: 400 11px var(--mono); letter-spacing: .3em; }
+.s-night.t-next .vp, .s-night.t-prev .vp { animation: dissolve .6s ease-out; }
+.s-night .prog { background: rgba(217,220,240,.12); }
+
+/* ======================= 05 作家原稿 ======================= */
+.s-genko { --room: #d9d3c4; --bar: #f5f0e4; --bar-ink: #3a2a24; --bar-line: #d2c6b1; --chip: #ebe3d2; --nav: #f5f0e4;
+  --paper: #fffdf6; --ink: #2f2622; --ink2: #3a2a24; --sub: #c0564a; --ac: #c0564a; --ac-ink: #fff; --panel: #fffdf6; --panel-ink: #2f2622;
+  --body: var(--kai); --lh: 1; --grid: #e2a49b; }
+.s-genko .book { box-shadow: 2px 3px 0 #e8e1d0, 4px 6px 0 #ddd5c2, 0 24px 40px -26px rgba(0,0,0,.45); }
+.s-genko .flow { letter-spacing: .6em; text-align: left; line-height: var(--row); padding-left: .3em; font-feature-settings: "fwid"; }
+.s-genko .flow p { text-indent: 3.2em; }
+.s-genko .flow h2 { font: 700 1em/var(--row) var(--kai); letter-spacing: .6em; color: #8a2f26; padding-bottom: var(--row); text-indent: 3.2em; }
+.s-genko .vp { background-image:
+   repeating-linear-gradient(to right, var(--grid) 0 1px, transparent 1px var(--cell)),
+   repeating-linear-gradient(to bottom, var(--paper) 0 var(--gap2), transparent var(--gap2) calc(var(--gap2) + var(--cell)), var(--paper) calc(var(--gap2) + var(--cell)) var(--row)); }
+.s-genko .vp::after { content: ""; position: absolute; inset: 0; pointer-events: none; background: repeating-linear-gradient(to bottom, transparent 0 var(--gap2), var(--grid) var(--gap2) calc(var(--gap2) + 1px), transparent calc(var(--gap2) + 1px) calc(var(--gap2) + var(--cell) - 1px), var(--grid) calc(var(--gap2) + var(--cell) - 1px) calc(var(--gap2) + var(--cell)), transparent calc(var(--gap2) + var(--cell)) var(--row)); }
+.s-genko .head { top: 20px; font: 500 10.5px var(--mono); letter-spacing: .18em; color: var(--sub); }
+.s-genko .folio { bottom: 18px; font: 12px var(--kai); color: var(--sub); }
+.s-genko .book::before { content: ""; position: absolute; left: 0; right: 0; top: 40px; border-top: 2px solid var(--grid); }
+.s-genko.t-next .vp, .s-genko.t-prev .vp { animation: rise .35s ease-out; }
+
+/* ======================= 06 電子墨水 ======================= */
+.s-eink { --room: #d8d8d2; --bar: #ecebe6; --bar-ink: #111; --bar-line: #c4c4bd; --chip: #dcdcd6; --nav: #ecebe6;
+  --paper: #ecebe6; --ink: #111; --ink2: #111; --sub: #555; --ac: #111; --ac-ink: #ecebe6; --panel: #ecebe6; --panel-ink: #111;
+  --body: var(--sans); --lh: 1.9; }
+.s-eink .book { border: 1px solid #b9b9b2; border-radius: 2px; }
+.s-eink .flow { font-weight: 500; text-align: justify; }
+.s-eink .flow h2 { font: 900 1.4em/1.5 var(--sans); padding: 1.5em 0 1em; border-bottom: 2px solid #111; margin-bottom: 1em; }
+.s-eink .head { top: 18px; font: 500 11px var(--mono); }
+.s-eink .folio { bottom: 18px; font: 500 11px var(--mono); }
+.s-eink .fx { opacity: 0; }
+.s-eink.t-next .fx, .s-eink.t-prev .fx { animation: flash .32s steps(3, end); }
+.s-eink * { transition: none !important; }
+
+/* 紙色覆寫（設定面板） */
+#reader.paper-warm { --paper: #f6eedc; --ink: #2b2420; }
+#reader.paper-mist { --paper: #e6ede6; --ink: #22302a; }
+#reader.paper-dark { --paper: #1f2227; --ink: #d9d5ca; --grid: #6b3a35; }
+#reader.font-serif { --body: var(--serif); }
+#reader.font-sans { --body: var(--sans); }
+#reader.font-kai { --body: var(--kai); }
+
+@media (max-width: 720px) {
+  .modes button { padding: 0 9px; font-size: 12px; }
+  .stage { grid-template-columns: 0 1fr 0; }
+  .nav { display: none; }
+  .tools .hide-s { display: none; }
+}
+</style>
+
+<div id="reader" class="s-hard">
+  <header class="bar">
+    <button class="tb" id="closeBtn" title="關閉閱讀" aria-label="關閉閱讀">✕</button>
+    <div class="ttl"><small>私人閱覽室 · READING ROOM</small><b id="ttl">《霜啼輪迴》</b></div>
+    <nav class="modes" id="modes" aria-label="閱讀版型"></nav>
+    <div class="tools">
+      <button class="tb" id="tocBtn" aria-expanded="false" title="目錄">目錄</button>
+      <button class="tb" id="setBtn" aria-expanded="false" title="閱讀設定">Aa</button>
+      <button class="tb hide-s" id="fsDec" title="縮小字級">A−</button>
+      <span class="fsv hide-s" id="fsVal">19px</span>
+      <button class="tb hide-s" id="fsInc" title="放大字級">A+</button>
+      <button class="tb hide-s" id="restart" title="從頭閱讀">從頭</button>
+    </div>
+  </header>
+
+  <main class="stage" id="stage">
+    <button class="nav" id="prev" aria-label="上一頁">‹</button>
+    <div id="stageInner">
+      <canvas id="bg" aria-hidden="true"></canvas>
+      <div class="book" id="book">
+        <div class="banxin" id="banxin" hidden><span>霜啼輪迴</span><span class="fish">︾</span><span id="bxCh">冗餘資料</span><span id="bxPg">一</span></div>
+        <span class="seal-mark" aria-hidden="true">霜啼<br>藏本</span><span class="head" id="headL"></span><span class="head" id="headR"></span>
+        <div class="vp" id="vp"><div class="flow" id="flow"></div></div>
+        <span class="folio" id="folL"></span><span class="folio" id="folR"></span>
+        <div class="fx" id="fx"></div>
+      </div>
+      <section class="panel" id="toc" hidden aria-label="目錄"><h3>目錄 · CONTENTS<button id="tocClose" aria-label="關閉目錄">✕</button></h3><ol id="tocList"></ol></section>
+      <section class="panel" id="set" hidden aria-label="閱讀設定">
+        <h3>閱讀設定<button id="setClose" aria-label="關閉設定">✕</button></h3>
+        <label class="row"><span>字級 <b id="fsLabel">19px</b></span><input type="range" id="fsRange" min="15" max="26" step="1" value="19"></label>
+        <div class="row"><span>字體</span><div class="seg" data-key="font"><button data-v="auto" aria-pressed="true">依版型</button><button data-v="serif" aria-pressed="false">宋體</button><button data-v="sans" aria-pressed="false">黑體</button><button data-v="kai" aria-pressed="false">楷體</button></div></div>
+        <div class="row"><span>行距</span><div class="seg" data-key="lead"><button data-v="0.88" aria-pressed="false">緊湊</button><button data-v="1" aria-pressed="true">標準</button><button data-v="1.13" aria-pressed="false">寬鬆</button></div></div>
+        <div class="row"><span>頁面寬度</span><div class="seg" data-key="width"><button data-v="0.85" aria-pressed="false">窄</button><button data-v="1" aria-pressed="true">標準</button><button data-v="1.15" aria-pressed="false">寬</button></div></div>
+        <div class="row"><span>紙面色彩</span><div class="seg" data-key="paper"><button data-v="auto" aria-pressed="true">依版型</button><button data-v="warm" aria-pressed="false">暖紙</button><button data-v="mist" aria-pressed="false">霧綠</button><button data-v="dark" aria-pressed="false">深色</button></div></div>
+      </section>
+    </div>
+    <button class="nav" id="next" aria-label="下一頁">›</button>
+  </main>
+
+  <footer class="foot">
+    <span id="where">第1章：冗餘資料</span>
+    <div class="prog"><i id="progBar"></i><div class="ticks" id="ticks"></div></div>
+    <span class="pg" id="pg">1 / 1</span>
+  </footer>
+</div>
+
+<script>
+const CHAPTERS = [
+  { n: '壹', title: '冗餘資料', deck: '維修部倉庫裡，一枚燒黑的徽章，讓沈硯舟看見被刪除的摯友，也讓系統盯上了他。', paras: [
+    '倉庫的鐵門推開時，一段鏽蝕的鉸鏈發出垂死的呻吟。',
+    '沈硯舟側身閃入，沒有開燈。黑暗對他而言從來不是障礙——左腕的舊錶帶在轉動時發出細微的皮革摩擦聲，那聲音在空曠的維修部倉庫裡被放大成某種節拍器般的節奏。',
+    '他停在第七排貨架前。這裡堆放著歷年從副本中回收的廢棄物品：破損的觀測儀、熔毀的魔杖、碎裂的防禦徽章。學院把它們統稱為「回收品」，彷彿只要換個名字，那些沒有回來的人就從未存在過。',
+    '他拿起一枚徽章。銀質邊緣被燒得發黑，背面刻著三個字：程以安。',
+    '指腹貼上刻痕的瞬間，倉庫消失了。',
+    '他看見副本深處的走廊，看見程以安回頭朝他笑，嘴型說著「下次見」。然後光從四面八方湧進來，像有人把整個世界的檔案一次刪除。',
+    '「警告。」角落的終端亮起灰白色的字，「偵測到未授權的讀取行為。」',
+    '那是灰小姐。沒有人知道是誰把她裝在這台淘汰終端裡，她只會在沈硯舟讀取記憶時開口。',
+    '「你的魔力波動已被系統標記為異常。」灰小姐的字一行一行跳出來，「若再使用讀取能力，你將被判定為冗餘資料。」',
+    '「冗餘資料會怎樣？」',
+    '螢幕閃了一下，沒有回答。',
+    '鐵門再次被推開。這次腳步聲很重，帶著訓練場的塵土味。',
+    '「我就知道你在這裡。」顧星野靠在門框上，護目鏡推到額頭，「沈硯舟，你上次輪迴到底看見了什麼？」',
+    '沈硯舟把徽章收進口袋。「什麼都沒看見。」',
+    '「說謊。」顧星野走近一步，「每次輪迴前，你都會來這裡。」',
+    '兩人之間隔著一排貨架，誰也沒有再開口。遠處的鐘樓響起整點的鐘聲，接著是全院廣播特有的電流聲。',
+    '「第三次輪迴名單公布。」',
+    '沈硯舟看向終端。灰小姐調出了名單，第四行寫著一個他很熟悉的名字——溫敘。'
+  ], pull: null },
+  { n: '貳', title: '霜啼', deck: '一張巡邏路線圖，換來一把以龍鱗為核心的長刀，和一段沈硯舟不敢說出口的記憶。', paras: [
+    '鍛造部永遠比其他地方熱三度。',
+    '葉知寒蹲在爐邊，頭也不抬：「路線圖帶來了？」',
+    '沈硯舟把一張摺成四折的羊皮紙放在工作台上。上面是警衛隊下週的巡邏路線，他花了三個晚上才從檔案室抄出來。',
+    '「觀測裝置明天給你。」葉知寒終於站起來，用沾滿煤灰的手攤開路線圖看了一眼，然後從身後的架子上取下一個長條木盒。',
+    '盒蓋打開，裡面躺著一把通體霜白的長刀。刀身中央嵌著一片青灰色的鱗，在爐火映照下像是在呼吸。',
+    '「霜啼。」葉知寒說，「核心是龍鱗。龍族使者敖宸說過，這把兵器能斬斷規則。」',
+    '「什麼規則？」',
+    '「他沒說。」葉知寒把刀遞過來，「你不是能讀東西嗎？讀讀看。」',
+    '沈硯舟遲疑了一秒。灰小姐的警告還在腦中迴響，但他還是伸出了手。',
+    '刀柄冰涼。記憶像碎玻璃一樣扎進來：昏暗的長廊、燭火、一個穿著院長長袍的背影。裴玄齡正在說話，對面的人戴著兜帽——是葉知寒。',
+    '「……只要第十次輪迴之前完成……」',
+    '畫面在這裡斷掉了。沈硯舟用力眨眼，眼前只剩下爐火和葉知寒探詢的臉。',
+    '「看見什麼了？」',
+    '「沒什麼。」他把刀還回去，「太模糊了。」',
+    '記憶缺口又大了一點。他能感覺到，像牙齒掉了一顆，舌頭總會忍不住去碰那個空位。',
+    '葉知寒沒有追問，只是把霜啼放回盒中。就在蓋子即將闔上的瞬間，刀身忽然震動起來。',
+    '沒有人碰它。一聲低沉的龍吟從盒中傳出，震得爐火都矮了一截。'
+  ], pull: '這把兵器能斬斷規則。' },
+  { n: '參', title: '靜止領域', deck: '寧昭刻意跳過的一頁講義，和一份被撕毀的第五輪迴紀錄。', paras: [
+    '寧昭的課總在最高層的天文教室。穹頂的玻璃外是流動的雲海，浮島的邊緣在陽光下像一道發亮的刀口。',
+    '「副本核心理論，第三章。」他翻開講義，卻在第四十七頁停頓了一下，然後直接跳到第四十九頁。',
+    '全班只有沈硯舟注意到了。',
+    '下課後，陸時晴攔住他，手裡晃著新聞社的採訪證：「能聊聊你的輪迴數據嗎？匿名，保證不寫名字。」',
+    '沈硯舟看著那張過分燦爛的笑臉，忽然有了主意。「可以。」他說，「不過我只說一次。」',
+    '他給的每一個數字都是假的。三天後，那些數字出現在《蒼穹週報》的角落，旁邊配了一張模糊的輪迴入口照片。',
+    '那天深夜，寧昭的辦公室還亮著燈。他翻開一本被撕去一半的紀錄冊，封面寫著「第五輪迴」，低聲說：「這次不能再錯。」'
+  ], pull: null }
+];
+
+const STYLES = {
+  guji:  { label: '線裝古籍', vertical: true, cols: 1, maxW: 600, pad: [44, 44, 44, 92] },
+  hard:  { label: '精裝典藏', cols: 2, maxW: 400, gap: 104, pad: [76, 60, 70, 60] },
+  mag:   { label: '文學月刊', cols: 2, maxW: 300, gap: 40, pad: [64, 54, 56, 54] },
+  night: { label: '星夜微光', cols: 1, maxW: 600, pad: [64, 40, 56, 40] },
+  genko: { label: '作家原稿', cols: 1, grid: true, maxW: 660, pad: [58, 34, 52, 34] },
+  eink:  { label: '電子墨水', cols: 1, maxW: 560, pad: [50, 46, 54, 46] }
+};
+const $ = id => document.getElementById(id);
+const reader = $('reader'), flow = $('flow'), vp = $('vp'), book = $('book');
+const store = { get(k, d) { try { const v = localStorage.getItem('reader-proto:' + k); return v === null ? d : JSON.parse(v); } catch (_) { return d; } },
+                set(k, v) { try { localStorage.setItem('reader-proto:' + k, JSON.stringify(v)); } catch (_) {} } };
+const state = { style: store.get('style', 'hard'), fs: store.get('fs', 19), lead: 1, width: 1, font: 'auto', paper: 'auto', page: 0, pages: 1, geo: null };
+
+// content
+function buildFlow() {
+  flow.innerHTML = CHAPTERS.map((c, i) => {
+    const paras = c.paras.map((p, j) => (c.pull && j === 6 ? `<p class="pull">「${c.pull}」</p>` : '') + `<p>${p}</p>`).join('');
+    return `<h2 data-ch="${i}">第${c.n}章　${c.title}</h2>`
+      + `<p class="kicker">${String(i + 1).padStart(2, '0')}<small>第${c.n}章 · CHAPTER ${i + 1}</small></p>`
+      + `<p class="deck">${c.deck}</p><p class="ornament">◆ ◆ ◆</p>` + paras;
+  }).join('');
+  // 精裝與月刊把章名排在 kicker 之後；古籍、星夜、原稿、電子墨水沿用 h2 在前
+  flow.querySelectorAll('h2').forEach(h => {
+    const kicker = h.nextElementSibling;
+    h.dataset.kicker = '1';
+    h._kicker = kicker;
+  });
+  $('tocList').innerHTML = CHAPTERS.map((c, i) => `<li><button data-ch="${i}"><span>${String(i + 1).padStart(2, '0')}</span>第${c.n}章　${c.title}</button></li>`).join('');
+}
+function orderForStyle() {
+  // 月刊、精裝：kicker（章號）放在章名上方
+  const above = state.style === 'mag' || state.style === 'hard';
+  flow.querySelectorAll('h2').forEach(h => {
+    const k = h._kicker;
+    if (above && h.nextElementSibling === k) h.before(k);
+    if (!above && h.previousElementSibling === k) h.after(k);
+    // 讓分頁從 kicker（或章名）開始
+    (above ? k : h).style.breakBefore = h.dataset.ch === '0' ? 'auto' : 'column';
+    (above ? h : k).style.breakBefore = 'auto';
+  });
+}
+
+function px(v) { return Math.round(v); }
+function layout(keepRatio) {
+  const st = STYLES[state.style];
+  const ratio = keepRatio && state.pages > 1 ? state.page / (state.pages - 1) : null;
+  reader.className = `s-${state.style}` + (state.paper !== 'auto' ? ` paper-${state.paper}` : '') + (state.font !== 'auto' ? ` font-${state.font}` : '');
+  document.documentElement.style.setProperty('--fs', state.fs + 'px');
+  document.documentElement.style.setProperty('--lead', state.lead);
+  orderForStyle();
+  const inner = $('stageInner');
+  const availW = inner.clientWidth - 8, availH = inner.clientHeight - 24;
+  let [pt, pr, pb, pl] = st.pad;
+  const small = availW < 520;
+  if (small) { pr = Math.min(pr, 24); pl = st.vertical ? Math.min(pl, 70) : Math.min(pl, 24); }
+  let cols = st.cols, gap = st.gap || 0;
+  let pw = Math.min(st.maxW * state.width, (availW - pl - pr - (cols - 1) * gap) / cols);
+  if (cols === 2 && pw < 250) { cols = 1; gap = 0; pw = Math.min(st.maxW * 1.4 * state.width, availW - pl - pr); }
+  let ph = Math.min(availH - pt - pb, st.vertical ? 560 : 860);
+  const lhPx = state.fs * parseFloat(getComputedStyle(reader).getPropertyValue('--lh') || 1.9) * state.lead;
+  if (st.vertical) { pw = Math.floor(pw / lhPx) * lhPx; book.style.setProperty('--colw', lhPx + 'px'); }
+  if (st.grid) {
+    const cell = state.fs * 1.6, row = Math.round(state.fs * 2.1 * state.lead), gap2 = (row - cell) / 2;
+    pw = Math.floor((pw - state.fs * 0.6) / cell) * cell + state.fs * 0.6;
+    ph = Math.floor(ph / row) * row;
+    reader.style.setProperty('--cell', cell + 'px'); reader.style.setProperty('--row', row + 'px'); reader.style.setProperty('--gap2', gap2 + 'px');
+  }
+  pw = Math.max(160, pw); ph = Math.max(200, ph);
+  const vpW = cols * pw + (cols - 1) * gap;
+  book.style.width = px(vpW + pl + pr) + 'px'; book.style.height = px(ph + pt + pb) + 'px';
+  Object.assign(vp.style, { left: pl + 'px', top: pt + 'px', width: vpW + 'px', height: ph + 'px' });
+  reader.classList.toggle('single', cols === 1);
+  if (st.vertical) {
+    Object.assign(flow.style, { height: ph + 'px', width: '', columnWidth: '', columnGap: '', columnCount: '' });
+  } else {
+    Object.assign(flow.style, { height: ph + 'px', width: vpW + 'px', columnWidth: pw + 'px', columnGap: gap + 'px', columnCount: cols });
+  }
+  state.geo = { cols, gap, pw, ph, pl, pr, pt, pb, vpW, step: st.vertical ? pw : cols * (pw + gap), vertical: !!st.vertical };
+  // page count
+  if (st.vertical) state.pages = Math.max(1, Math.ceil((flow.scrollWidth - 2) / pw));
+  else { const totalCols = Math.round((vp.scrollWidth + gap) / (pw + gap)); state.pages = Math.max(1, Math.ceil(totalCols / cols)); }
+  // decorations
+  $('banxin').hidden = !st.vertical;
+  const heads = [$('headL'), $('headR')], fols = [$('folL'), $('folR')];
+  heads[0].style.left = pl + 'px'; heads[1].style.right = pr + 'px'; heads[1].style.left = '';
+  fols[0].style.left = pl + 'px'; fols[1].style.right = pr + 'px';
+  heads[1].hidden = fols[1].hidden = cols === 1;
+  // chapter ticks on progress
+  $('ticks').innerHTML = CHAPTERS.map((_, i) => i ? `<b style="left:${(chapterPage(i) / Math.max(1, state.pages - 1)) * 100}%"></b>` : '').join('');
+  state.page = ratio === null ? Math.min(state.page, state.pages - 1) : Math.round(ratio * (state.pages - 1));
+  render(null);
+  drawBg();
+}
+
+function chapterPage(i) {
+  const h = flow.querySelector(`h2[data-ch="${i}"]`);
+  const g = state.geo; if (!h || !g) return 0;
+  const anchor = (state.style === 'mag' || state.style === 'hard') ? (h.previousElementSibling || h) : h;
+  if (g.vertical) { const fromRight = flow.offsetWidth - (anchor.offsetLeft + anchor.offsetWidth); return Math.max(0, Math.floor((fromRight + 2) / g.pw)); }
+  const col = Math.floor((anchor.offsetLeft + 2) / (g.pw + g.gap));
+  return Math.floor(col / g.cols);
+}
+function currentChapter() { let c = 0; CHAPTERS.forEach((_, i) => { if (chapterPage(i) <= state.page) c = i; }); return c; }
+const zh = n => { const d = '〇一二三四五六七八九'; if (n < 10) return d[n]; if (n < 20) return '十' + (n % 10 ? d[n % 10] : ''); return d[Math.floor(n / 10)] + '十' + (n % 10 ? d[n % 10] : ''); };
+
+function render(dir) {
+  const g = state.geo;
+  flow.style.transform = g.vertical ? `translateX(${state.page * g.step}px)` : `translateX(${-state.page * g.step}px)`;
+  const ch = currentChapter(), c = CHAPTERS[ch];
+  const p1 = state.page * g.cols + 1;
+  const total = state.pages;
+  const st = state.style;
+  $('headL').textContent = st === 'mag' ? '冗餘資料 · 連載第一期' : st === 'eink' ? `第${c.n}章 ${c.title}` : st === 'genko' ? "AUTHOR'S PROOF · 霜啼輪迴" : '霜啼輪迴';
+  $('headR').textContent = st === 'mag' ? `第${c.n}章 ${c.title}` : `第${c.n}章　${c.title}`;
+  $('folL').textContent = st === 'genko' ? `20×20　第 ${p1} 張` : st === 'eink' ? `${Math.round(((state.page + 1) / total) * 100)}%　·　剩 ${total - state.page - 1} 頁` : st === 'night' ? `${p1}` : String(p1);
+  $('folR').textContent = String(p1 + 1);
+  if (st === 'eink') { const t = new Date(); $('headR').hidden = false; $('headR').textContent = t.toTimeString().slice(0, 5) + '　▮▮▮▯'; $('headR').style.right = g.pr + 'px'; }
+  $('bxCh').textContent = c.title; $('bxPg').textContent = zh(state.page + 1);
+  $('where').textContent = `第${c.n}章　${c.title}`;
+  $('pg').textContent = g.cols === 2 ? `${p1}–${Math.min(p1 + 1, total * 2)} / ${total * 2}` : `${state.page + 1} / ${total}`;
+  $('progBar').style.width = (total > 1 ? (state.page / (total - 1)) * 100 : 100) + '%';
+  $('prev').disabled = state.page === 0; $('next').disabled = state.page >= total - 1;
+  $('tocList').querySelectorAll('button').forEach((b, i) => b.setAttribute('aria-current', String(i === ch)));
+  if (st === 'guji') { // 古籍由右往左翻：左鍵＝下一頁
+    $('prev').textContent = '›'; $('next').textContent = '‹';
+    $('prev').style.order = 3; $('next').style.order = 1; $('stageInner').style.order = 2;
+  } else { $('prev').textContent = '‹'; $('next').textContent = '›'; $('prev').style.order = ''; $('next').style.order = ''; $('stageInner').style.order = ''; }
+  if (dir) {
+    reader.classList.remove('t-next', 't-prev'); void reader.offsetWidth;
+    reader.classList.add(dir > 0 ? 't-next' : 't-prev');
+    clearTimeout(render.t); render.t = setTimeout(() => reader.classList.remove('t-next', 't-prev'), 650);
+  }
+  store.set('page-' + st, state.page);
+}
+function go(d) { const n = Math.max(0, Math.min(state.pages - 1, state.page + d)); if (n !== state.page) { state.page = n; render(d); } }
+
+// modes
+$('modes').innerHTML = Object.entries(STYLES).map(([k, s], i) => `<button data-s="${k}" aria-pressed="${k === state.style}">${String(i + 1).padStart(2, '0')} ${s.label}</button>`).join('');
+$('modes').addEventListener('click', e => {
+  const b = e.target.closest('button'); if (!b) return;
+  state.style = b.dataset.s; store.set('style', state.style);
+  $('modes').querySelectorAll('button').forEach(x => x.setAttribute('aria-pressed', String(x === b)));
+  state.page = store.get('page-' + state.style, 0);
+  layout(false); render(1);
+});
+// controls
+$('prev').onclick = () => go(-1); $('next').onclick = () => go(1);
+$('restart').onclick = () => { state.page = 0; render(-1); };
+const setFs = v => { state.fs = Math.max(15, Math.min(26, v)); store.set('fs', state.fs); $('fsVal').textContent = $('fsLabel').textContent = state.fs + 'px'; $('fsRange').value = state.fs; layout(true); };
+$('fsDec').onclick = () => setFs(state.fs - 1); $('fsInc').onclick = () => setFs(state.fs + 1);
+$('fsRange').oninput = e => setFs(+e.target.value);
+const toggle = (panel, btn, open) => { const show = open ?? panel.hidden; panel.hidden = !show; btn.setAttribute('aria-expanded', String(show)); };
+$('tocBtn').onclick = () => { toggle($('toc'), $('tocBtn')); toggle($('set'), $('setBtn'), false); };
+$('setBtn').onclick = () => { toggle($('set'), $('setBtn')); toggle($('toc'), $('tocBtn'), false); };
+$('tocClose').onclick = () => toggle($('toc'), $('tocBtn'), false);
+$('setClose').onclick = () => toggle($('set'), $('setBtn'), false);
+$('tocList').addEventListener('click', e => { const b = e.target.closest('button'); if (!b) return; const n = chapterPage(+b.dataset.ch); const d = n >= state.page ? 1 : -1; state.page = n; render(d); toggle($('toc'), $('tocBtn'), false); });
+document.querySelectorAll('.seg').forEach(seg => seg.addEventListener('click', e => {
+  const b = e.target.closest('button'); if (!b) return;
+  seg.querySelectorAll('button').forEach(x => x.setAttribute('aria-pressed', String(x === b)));
+  const k = seg.dataset.key, v = b.dataset.v;
+  state[k] = (k === 'lead' || k === 'width') ? +v : v;
+  layout(true);
+}));
+$('closeBtn').onclick = () => { $('closeBtn').textContent = '✓'; setTimeout(() => $('closeBtn').textContent = '✕', 900); };
+document.addEventListener('keydown', e => {
+  if (e.target.closest('input, select')) return;
+  const rtl = state.style === 'guji';
+  if (e.key === 'ArrowRight') go(rtl ? -1 : 1);
+  else if (e.key === 'ArrowLeft') go(rtl ? 1 : -1);
+  else if (e.key === ' ' || e.key === 'PageDown') { e.preventDefault(); go(1); }
+  else if (e.key === 'PageUp') go(-1);
+  else if (e.key === 'Escape') { toggle($('toc'), $('tocBtn'), false); toggle($('set'), $('setBtn'), false); }
+});
+// 點書頁左右半邊翻頁、手機左右滑動
+let sx = null;
+book.addEventListener('pointerdown', e => { sx = e.clientX; });
+book.addEventListener('pointerup', e => {
+  if (sx === null) return; const dx = e.clientX - sx; sx = null;
+  const rtl = state.style === 'guji';
+  if (Math.abs(dx) > 40) go((dx < 0) !== rtl ? 1 : -1);
+  else { const r = book.getBoundingClientRect(); const right = e.clientX > r.left + r.width / 2; go(right !== rtl ? 1 : -1); }
+});
+
+// 星夜背景：慢慢閃爍的星點
+const bg = $('bg'), ctx = bg.getContext('2d'); let stars = [], raf = 0;
+function drawBg() {
+  cancelAnimationFrame(raf); const dpr = window.devicePixelRatio || 1;
+  bg.width = bg.clientWidth * dpr; bg.height = bg.clientHeight * dpr; ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+  ctx.clearRect(0, 0, bg.clientWidth, bg.clientHeight);
+  if (state.style !== 'night') return;
+  stars = Array.from({ length: 140 }, () => ({ x: Math.random() * bg.clientWidth, y: Math.random() * bg.clientHeight, r: Math.random() * 1.3 + .2, p: Math.random() * 6.28, s: .4 + Math.random() }));
+  const still = matchMedia('(prefers-reduced-motion: reduce)').matches;
+  const frame = t => {
+    ctx.clearRect(0, 0, bg.clientWidth, bg.clientHeight);
+    for (const s of stars) { const a = still ? .6 : .35 + .35 * Math.sin(s.p + t / 1000 * s.s); ctx.fillStyle = `rgba(232,226,208,${a})`; ctx.beginPath(); ctx.arc(s.x, s.y, s.r, 0, 6.283); ctx.fill(); }
+    if (!still) raf = requestAnimationFrame(frame);
+  };
+  frame(0);
+}
+
+buildFlow();
+$('fsVal').textContent = $('fsLabel').textContent = state.fs + 'px'; $('fsRange').value = state.fs;
+$('modes').querySelectorAll('button').forEach(x => x.setAttribute('aria-pressed', String(x.dataset.s === state.style)));
+state.page = store.get('page-' + state.style, 0);
+const relayout = () => layout(true);
+window.addEventListener('resize', () => { clearTimeout(relayout.t); relayout.t = setTimeout(relayout, 120); });
+(document.fonts ? document.fonts.ready : Promise.resolve()).then(() => layout(true));
+layout(false);
+</script>

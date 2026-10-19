@@ -14382,11 +14382,16 @@ ${currentOutline.slice(0, 1600)}
         const settingsToggle = document.getElementById('bookSettingsToggle');
         const scrollView = document.getElementById('bookScrollView');
         const scrollText = document.getElementById('bookScrollText');
-        const modes = ['clean', 'book', 'night', 'illustrated', 'outline', 'scroll', 'spread', 'focus'];
+        // 六種版型：線裝古籍（直排右翻）／精裝典藏（雙頁翻書）／文學月刊（雙欄）／星夜微光／作家原稿／電子墨水
+        const modes = ['guji', 'hard', 'mag', 'night', 'genko', 'eink'];
+        const DOUBLE_PAGE_MODES = ['hard', 'mag'];
+        // 舊版 8 種版型的偏好對應到最接近的新版型；字體改回「依版型」才看得出新版型的字
+        const LEGACY_MODES = { book: 'hard', spread: 'hard', illustrated: 'hard', scroll: 'hard', outline: 'mag', clean: 'eink', focus: 'eink' };
         let preferences = {};
         try { preferences = JSON.parse(localStorage.getItem('bookReaderPreferences') || '{}') || {}; } catch { /* use defaults */ }
         if (typeof preferences !== 'object' || Array.isArray(preferences)) preferences = {};
-        let readerMode = modes.includes(preferences.mode) ? preferences.mode : 'outline';
+        if (LEGACY_MODES[preferences.mode]) { preferences.mode = LEGACY_MODES[preferences.mode]; preferences.font = 'auto'; }
+        let readerMode = modes.includes(preferences.mode) ? preferences.mode : 'hard';
         let scrollAnchor = 0;
         let chapters = [];
 
@@ -14407,7 +14412,8 @@ ${currentOutline.slice(0, 1600)}
         let backgroundState = [];
         let previousOverflow = '';
 
-        const isSingle = () => !['book', 'spread'].includes(readerMode) || window.matchMedia('(max-width: 820px)').matches;
+        const isSingle = () => !DOUBLE_PAGE_MODES.includes(readerMode) || window.matchMedia('(max-width: 820px)').matches;
+        const isRightToLeft = () => readerMode === 'guji';
         const step = () => (isSingle() ? 1 : 2);
 
         function savePreferences() {
@@ -14435,7 +14441,7 @@ ${currentOutline.slice(0, 1600)}
           if (scrollView) scrollView.hidden = readerMode !== 'scroll';
           bookEl.inert = readerMode === 'scroll';
           prevBtn.tabIndex = nextBtn.tabIndex = readerMode === 'scroll' ? -1 : 0;
-          setToc(['outline', 'night'].includes(readerMode) && window.innerWidth > 900);
+          setToc(false);
           if (settings) settings.hidden = true;
           if (settingsToggle) settingsToggle.setAttribute('aria-expanded', 'false');
         }
@@ -14497,8 +14503,7 @@ ${currentOutline.slice(0, 1600)}
               button.addEventListener('click', () => {
                 if (!readerReady) return;
                 if (finishFlip) finishFlip();
-                const closeToc = window.innerWidth <= 900 || !['outline', 'night'].includes(readerMode);
-                if (closeToc) { setToc(false); tocToggle.focus(); }
+                setToc(false); tocToggle.focus();
                 if (readerMode === 'scroll') restoreScrollAnchor(chapterOffset);
                 pos = positionAtOffset(chapterOffset); clampPos(); render();
               });
@@ -14529,7 +14534,7 @@ ${currentOutline.slice(0, 1600)}
         if (modeSelect) modeSelect.addEventListener('change', () => {
           if (finishFlip) finishFlip();
           const anchor = currentAnchor();
-          readerMode = modes.includes(modeSelect.value) ? modeSelect.value : 'outline';
+          readerMode = modes.includes(modeSelect.value) ? modeSelect.value : 'hard';
           preferences.mode = readerMode; savePreferences(); applyReaderMode(); reflowReader(anchor);
         });
         if (tocToggle) tocToggle.addEventListener('click', () => { const anchor = currentAnchor(); setToc(toc.hidden); reflowReader(anchor); });
@@ -14537,7 +14542,7 @@ ${currentOutline.slice(0, 1600)}
         if (settingsToggle) settingsToggle.addEventListener('click', () => setSettings(settings.hidden));
         document.getElementById('bookSettingsClose')?.addEventListener('click', () => setSettings(false));
         for (const [id, key, allowed, fallback] of [
-          ['bookReaderFont', 'font', ['serif', 'sans'], 'serif'],
+          ['bookReaderFont', 'font', ['auto', 'serif', 'sans', 'kai'], 'auto'],
           ['bookReaderLeading', 'leading', ['1.7', '1.95', '2.2'], '1.95'],
           ['bookReaderWidth', 'width', ['narrow', 'standard', 'wide'], 'standard'],
           ['bookReaderTone', 'tone', ['auto', 'paper', 'mist', 'dark'], 'auto']
@@ -14547,7 +14552,9 @@ ${currentOutline.slice(0, 1600)}
           preferences[key] = allowed.includes(preferences[key]) ? preferences[key] : fallback;
           control.value = preferences[key];
           const apply = () => {
-            overlay.style.setProperty('--reader-font', preferences.font === 'sans' ? 'system-ui, sans-serif' : '"Noto Serif TC", serif');
+            // 依版型＝不覆寫，用版型自己的字體
+            const font = { serif: '"Noto Serif TC", serif', sans: '"Noto Sans TC", system-ui, sans-serif', kai: '"LXGW WenKai TC", "Noto Serif TC", serif' }[preferences.font];
+            if (font) overlay.style.setProperty('--reader-font', font); else overlay.style.removeProperty('--reader-font');
             overlay.style.setProperty('--reader-leading', preferences.leading || '1.95');
             overlay.style.setProperty('--reader-width', { narrow: '620px', standard: '760px', wide: '920px' }[preferences.width] || '760px');
             overlay.dataset.readerTone = preferences.tone || 'auto';
@@ -14814,9 +14821,13 @@ ${currentOutline.slice(0, 1600)}
           if (dir > 0 && pos + s >= total) return;
           if (dir < 0 && pos <= 0) return;
 
-          if (!['book', 'spread'].includes(readerMode) || window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
+          // 只有精裝典藏用立體翻頁；其他版型直接換頁，再由 CSS 播放各自的過場
+          if (readerMode !== 'hard' || window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
             pos += dir > 0 ? s : -s;
             render();
+            overlay.classList.remove('turn-next', 'turn-prev');
+            void overlay.offsetWidth;
+            overlay.classList.add(dir > 0 ? 'turn-next' : 'turn-prev');
             return;
           }
 
@@ -14882,6 +14893,7 @@ ${currentOutline.slice(0, 1600)}
           }
           titleEl.textContent = getStoryTitle();
           titleEl.title = getStoryTitle();
+          bookEl.dataset.title = getStoryTitle().replace(/[《》]/g, ''); // 線裝古籍的版心
           const revision = ++openRevision;
           readerReady = false;
           opener = document.activeElement;
@@ -14969,7 +14981,8 @@ ${currentOutline.slice(0, 1600)}
         bookEl.addEventListener('click', (e) => {
           if (animating || readerMode === 'scroll' || window.getSelection()?.toString()) return;
           const r = bookEl.getBoundingClientRect();
-          if ((e.clientX - r.left) < r.width / 2) go(-1); else go(1);
+          const leftHalf = (e.clientX - r.left) < r.width / 2;
+          go(leftHalf !== isRightToLeft() ? -1 : 1); // 直排古籍由右往左翻：點左半邊是下一頁
         });
 
         fontInc.addEventListener('click', () => {
@@ -15002,11 +15015,11 @@ ${currentOutline.slice(0, 1600)}
           e.stopPropagation();
           if (e.key === 'Escape') {
             if (settings && !settings.hidden) setSettings(false);
-            else if (toc && !toc.hidden && window.innerWidth <= 900) { setToc(false); tocToggle.focus(); }
+            else if (toc && !toc.hidden) { setToc(false); tocToggle.focus(); }
             else close();
           }
-          else if (e.key === 'ArrowLeft') { go(-1); }
-          else if (e.key === 'ArrowRight') { go(1); }
+          else if (e.key === 'ArrowLeft') { go(isRightToLeft() ? 1 : -1); }
+          else if (e.key === 'ArrowRight') { go(isRightToLeft() ? -1 : 1); }
         }, true);
       })();
 

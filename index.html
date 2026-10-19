@@ -42,6 +42,7 @@
     <link rel="stylesheet" href="css/manuscript-workspace.css" />
     <link rel="stylesheet" href="css/mobile-touch.css" />
     <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;500;700&family=JetBrains+Mono:wght@400;500&display=swap" media="print" onload="this.media='all'" />
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Cactus+Classical+Serif&family=Cormorant+Garamond:ital,wght@0,500;1,500&display=swap" media="print" onload="this.media='all'" />
     <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..24,300..500,0,0&display=block" media="print" onload="this.media='all'" />
     <noscript>
       <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;500;700&family=JetBrains+Mono:wght@400;500&display=swap" />
@@ -1308,10 +1309,9 @@
         </div>
         <div class="book-mode-tools">
           <select id="bookReaderMode" aria-label="閱讀版型">
-            <option value="clean">01 · 簡約清新</option><option value="book">02 · 沉浸書本</option>
-            <option value="night">03 · 星空夜讀</option><option value="illustrated">04 · 圖文插畫</option>
-            <option value="outline" selected>05 · 分欄目錄</option><option value="scroll">06 · 長文捲動</option>
-            <option value="spread">08 · 雙頁橫向</option><option value="focus">09 · 純文字專注</option>
+            <option value="guji">01 · 線裝古籍</option><option value="hard" selected>02 · 精裝典藏</option>
+            <option value="mag">03 · 文學月刊</option><option value="night">04 · 星夜微光</option>
+            <option value="genko">05 · 作家原稿</option><option value="eink">06 · 電子墨水</option>
           </select>
           <button id="bookTocToggle" class="book-tool-btn" type="button" aria-label="章節目錄" aria-controls="bookToc" aria-expanded="false">☰</button>
           <button id="bookSettingsToggle" class="book-tool-btn" type="button" aria-label="閱讀設定" aria-controls="bookSettings" aria-expanded="false">Aa</button>
@@ -1320,7 +1320,7 @@
       <section id="bookSettings" class="book-settings" aria-label="閱讀設定" hidden>
         <div class="book-panel-heading"><strong>07 · 個人閱讀設定</strong><button id="bookSettingsClose" type="button" aria-label="關閉閱讀設定">✕</button></div>
         <label>字級<input id="bookReaderSize" type="range" min="14" max="28" value="19" aria-label="閱讀字級"></label>
-        <label>字體<select id="bookReaderFont"><option value="serif">書卷宋體</option><option value="sans">清晰黑體</option></select></label>
+        <label>字體<select id="bookReaderFont"><option value="auto">依版型</option><option value="serif">書卷宋體</option><option value="sans">清晰黑體</option><option value="kai">手寫楷體</option></select></label>
         <label>行距<select id="bookReaderLeading"><option value="1.7">緊湊</option><option value="1.95" selected>標準</option><option value="2.2">寬鬆</option></select></label>
         <label>頁面寬度<select id="bookReaderWidth"><option value="narrow">窄</option><option value="standard" selected>標準</option><option value="wide">寬</option></select></label>
         <label>紙面色彩<select id="bookReaderTone"><option value="auto">依版型／網站主題</option><option value="paper">暖紙</option><option value="mist">霧綠</option><option value="dark">深色</option></select></label>

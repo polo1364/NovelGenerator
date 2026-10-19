@@ -12,7 +12,7 @@ spec = importlib.util.spec_from_file_location('reader_qa', Path(__file__).with_n
 sys.dont_write_bytecode = True
 qa = importlib.util.module_from_spec(spec)
 spec.loader.exec_module(qa)
-MODES = ['clean','book','night','illustrated','outline','scroll','spread','focus']
+MODES = ['guji','hard','mag','night','genko','eink']
 STORY = '# 霧港來信\n' + '\n'.join(f'## 第{i}章 遠方的燈火\n' + ('旅人推開窗，看見港口的燈火映在潮水上。📚 那封沒有署名的信，仍安靜地躺在桌角。\n' * 10) for i in range(1,5))
 
 def run():
@@ -37,41 +37,35 @@ def run():
                     assert not page.evaluate('bookReaderOverlay.scrollWidth>innerWidth'), (width,mode,'overflow')
                     controls=page.locator('.book-reader-bar button, #bookReaderMode, .book-stage button').evaluate_all('''els=>els.filter(e=>e.getClientRects().length&&getComputedStyle(e).visibility!=='hidden').map(e=>{const r=e.getBoundingClientRect();return r.width>=44&&r.height>=44&&r.left>=0&&r.right<=innerWidth&&r.top>=0&&r.bottom<=innerHeight&&e.contains(document.elementFromPoint(r.x+r.width/2,r.y+r.height/2));})''')
                     assert all(controls), (width,mode,'unreachable control')
-                    if mode=='scroll':
-                        assert page.locator('#bookScrollText').inner_text().replace('\n','')==STORY.replace('## ','').replace('# ','').replace('\n','')
-                        page.locator('#bookScrollView').evaluate('e=>e.scrollTop=e.scrollHeight*.47')
-                        page.wait_for_timeout(400)
-                    else:
-                        assert not qa.snapshot(page)['clipped'], (width,mode,'clipped text')
-                        if width==1280:
-                            page.locator('#bookResetProgress').click() if mode!='focus' else None
-                            if mode=='focus':
-                                page.locator('#bookReaderMode').select_option('clean')
-                                page.locator('#bookResetProgress').click()
-                                page.locator('#bookReaderMode').select_option('focus')
-                            text,clipped=qa.collect_pages(page)
-                            assert not clipped and text==STORY.replace('## ','').replace('# ','').replace('\n',''), (mode,'full text lost or clipped')
+                    assert not qa.snapshot(page)['clipped'], (width,mode,'clipped text')
+                    if width==1280:
+                        page.locator('#bookResetProgress').click()
+                        text,clipped=qa.collect_pages(page)
+                        assert not clipped and text==STORY.replace('## ','').replace('# ','').replace('\n',''), (mode,'full text lost or clipped')
                     page.screenshot(path=str(qa.OUT/f'mode-{width}-{mode}.png'))
                     print(f'PASS {width}: {mode}',flush=True)
-                page.locator('#bookReaderMode').select_option('outline')
-                if width<=900: page.locator('#bookTocToggle').click()
+                # 目錄跳章、換版型、關閉重開、改視窗大小，閱讀位置都要留在同一處（分頁版型以字元位置記錄）
+                progress = lambda: page.evaluate('Object.values(JSON.parse(localStorage.getItem("bookReaderProgressByStory")||"{}"))[0]?.offset ?? -1')
+                page.locator('#bookReaderMode').select_option('night')
+                page.locator('#bookTocToggle').click()
                 page.locator('#bookTocList button').filter(has_text='第3章').click()
                 assert '第3章' in qa.snapshot(page)['text'], 'Chapter navigation missed target'
-                page.locator('#bookReaderMode').select_option('scroll')
-                page.wait_for_timeout(100)
-                saved_top=page.locator('#bookScrollView').evaluate('e=>e.scrollTop')
-                assert saved_top>0, 'Switch to scroll lost progress'
+                page.wait_for_timeout(400)
+                offset_before=progress()
+                assert offset_before>0, 'Chapter jump did not save progress'
+                page.locator('#bookReaderMode').select_option('genko')
+                page.wait_for_timeout(400)
+                assert abs(progress()-offset_before)<800, ('switching layout lost progress',offset_before,progress())
+                saved=progress()
                 page.locator('#bookReaderClose').click()
                 qa.open_reader(page)
-                assert abs(page.locator('#bookScrollView').evaluate('e=>e.scrollTop')-saved_top)<3, 'Reopen scroll anchor drifted'
+                page.wait_for_timeout(400)
+                assert abs(progress()-saved)<800, ('reopen lost progress',saved,progress())
                 if width==375:
-                    page.locator('#bookScrollView').evaluate('e=>e.scrollTop+=317')
-                    page.wait_for_timeout(400)
-                    offset_before=page.evaluate('Object.values(JSON.parse(localStorage.getItem("bookReaderProgressByStory")))[0].offset')
+                    offset_before=progress()
                     page.set_viewport_size({'width':768,'height':900})
                     page.wait_for_timeout(800)
-                    offset_after=page.evaluate('Object.values(JSON.parse(localStorage.getItem("bookReaderProgressByStory")))[0].offset')
-                    assert abs(offset_after-offset_before)<40, ('scroll resize anchor lost',offset_before,offset_after)
+                    assert abs(progress()-offset_before)<800, ('resize lost progress',offset_before,progress())
                     page.set_viewport_size({'width':375,'height':900})
                     page.wait_for_timeout(800)
                 page.locator('#bookSettingsToggle').click()
@@ -83,14 +77,14 @@ def run():
                 page.locator('#bookReaderSize').dispatch_event('input')
                 page.locator('#bookReaderTone').select_option('dark')
                 page.locator('#bookSettingsClose').click()
-                page.locator('#bookReaderMode').select_option('clean')
+                page.locator('#bookReaderMode').select_option('eink')
                 assert not qa.snapshot(page)['clipped'], 'Settings clipped paginated text'
                 page.locator('#bookReaderClose').click()
                 page.reload(wait_until='networkidle')
                 qa.open_reader(page)
-                assert page.locator('#bookReaderMode').input_value()=='clean', 'Mode preference not persisted'
+                assert page.locator('#bookReaderMode').input_value()=='eink', 'Mode preference not persisted'
                 if width==1280:
-                    for mode in ['book','spread','illustrated']:
+                    for mode in ['hard','mag','guji']:
                         page.locator('#bookReaderMode').select_option(mode)
                         page.locator('#bookSettingsToggle').click()
                         page.locator('#bookReaderWidth').select_option('narrow')
@@ -113,7 +107,7 @@ def run():
                 page.locator('#bookSettingsClose').click()
                 for mode in MODES:
                     page.locator('#bookReaderMode').select_option(mode)
-                    if mode!='scroll': assert not qa.snapshot(page)['clipped'], (width,height,mode,'28px clipped')
+                    assert not qa.snapshot(page)['clipped'], (width,height,mode,'28px clipped')
                     assert not page.evaluate('bookReaderOverlay.scrollWidth>innerWidth'), (width,height,mode,'overflow')
                 context.close()
             browser.close()

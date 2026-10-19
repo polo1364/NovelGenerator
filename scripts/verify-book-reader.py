@@ -28,7 +28,7 @@ class QuietHandler(http.server.SimpleHTTPRequestHandler):
 
 def boot(browser, width, story, url, errors=None):
     context = browser.new_context(viewport={'width': width, 'height': 900}, is_mobile=width < 500, has_touch=width < 500, service_workers='block')
-    context.add_init_script('if(!localStorage.getItem("bookReaderPreferences"))localStorage.setItem("bookReaderPreferences",JSON.stringify({mode:"book"}));')
+    context.add_init_script('if(!localStorage.getItem("bookReaderPreferences"))localStorage.setItem("bookReaderPreferences",JSON.stringify({mode:"hard"}));')
     context.add_init_script('if(!localStorage.getItem("readerQaSeeded")){localStorage.setItem("savedStory",'+json.dumps(story)+');localStorage.setItem("readerQaSeeded","1");}')
     bookmarks = [{'id':1720000000000,'title':'測試藏書','content':STORY}, {'id':1720000000001,'title':'第二本書','content':STORY.replace('測試藏書','第二本書')}]
     context.add_init_script('localStorage.setItem("bookmarks",'+json.dumps(json.dumps(bookmarks))+');')
