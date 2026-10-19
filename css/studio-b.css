@@ -267,7 +267,6 @@ body.studio-b #readingScene {
   background: var(--sb-sf); color: var(--sb-ink); border: 1px solid var(--sb-line); border-radius: 14px; overflow: hidden;
   box-shadow: none; margin-top: 18px; position: relative;
 }
-body.studio-b #readingScene .reading-scene-bg { opacity: .16; }
 body.studio-b #readingScene .output-header { background: transparent; border: 0; border-bottom: 1px solid var(--sb-line); padding: 14px 18px; box-shadow: none; }
 body.studio-b #readingScene .output-title { color: var(--sb-ink); font: 500 16px var(--sb-sans); letter-spacing: 0; text-shadow: none; display: flex; align-items: center; gap: 8px; }
 body.studio-b #readingScene .output-title::before { content: "menu_book"; font-family: "Material Symbols Outlined"; font-size: 20px; color: var(--sb-m1); order: -1; }
@@ -282,8 +281,6 @@ body.studio-b #readingScene .continuity-actions button {
 }
 body.studio-b #readingScene .manuscript-tools button:disabled, body.studio-b #readingScene .manuscript-footer-actions button:disabled { opacity: .45; }
 body.studio-b #readingScene .manuscript-paper-tools button[aria-pressed="true"] { background: var(--sb-m1); border-color: var(--sb-m1); color: var(--sb-on); }
-body.studio-b #readingScene .ambiance-label { color: var(--sb-mut); font-size: 12.5px; letter-spacing: 0; }
-body.studio-b #readingScene .ambiance-select { background: var(--sb-sf); color: var(--sb-ink); border: 1px solid var(--sb-line); border-radius: 8px; box-shadow: none; }
 body.studio-b #readingScene .manuscript-workspace { background: transparent; border: 0; box-shadow: none; }
 body.studio-b #readingScene .manuscript-sidebar { background: var(--sb-bg); color: var(--sb-ink); border: 0; border-right: 1px solid var(--sb-line); }
 body.studio-b #readingScene .manuscript-imprint, body.studio-b #readingScene .manuscript-index-label { color: var(--sb-mut); letter-spacing: .14em; font-size: 11.5px; }
@@ -383,8 +380,6 @@ body.studio-b #readingScene .output.vertical-writing {
   background-repeat: no-repeat;
 }
 body.studio-b #readingScene .output.vertical-writing .manuscript-chapter { padding: 0 var(--lh); }
-
-:root[data-theme="dark"] body.studio-b #readingScene .reading-scene-bg { opacity: .1; }
 
 /* ---------- 我的藏書：頁首 ---------- */
 body.studio-b #bookshelfModal .bookshelf-header { background: var(--sb-hb); border-bottom: 0; box-shadow: none; flex-wrap: wrap; }

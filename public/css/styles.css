@@ -5681,75 +5681,6 @@
         /* 不可 overflow:hidden，否則 sticky 背景失效 */
       }
 
-      /* 氛圍底圖：sticky 黏在視窗，捲動長文時始終可見，又不隨內容變高 zoom in */
-      .reading-scene-bg {
-        position: sticky;
-        top: 0;
-        width: 100%;
-        height: 100vh;
-        height: 100dvh;
-        margin-bottom: calc(-100vh);
-        margin-bottom: calc(-100dvh);
-        flex-shrink: 0;
-        z-index: 0;
-        pointer-events: none;
-        background-size: cover;
-        background-position: center;
-        background-repeat: no-repeat;
-      }
-
-      /* —— 照片背景 —— */
-      .reading-scene[data-ambiance="library"] .reading-scene-bg {
-        background-image: url("../assets/library.webp");
-      }
-      .reading-scene[data-ambiance="cafe"] .reading-scene-bg {
-        background-image: url("../assets/cafe.webp");
-      }
-      .reading-scene[data-ambiance="moon"] .reading-scene-bg {
-        background-image: url("../assets/moon.webp");
-      }
-      .reading-scene[data-ambiance="rain"] .reading-scene-bg {
-        background-image: url("../assets/rain.webp");
-      }
-      .reading-scene[data-ambiance="study"] .reading-scene-bg {
-        background-image: url("../assets/study.webp");
-      }
-      .reading-scene[data-ambiance="bamboo"] .reading-scene-bg {
-        background-image: url("../assets/bamboo.webp");
-      }
-      .reading-scene[data-ambiance="sea"] .reading-scene-bg {
-        background-image: url("../assets/sea.webp");
-      }
-      .reading-scene[data-ambiance="hearth"] .reading-scene-bg {
-        background-image: url("../assets/hearth.webp");
-      }
-      .reading-scene[data-ambiance="sakura"] .reading-scene-bg {
-        background-image: url("../assets/sakura.webp");
-      }
-      .reading-scene[data-ambiance="mountain"] .reading-scene-bg {
-        background-image: url("../assets/mountain.webp");
-      }
-
-      /* 雨夜動效 */
-      .reading-scene[data-ambiance="rain"] .reading-scene-bg::after {
-        content: '';
-        position: absolute;
-        inset: 0;
-        background-image: repeating-linear-gradient(
-          118deg,
-          transparent 0,
-          transparent 18px,
-          rgba(255, 255, 255, 0.025) 18px,
-          rgba(255, 255, 255, 0.06) 19px
-        );
-        animation: ambiance-rain 0.75s linear infinite;
-        pointer-events: none;
-      }
-      @keyframes ambiance-rain {
-        from { transform: translateY(-24px); }
-        to { transform: translateY(24px); }
-      }
-
       /* 氛圍遮罩（依主題微調，確保文字可讀） */
       .reading-scene::before {
         content: '';
@@ -5758,30 +5689,6 @@
         pointer-events: none;
         z-index: 1;
         background: linear-gradient(180deg, rgba(20,14,6,0.34) 0%, rgba(20,14,6,0.20) 50%, rgba(20,14,6,0.40) 100%);
-      }
-      .reading-scene[data-ambiance="moon"]::before {
-        background: linear-gradient(180deg, rgba(8,12,24,0.52) 0%, rgba(8,12,24,0.32) 50%, rgba(8,12,24,0.55) 100%);
-      }
-      .reading-scene[data-ambiance="rain"]::before {
-        background: linear-gradient(180deg, rgba(12,16,28,0.55) 0%, rgba(12,16,28,0.38) 50%, rgba(12,16,28,0.58) 100%);
-      }
-      .reading-scene[data-ambiance="study"]::before {
-        background: linear-gradient(180deg, rgba(20,12,4,0.48) 0%, rgba(20,12,4,0.28) 50%, rgba(20,12,4,0.50) 100%);
-      }
-      .reading-scene[data-ambiance="bamboo"]::before {
-        background: linear-gradient(180deg, rgba(8,20,12,0.50) 0%, rgba(8,20,12,0.30) 50%, rgba(8,20,12,0.52) 100%);
-      }
-      .reading-scene[data-ambiance="sea"]::before {
-        background: linear-gradient(180deg, rgba(10,30,45,0.42) 0%, rgba(10,30,45,0.22) 50%, rgba(10,30,45,0.48) 100%);
-      }
-      .reading-scene[data-ambiance="hearth"]::before {
-        background: linear-gradient(180deg, rgba(24,10,4,0.50) 0%, rgba(24,10,4,0.30) 50%, rgba(24,10,4,0.52) 100%);
-      }
-      .reading-scene[data-ambiance="sakura"]::before {
-        background: linear-gradient(180deg, rgba(30,16,24,0.48) 0%, rgba(30,16,24,0.28) 50%, rgba(30,16,24,0.50) 100%);
-      }
-      .reading-scene[data-ambiance="mountain"]::before {
-        background: linear-gradient(180deg, rgba(16,24,36,0.45) 0%, rgba(16,24,36,0.25) 50%, rgba(16,24,36,0.48) 100%);
       }
 
       /* 氛圍切換（嵌在 output-header 內，避免被右側工具列遮擋） */
@@ -5794,53 +5701,6 @@
         width: 100%;
         margin-bottom: 12px;
         padding-right: 84px;
-      }
-
-      .ambiance-toggle {
-        position: relative;
-        z-index: 5;
-        display: flex;
-        align-items: center;
-        gap: 8px;
-        padding: 6px 10px 6px 12px;
-        border-radius: 30px;
-        background: rgba(28, 18, 8, 0.55);
-        backdrop-filter: blur(8px);
-        border: 1px solid rgba(255,255,255,0.18);
-        flex-shrink: 0;
-        max-width: 100%;
-      }
-      .ambiance-label {
-        color: #f3e3c8;
-        font-size: 0.78rem;
-        letter-spacing: 0.05em;
-        white-space: nowrap;
-        flex-shrink: 0;
-      }
-      .ambiance-select {
-        appearance: none;
-        -webkit-appearance: none;
-        min-width: 0;
-        max-width: 148px;
-        padding: 6px 28px 6px 10px;
-        border: 1px solid rgba(255,255,255,0.28);
-        border-radius: 20px;
-        background: rgba(255,255,255,0.1) url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%23f3e3c8' stroke-width='2.5'%3E%3Cpolyline points='6 9 12 15 18 9'/%3E%3C/svg%3E") no-repeat right 8px center;
-        color: #fffdf8;
-        font-family: inherit;
-        font-size: 0.82rem;
-        cursor: pointer;
-        transition: background 0.2s ease, border-color 0.2s ease;
-      }
-      .ambiance-select:hover,
-      .ambiance-select:focus {
-        background-color: rgba(255,255,255,0.18);
-        border-color: rgba(255,255,255,0.45);
-        outline: none;
-      }
-      .ambiance-select option {
-        color: #2a2620;
-        background: #fffdf8;
       }
 
       /* 結果頭部與書頁浮在氛圍之上 */
@@ -5913,11 +5773,6 @@
       [data-theme="dark"] .reading-scene::before {
         background: linear-gradient(180deg, rgba(4,3,1,0.68) 0%, rgba(4,3,1,0.56) 50%, rgba(4,3,1,0.72) 100%);
       }
-      [data-theme="dark"] .reading-scene[data-ambiance="moon"]::before,
-      [data-theme="dark"] .reading-scene[data-ambiance="rain"]::before,
-      [data-theme="dark"] .reading-scene[data-ambiance="mountain"]::before {
-        background: linear-gradient(180deg, rgba(2,4,8,0.72) 0%, rgba(2,4,8,0.58) 50%, rgba(2,4,8,0.76) 100%);
-      }
 
       /* ---------- 場景 RWD ---------- */
       @media (max-width: 768px) {
@@ -5976,19 +5831,8 @@
         .reading-scene .output-title {
           text-align: center;
         }
-        .ambiance-toggle {
-          justify-content: center;
-          width: 100%;
-        }
-        .ambiance-select {
-          flex: 1;
-          max-width: none;
-        }
       }
       @media (max-width: 600px) {
-        .ambiance-toggle { padding: 5px 8px 5px 10px; gap: 6px; }
-        .ambiance-label { font-size: 0.72rem; }
-        .ambiance-select { font-size: 0.76rem; padding: 5px 24px 5px 8px; }
         .desk-tube-light { height: 34px; }
         .tube-glass { height: 14px; }
         .desk-scene .card { margin-top: 60px; }

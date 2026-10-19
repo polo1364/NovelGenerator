@@ -425,8 +425,7 @@
         <!-- ==================== 撰寫狀態區結束 ==================== -->
 
         <!-- ==================== 閱讀區 ==================== -->
-        <div class="reading-scene" id="readingScene" data-ambiance="library">
-          <div class="reading-scene-bg" aria-hidden="true"></div>
+        <div class="reading-scene" id="readingScene">
         <!-- 輸出區 -->
         <div class="output-header">
           <div class="output-header-row">
@@ -437,10 +436,6 @@
               <button id="manuscriptSave" type="button" disabled>收藏</button>
               <details class="manuscript-download"><summary>下載</summary><div><button type="button" data-manuscript-format="txt" disabled>TXT 純文字</button><button type="button" data-manuscript-format="html" disabled>HTML 閱讀版</button></div></details>
               <button id="manuscriptRead" type="button" disabled>進入閱讀 ↗</button>
-            </div>
-            <div class="ambiance-toggle">
-              <label class="ambiance-label" for="ambianceSelect">閱讀氛圍</label>
-              <select id="ambianceSelect" class="ambiance-select" aria-label="閱讀氛圍"></select>
             </div>
           </div>
         </div>
@@ -802,11 +797,6 @@
               <p class="settings-hint">橫排自動往下捲；直排時在文字區滾輪往下＝往右滑</p>
             </div>
 
-            <div class="settings-item settings-item--flush">
-              <label for="settingsAmbianceSelect">🌅 閱讀氛圍</label>
-              <select id="settingsAmbianceSelect" class="template-select"></select>
-              <p class="settings-hint">切換閱讀區背景：圖書館、雨夜、書齋等</p>
-            </div>
           </section>
 
           <section class="settings-section settings-section--templates" aria-label="快速模板">
@@ -815,110 +805,6 @@
               <label for="quickTemplateSelect" class="visually-hidden">選擇模板</label>
               <select id="quickTemplateSelect" class="template-select">
               <option value="">── 請選擇模板 ──</option>
-              <optgroup label="🐉 玄幻仙俠">
-                <option value="fantasy">⚔️ 玄幻修仙 - 升級打怪逆襲</option>
-                <option value="cultivation">☯️ 傳統仙俠 - 修道問心</option>
-                <option value="martial">🥋 武俠江湖 - 快意恩仇</option>
-                <option value="xuanhuan-harem">👑 玄幻後宮 - 美女如雲</option>
-                <option value="system-novel">📊 系統流 - 金手指開掛</option>
-                <option value="reincarnation">🔄 重生復仇 - 逆天改命</option>
-              </optgroup>
-              <optgroup label="💕 言情浪漫">
-                <option value="romance">💗 現代言情 - 都市甜蜜</option>
-                <option value="ceo-romance">👔 霸總虐愛 - 總裁寵妻</option>
-                <option value="campus-romance">🏫 校園純愛 - 青春戀曲</option>
-                <option value="historical-romance">🏯 古代宮廷 - 宮鬥情深</option>
-                <option value="transmig-romance">📖 穿書女主 - 改寫命運</option>
-                <option value="rebirth-romance">🌅 重生復甜 - 珍惜所愛</option>
-                <option value="contract-marriage">💍 契約婚姻 - 假戲真做</option>
-                <option value="enemies-lovers">⚔️💕 歡喜冤家 - 吵著愛上</option>
-              </optgroup>
-              <optgroup label="🔍 懸疑驚悚">
-                <option value="mystery">🔎 懸疑推理 - 抽絲剝繭</option>
-                <option value="detective">🕵️ 偵探破案 - 邏輯推理</option>
-                <option value="thriller">😱 驚悚恐怖 - 步步驚心</option>
-                <option value="psychological">🧠 心理驚悚 - 細思極恐</option>
-                <option value="crime">🔫 犯罪懸疑 - 黑暗深淵</option>
-                <option value="supernatural-mystery">👻 靈異懸疑 - 鬼影重重</option>
-              </optgroup>
-              <optgroup label="🚀 科幻未來">
-                <option value="scifi">🌌 太空歌劇 - 星際冒險</option>
-                <option value="cyberpunk">🌃 賽博龐克 - 霓虹暗影</option>
-                <option value="apocalypse">☢️ 末日廢土 - 生存掙扎</option>
-                <option value="ai-story">🤖 人工智能 - 機械覺醒</option>
-                <option value="virtual-reality">🥽 虛擬現實 - 遊戲人生</option>
-                <option value="time-travel">⏳ 時間旅行 - 改變歷史</option>
-              </optgroup>
-              <optgroup label="🏰 西方奇幻">
-                <option value="western-fantasy">⚔️ 劍與魔法 - 勇者冒險</option>
-                <option value="dark-fantasy">🖤 黑暗奇幻 - 殘酷世界</option>
-                <option value="dragon-knight">🐲 龍騎士 - 馴龍傳奇</option>
-                <option value="magic-academy">🏫 魔法學院 - 成長蛻變</option>
-                <option value="vampire">🧛 吸血鬼 - 黑夜傳說</option>
-                <option value="werewolf">🐺 狼人傳說 - 野性呼喚</option>
-              </optgroup>
-              <optgroup label="🎮 遊戲競技">
-                <option value="game-world">🎮 遊戲世界 - 穿越遊戲</option>
-                <option value="esports">🏆 電競熱血 - 巔峰對決</option>
-                <option value="infinite-flow">♾️ 無限流 - 副本求生</option>
-                <option value="death-game">☠️ 死亡遊戲 - 生存博弈</option>
-                <option value="card-master">🃏 卡牌大師 - 決鬥王者</option>
-              </optgroup>
-              <optgroup label="🎭 歷史傳奇">
-                <option value="historical">📜 架空歷史 - 權謀天下</option>
-                <option value="three-kingdoms">⚔️ 三國風雲 - 群雄逐鹿</option>
-                <option value="tang-dynasty">🌸 大唐盛世 - 繁華長安</option>
-                <option value="ming-dynasty">🏮 明朝錦衣 - 廠衛風雲</option>
-                <option value="warring-states">🗡️ 戰國策士 - 縱橫捭闔</option>
-                <option value="republic-era">🎩 民國風雲 - 亂世佳人</option>
-              </optgroup>
-              <optgroup label="🌟 特殊題材">
-                <option value="slice-of-life">☕ 日常治癒 - 歲月靜好</option>
-                <option value="farming">🌾 種田經營 - 悠閒生活</option>
-                <option value="cooking">🍜 美食江湖 - 舌尖風雲</option>
-                <option value="showbiz">🎬 娛樂圈 - 星光閃耀</option>
-                <option value="sports">⚽ 熱血運動 - 青春揮汗</option>
-                <option value="military">🎖️ 軍旅榮光 - 鐵血軍魂</option>
-                <option value="medical">👨‍⚕️ 醫療懸壺 - 仁心仁術</option>
-                <option value="legal">⚖️ 法律正義 - 庭審風雲</option>
-              </optgroup>
-              <optgroup label="😈 反派視角">
-                <option value="villain-mc">😈 反派主角 - 我即是惡</option>
-                <option value="demon-lord">👹 魔王崛起 - 統御黑暗</option>
-                <option value="villain-redemption">🕊️ 反派救贖 - 洗白之路</option>
-                <option value="misunderstood">🎭 被誤解的惡人 - 真相反轉</option>
-              </optgroup>
-              <optgroup label="📼 年代懷舊">
-                <option value="nostalgia-era">📼 年代生活 - 樸實歲月</option>
-                <option value="old-shanghai">🎩 老上海往事 - 亂世風華</option>
-              </optgroup>
-              <optgroup label="🕵️ 諜戰特工">
-                <option value="spy-war">🕵️ 諜戰風雲 - 潛伏博弈</option>
-                <option value="cold-war-spy">🌃 冷戰諜影 - 雙面間諜</option>
-              </optgroup>
-              <optgroup label="🤖 機甲星際">
-                <option value="mecha-pilot">🤖 機甲駕駛員 - 鋼鐵防線</option>
-                <option value="star-pioneer">🛰️ 銀河開拓者 - 星海拓荒</option>
-              </optgroup>
-              <optgroup label="🧟 末世求生">
-                <option value="zombie-survival">🧟 喪屍末日 - 屍潮求生</option>
-                <option value="wasteland-farming">🌿 廢土種田 - 重建綠洲</option>
-              </optgroup>
-              <optgroup label="🌾 種田經營">
-                <option value="farming-life">🏡 悠閒種田 - 空間發家</option>
-                <option value="shop-management">🍜 餐廳經營 - 暖心小店</option>
-              </optgroup>
-              <optgroup label="🔄 異世界轉生">
-                <option value="isekai-reborn">🔄 異世界轉生 - 重啟人生</option>
-                <option value="slime-reborn">🟦 轉生史萊姆 - 最弱逆襲</option>
-              </optgroup>
-              <optgroup label="🪝 規則詭異">
-                <option value="rule-horror">🪝 規則怪談 - 遵守活命</option>
-                <option value="cthulhu-mythos">🐙 克蘇魯神話 - 不可名狀</option>
-              </optgroup>
-              <optgroup label="🏴‍☠️ 海賊冒險">
-                <option value="pirate-adventure">🏴‍☠️ 大海賊時代 - 揚帆尋寶</option>
-              </optgroup>
             </select>
             <div class="template-btn-row">
               <button id="applyTemplateBtn" class="apply-template-btn">
