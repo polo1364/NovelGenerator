@@ -6,11 +6,11 @@ const planning = require('../public/js/generation-planning');
 const modulePath = path.join(__dirname, '../public/js/character-design.js');
 const design = fs.existsSync(modulePath) ? require(modulePath) : {};
 
-test('character extras preserve all six fields and tolerate legacy data', () => {
+test('character extras preserve all fields and tolerate legacy data', () => {
   assert.equal(typeof design.normalizeExtras, 'function');
   const input = { background: ' 前醫師 ', ability: '救人但耗損體力', belief: '不傷無辜', arc: '學會信任', voice: '先反問', allegiance: '王室', ignored: 'x' };
   assert.deepEqual(design.normalizeExtras(input), {
-    background: '前醫師', ability: input.ability, belief: input.belief, arc: input.arc, voice: input.voice, allegiance: input.allegiance
+    traits: '', background: '前醫師', appearance: '', ability: input.ability, belief: input.belief, need: '', arc: input.arc, voice: input.voice, allegiance: input.allegiance
   });
   assert.ok(Object.values(design.normalizeExtras({})).every(value => value === ''));
   assert.match(design.formatExtras(input), /能力與代價：救人但耗損體力/);
@@ -76,4 +76,13 @@ test('character warnings require a matching character constraint and supported c
   const prompt = planning.buildStoryStatePrompt({ storyText: story, characterCanon: canon });
   assert.match(prompt, /外觀.*情緒/);
   assert.match(prompt, /不能.*缺少.*鋪陳/);
+});
+
+test('trait tags are optional for AI completeness; story depth reaches the design context', () => {
+  const required = Object.fromEntries(['gender', 'role', 'age', 'name', 'personality', 'goal', 'weakness', 'secret', 'relation', ...design.fields.filter(f => !f.optional).map(f => f.key)].map(key => [key, '已設定']));
+  assert.equal(design.isCompleteCharacter(required), true);
+  assert.equal(design.isCompleteCharacter({ ...required, need: '' }), false);
+  assert.ok(design.fields.some(f => f.key === 'appearance') && design.fields.some(f => f.key === 'need'));
+  const context = design.buildContext({ subTheme: '宮廷鬥爭', secondarySetting: '北境', coreQuestion: '復仇之後還剩什麼', subplots: '感情線' });
+  for (const value of ['副主題：宮廷鬥爭', '次要舞台：北境', '故事核心問題：復仇之後還剩什麼', '支線配置：感情線']) assert.ok(context.includes(value), value);
 });

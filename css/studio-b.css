@@ -925,3 +925,32 @@ body.studio-b .workspace-modal .character-rules-note .section-title::before { ba
 body.studio-b #specialElementsModal .character-rules-note { flex: none; overflow: visible; padding: 14px 16px; }
 body.studio-b #specialElementsModal .character-rules-note textarea#notes { display: block; width: 100%; min-height: 110px; resize: vertical; margin-top: 10px; padding: 10px 12px; line-height: 1.7; box-sizing: border-box; }
 body.studio-b #specialElementsModal .special-elements-panel { flex: 1 1 auto; min-height: 260px; }
+
+/* 已選元素列：核心＝主色實心並加星號，點綴＝白底線框 */
+body.studio-b .core-element-bar { padding: 10px 14px 12px; border-bottom: 1px solid var(--sb-line); background: var(--sb-sf); display: grid; gap: 8px; }
+body.studio-b .core-element-bar[hidden] { display: none; }
+body.studio-b .core-element-hint { margin: 0; font-size: 12.5px; color: var(--sb-mut); line-height: 1.6; }
+body.studio-b .core-element-hint.is-warning { color: var(--sb-m3); font-weight: 500; }
+body.studio-b .core-element-chips { display: flex; flex-wrap: wrap; gap: 6px; max-height: 120px; overflow: auto; }
+body.studio-b .core-element-chip { min-height: 36px; padding: 0 12px; border-radius: 999px; border: 1px solid var(--sb-line); background: var(--sb-sf); color: var(--sb-ink); font: 500 13px var(--sb-sans); cursor: pointer; }
+body.studio-b .core-element-chip:hover { border-color: var(--c, var(--sb-m3)); }
+body.studio-b .core-element-chip[aria-pressed="true"] { background: var(--c, var(--sb-m3)); border-color: var(--c, var(--sb-m3)); color: #fff; }
+
+/* 故事深度欄位與人物關係表 */
+body.studio-b .story-depth { display: grid; gap: 12px; margin: 4px 0 16px; padding-top: 14px; border-top: 1px dashed var(--sb-line); }
+body.studio-b .story-depth textarea { min-height: 84px; resize: vertical; }
+body.studio-b .relationship-panel { margin-top: 16px; padding-top: 14px; border-top: 1px solid var(--sb-line); display: grid; gap: 8px; }
+body.studio-b .relationship-panel .char-hint { margin: 0; }
+body.studio-b .relationship-list { display: grid; gap: 8px; }
+body.studio-b .relationship-list:empty::before { content: '尚未設定關係，點「+ 新增關係」開始'; color: var(--sb-mut); font-size: 13px; padding: 10px 0; }
+body.studio-b .relationship-row { display: grid; grid-template-columns: minmax(96px, 1fr) auto minmax(96px, 1fr) minmax(120px, 1.2fr) minmax(160px, 2fr) 40px; gap: 8px; align-items: center; }
+body.studio-b .relationship-row select, body.studio-b .relationship-row input { min-height: 40px; min-width: 0; width: 100%; }
+body.studio-b .relationship-row .combo { position: relative; min-width: 0; }
+body.studio-b .rel-link { color: var(--c, var(--sb-m4)); font-weight: 700; }
+body.studio-b .rel-remove { width: 100%; min-width: 0; height: 40px; padding: 0; border-radius: 8px; border: 1px solid var(--sb-line); background: var(--sb-sf); color: var(--sb-mut); cursor: pointer; }
+body.studio-b .rel-remove:hover { color: var(--sb-m4); border-color: var(--sb-m4); }
+@media (max-width: 760px) {
+  body.studio-b .relationship-row { grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr) 44px; padding: 10px; border: 1px solid var(--sb-line); border-radius: 10px; }
+  body.studio-b .relationship-row .rel-remove { grid-column: 4; grid-row: 1; }
+  body.studio-b .relationship-row > .combo, body.studio-b .relationship-row > .rel-note { grid-column: 1 / -1; }
+}

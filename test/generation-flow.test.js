@@ -329,6 +329,7 @@ function continuationHarness(request) {
     formatChapterWordRequirement: () => '', countStoryWords: text => text.length,
     storySeries: null, currentOutline: '', collectCharactersInfo: () => ({ mainNames: [], secondaryNames: [], characterNames: [] }),
     specialElementsContainer: { querySelectorAll: () => [] },
+    getSelectedSpecialElements: () => [], buildSpecialElementsBlock: () => '', describeAdvanced: (field, value) => value, storyDepthLines: () => [],
     getSupplementaryNotesBlock: () => '', getUserNotesText: () => '',
     getNamePoolStoryBlock: () => '', getDiversityGuidance: () => '', getDiversityMode: () => 'rich',
     document: { getElementById: () => ({ style: {} }) },

@@ -1730,7 +1730,7 @@
           '空戰英雄','狙擊手','諜報人員','戰地醫護','戰爭與和平','未來戰爭'
         ]},
         { name: '冒險探索類', items: [
-          '海洋冒險','西部拓荒','北歐維京','探險尋寶','荒野求生','登山探險',
+          '海洋冒險','西部拓荒','探險尋寶','荒野求生','登山探險',
           '叢林探險','沙漠之旅','極地冒險','地心探索','空島冒險','異世界探險'
         ]},
         { name: '生活職業類', items: [
@@ -1785,27 +1785,27 @@
           '馬拉松挑戰','滑冰競技','拳擊擂台','奧運追夢'
         ]},
         { name: '偶像音樂類', items: [
-          '偶像養成','地下樂團','聲優之路','唱跳練習生','綜藝星探','古典音樂家',
+          '地下樂團','聲優之路','唱跳練習生','綜藝星探','古典音樂家',
           '街頭嘻哈','樂隊主唱','鋼琴師成長','國樂傳承'
         ]},
         { name: '宮廷宅鬥類', items: [
-          '後宮爭寵','宅門嫡女','嫡庶之爭','侯府深深','皇后之路','和親公主',
+          '宅門嫡女','嫡庶之爭','侯府深深','皇后之路','和親公主',
           '寵妃復寵','望族聯姻','正室對決','深閨密謀'
         ]},
         { name: '網文機制類', items: [
-          '全民領主','國運直播','萬界聊天群','每日簽到','人生模擬器','功德成聖',
+          '全民領主','國運直播','萬界聊天群','人生模擬器','功德成聖',
           '詞條抽取','許願系統','商城兌換流','經驗加倍'
         ]},
         { name: '武道格鬥類', items: [
           '地下拳賽','綜合格鬥','劍道之心','空手道之路','跆拳道挑戰','泰拳燃魂',
-          '摔跤擂台','散打冠軍','街頭格鬥','傳統武術'
+          '散打冠軍','街頭格鬥','傳統武術'
         ]},
         { name: '海外華人類', items: [
           '華僑商戰','唐人街傳奇','留學生涯','海外移民','異國合夥','唐人街探案',
           '唐人街餐館','回流創業','僑鄉報國','雙城生活'
         ]},
         { name: '耽美百合類', items: [
-          '雙男主之戀','百合純愛','ABO設定','年上攻','年下寵','師徒戀',
+          '雙男主之戀','百合純愛','ABO設定','年上攻','年下寵',
           '宿敵相愛','破鏡重圓BL','職場雙雄','校園純愛BL'
         ]}
       ];
@@ -1834,7 +1834,7 @@
         { name: '古代其他', items: [
           '古羅馬競技場','埃及法老王宮','希臘神殿','維京海盜船','日本戰國城堡',
           '中世紀歐洲城堡','騎士團要塞','阿拉伯宮殿','瑪雅神廟','印加帝國',
-          '波斯帝國','拜占庭皇宮','蒙古大草原','奧斯曼帝國','中世紀修道院'
+          '波斯帝國','拜占庭皇宮','蒙古大草原','中世紀修道院'
         ]},
         { name: '近現代歷史', items: [
           '民國時期的上海灘','十里洋場','租界區','抗戰時期的重慶','延安窯洞',
@@ -1947,24 +1947,18 @@
 
       const styleCategories = [
         { name: '情感基調', items: [
-          '溫馨治癒','甜蜜浪漫','輕鬆幽默','青春活力','熱血燃情',
-          '感人催淚','虐心糾結','悲傷哀婉','沉重壓抑','黑暗絕望',
-          '溫柔細膩','清新淡雅','詩意唯美','勵志向上','正能量'
+          '甜蜜浪漫','輕鬆幽默','熱血燃情',
+          '感人催淚','悲傷哀婉','沉重壓抑','黑暗絕望',
+          '溫柔細膩','清新淡雅','詩意唯美','正能量'
         ]},
         { name: '氛圍風格', items: [
-          '神秘詭異','懸疑緊張','驚悚恐怖','陰森詭譎','荒誕離奇',
-          '史詩壯闘','大氣磅礴','恢弘壯麗','莊嚴肅穆','蒼涼悲壯',
+          '神秘詭異','驚悚恐怖','陰森詭譎',
+          '大氣磅礴','恢弘壯麗','莊嚴肅穆',
           '明亮歡快','俏皮可愛','夢幻迷離','空靈縹緲','禪意悠遠'
         ]},
-        { name: '敘事風格', items: [
-          '細膩描寫','白描手法','意識流','蒙太奇','碎片化敘事',
-          '多線並進','雙線交織','環形敘事','倒敘插敘','非線性敘事',
-          '第一人稱','第三人稱限知','全知視角','多視角切換','書信體'
-        ]},
-        { name: '節奏風格', items: [
-          '快節奏爽文','緊湊刺激','高潮迭起','一氣呵成',
-          '慢熱鋪陳','娓娓道來','循序漸進','細水長流',
-          '張弛有度','跌宕起伏','平鋪直敘','留白想像'
+        { name: '描寫手法', items: [
+          '細膩描寫','白描手法','蒙太奇','電影鏡頭感','對白驅動',
+          '感官沉浸','留白含蓄','長鏡頭描寫'
         ]},
         { name: '文學風格', items: [
           '古典優雅','華麗繁複','簡約留白','粗獷豪放',
@@ -1980,7 +1974,7 @@
         ]},
         { name: '特殊風格', items: [
           '新武俠','傳統武俠','仙俠飄逸','玄幻熱血',
-          '硬科幻','軟科幻','賽博龐克','蒸汽龐克',
+          
           '哥特風','暗黑系','克蘇魯','民俗風',
           '日系輕小說','韓式甜劇','美劇節奏','英劇質感'
         ]},
@@ -3247,6 +3241,11 @@
         '白描手法': '以白描手法，簡潔而傳神',
         '意識流': '以意識流寫內心跳躍與聯想',
         '蒙太奇': '以蒙太奇剪接場景與意象',
+        '電影鏡頭感': '用鏡頭語言寫場景：遠近景切換、畫面有構圖',
+        '對白驅動': '以對話推進劇情與塑造人物，敘述精簡',
+        '感官沉浸': '調動視聽嗅味觸，讓讀者身歷其境',
+        '留白含蓄': '點到為止，把情緒與答案留給讀者',
+        '長鏡頭描寫': '一個場景連續推進不切換，累積張力',
         '碎片化敘事': '以碎片化敘事拼湊真相',
         '多線並進': '以多線並進交織推進情節',
         '雙線交織': '以雙線交織互為映照',
@@ -3966,8 +3965,16 @@
       populateDatalist('relation-list', relationOptions);
 
       // ==================== 自訂下拉選單（可點開／捲動／過濾／自由輸入）====================
-      function attachCombobox(input, options) {
+      // multi：可多選，以「、」分隔，選單只比對最後一段並略過已選項目
+      function attachCombobox(input, options, { multi = false } = {}) {
         if (!input || input.__comboAttached) return;
+        const SEP = /\s*[、,，]\s*/;
+        const chosen = () => input.value.split(SEP).map(part => part.trim()).filter(Boolean);
+        const query = () => {
+          if (!multi) return input.value;
+          const last = input.value.split(SEP).pop().trim();
+          return options.includes(last) ? '' : last;
+        };
         input.__comboAttached = true;
 
         const wrap = document.createElement('div');
@@ -3993,7 +4000,8 @@
 
         function buildMenu(filterText) {
           const q = (filterText || '').trim();
-          filtered = q ? options.filter(o => o.includes(q)) : options.slice();
+          const picked = multi ? new Set(chosen()) : null;
+          filtered = (q ? options.filter(o => o.includes(q)) : options.slice()).filter(o => !picked || !picked.has(o));
           menu.innerHTML = '';
           if (filtered.length === 0) {
             const li = document.createElement('li');
@@ -4027,10 +4035,15 @@
           activeIndex = -1;
         }
         function choose(val) {
-          input.value = val;
+          if (multi) {
+            const parts = input.value.split(SEP).map(part => part.trim());
+            if (parts.length && !options.includes(parts[parts.length - 1])) parts.pop();
+            input.value = [...new Set([...parts.filter(Boolean), val])].join('、');
+          } else input.value = val;
           input.dispatchEvent(new Event('input', { bubbles: true }));
           input.dispatchEvent(new Event('change', { bubbles: true }));
-          close();
+          // 多選時選單保持開啟（input 事件已重建剩餘選項），可以連續點選
+          if (!multi) close();
         }
         function highlight(idx) {
           const items = Array.from(menu.querySelectorAll('.combo-item'));
@@ -4045,11 +4058,12 @@
           if (wrap.classList.contains('open')) { close(); }
           else { open(''); input.focus(); }
         });
-        input.addEventListener('focus', () => open(input.value));
-        input.addEventListener('input', () => open(input.value));
+        input.addEventListener('focus', () => open(query()));
+        input.addEventListener('click', () => { if (!wrap.classList.contains('open')) open(query()); });
+        input.addEventListener('input', () => open(query()));
         input.addEventListener('keydown', (e) => {
           if (e.key === 'ArrowDown') {
-            if (!wrap.classList.contains('open')) open(input.value); else highlight(activeIndex + 1);
+            if (!wrap.classList.contains('open')) open(query()); else highlight(activeIndex + 1);
             e.preventDefault();
           } else if (e.key === 'ArrowUp') {
             highlight(activeIndex - 1); e.preventDefault();
@@ -4180,10 +4194,6 @@
         { value: '仙俠世界', label: '☯️ 仙俠 - 修仙問道' },
         { value: '玄幻大陸', label: '✨ 玄幻 - 鬥氣魔法' },
         { value: '西幻大陸', label: '🏰 西幻 - 劍與魔法' },
-        { value: '蒸汽龐克', label: '⚙️ 蒸汽龐克 - 齒輪蒸汽' },
-        { value: '賽博龐克', label: '🌃 賽博龐克 - 高科技低生活' },
-        { value: '克蘇魯', label: '🐙 克蘇魯 - 宇宙恐懼' },
-        { value: '哥特風', label: '🦇 哥特風 - 黑暗浪漫' },
         // 新增時代
         { value: '大正浪漫', label: '🌸 大正浪漫 - 和洋折衷' },
         { value: '昭和時代', label: '📻 昭和時代 - 復古日本' },
@@ -4216,20 +4226,15 @@
         { value: '浪漫節奏', label: '💕 浪漫節奏 - 情感細膩，怦然心動' },
         { value: '熱血節奏', label: '🔥 熱血節奏 - 戰鬥激昂，燃點不斷' },
         // 特殊節奏
-        { value: '倒敘節奏', label: '⏪ 倒敘節奏 - 結局開場，追溯原因' },
-        { value: '環形節奏', label: '🔁 環形節奏 - 首尾呼應，命運輪迴' },
-        { value: '碎片節奏', label: '🧩 碎片節奏 - 時間跳躍，拼湊真相' },
         { value: '漸進節奏', label: '📈 漸進節奏 - 由慢到快，漸入佳境' },
         { value: '波浪節奏', label: '🌊 波浪節奏 - 起伏交替，張弛有度' },
         { value: '階梯節奏', label: '📶 階梯節奏 - 逐步升級，層層遞進' },
         { value: '爆發節奏', label: '💣 爆發節奏 - 蓄力爆發，高潮集中' },
-        { value: '雙線節奏', label: '🔀 雙線節奏 - 並行推進，交匯高潮' },
         // 新增節奏
         { value: '開局即高潮', label: '🚀 開局即高潮 - 第一章就抓人' },
         { value: '單元劇節奏', label: '📺 單元劇 - 一章一個小故事' },
         { value: '養成漸進', label: '🌱 養成漸進 - 陪伴式成長' },
         { value: '慢綜治癒', label: '🍃 慢綜治癒 - 鬆弛無壓力' },
-        { value: '群像輪轉', label: '👥 群像輪轉 - 多角色輪流推進' },
         { value: '懸念鉤子連發', label: '🪝 鉤子連發 - 章章留懸念' }
       ];
 
@@ -4248,16 +4253,9 @@
         { value: '獵奇向', label: '👁️ 獵奇向 - 奇特設定，挑戰常規' },
         { value: '血腥向', label: '🩸 血腥向 - 戰鬥描寫較激烈' },
         { value: '驚悚向', label: '👻 驚悚向 - 恐怖驚悚元素' },
-        { value: '虐心向', label: '💔 虐心向 - 情感拉扯，刀片不斷' },
-        { value: '致鬱向', label: '😢 致鬱向 - 沉重壓抑，悲劇走向' },
-        { value: '治癒向', label: '🌸 治癒向 - 溫暖人心，療癒系' },
-        { value: '搞笑向', label: '😂 搞笑向 - 輕鬆歡樂，笑點密集' },
         { value: '正劇向', label: '📖 正劇向 - 嚴肅認真，劇情為主' },
         // 新增傾向
-        { value: '闔家歡', label: '👨‍👩‍👧‍👦 闔家歡 - 老少咸宜' },
         { value: '燒腦向', label: '🧩 燒腦向 - 需動腦推理' },
-        { value: '無腦爽向', label: '😎 無腦爽向 - 圖一個痛快' },
-        { value: '群像向', label: '👥 群像向 - 重在眾生百態' },
         { value: '考據向', label: '📚 考據向 - 注重設定與細節' }
       ];
 
@@ -4281,13 +4279,10 @@
         // 體系設定
         { value: '鬆散設定', label: '🎲 鬆散設定 - 服務劇情，隨寫隨編' },
         { value: '硬核設定', label: '📐 硬核設定 - 嚴格體系，邏輯自洽' },
-        { value: '軟科幻', label: '🔮 軟科幻 - 科技為背景，不深究' },
-        { value: '硬科幻', label: '⚛️ 硬科幻 - 科學嚴謹，邏輯推演' },
         // 新增複雜度
         { value: '低魔世界', label: '🕯️ 低魔世界 - 魔法稀少而珍貴' },
         { value: '高魔世界', label: '🔥 高魔世界 - 魔法充斥日常' },
         { value: '規則驅動', label: '📐 規則驅動 - 嚴格規則主導劇情' },
-        { value: '克系不可知', label: '🐙 克系不可知 - 真相不可名狀' },
         { value: '雙世界對照', label: '🪞 雙世界對照 - 兩個世界互映' }
       ];
 
@@ -5664,6 +5659,122 @@
         });
       });
 
+      // 主角類型、身份職業、種族設定描述的是「某個人」，改成人物卡上的特質標籤，不再當全書特殊元素
+      const CHARACTER_TRAIT_CATEGORIES = new Set(['主角類型', '身份職業', '種族設定']);
+      const legacyTraitLabels = new Map();
+      const traitHints = new Map();
+      specialElementCategories.filter(cat => CHARACTER_TRAIT_CATEGORIES.has(cat.name)).forEach(cat => cat.items.forEach(item => {
+        legacyTraitLabels.set(item.id, item.label);
+        traitHints.set(item.label, specialElementMeta.get(item.id).hint);
+      }));
+      const characterTraitOptions = [...traitHints.keys()];
+      for (let i = specialElementCategories.length - 1; i >= 0; i--) {
+        if (CHARACTER_TRAIT_CATEGORIES.has(specialElementCategories[i].name)) specialElementCategories.splice(i, 1);
+      }
+      // 「重生者、醫生」→「重生者（說明）、醫生（說明）」
+      function describeTraits(value) {
+        return String(value || '').split(/\s*[、,，]\s*/).filter(Boolean).map(label => {
+          const hint = traitHints.get(label);
+          return hint && hint !== label && !CHARACTER_TRAIT_CATEGORIES.has(hint) ? `${label}（${hint}）` : label;
+        }).join('、');
+      }
+
+      // ===== 送進提示詞的設定都附上一句說明，AI 才知道每個選項要怎麼影響故事 =====
+      // 特殊元素分「核心」（最多 3 個，貫穿主線）與「點綴」（分散到各章，每章最多 2 個）。
+      const coreElementIds = new Set();
+      const MAX_CORE_ELEMENTS = 3;
+      const ACCENTS_PER_CHAPTER = 2;
+      const ADVANCED_OPTION_LISTS = {
+        narrative: narrativeOptions, era: eraOptions, pacing: pacingOptions, rating: ratingOptions,
+        worldComplexity: worldComplexityOptions, emotionalTone: emotionalToneOptions, ending: endingOptions
+      };
+      // 選項標籤長這樣：「💥 爽文節奏 - 高潮迭起，打臉不斷」→「爽文節奏（高潮迭起，打臉不斷）」
+      function describeAdvanced(field, value) {
+        const item = (ADVANCED_OPTION_LISTS[field] || []).find(option => option.value === value);
+        const desc = item ? (item.label.match(/-\s*([^-]+)$/) || [])[1] : '';
+        return desc ? `${value}（${desc.trim()}）` : value;
+      }
+      function getSelectedSpecialElements() {
+        return Array.from(specialElementsContainer.querySelectorAll('.special-element-item.selected')).map(item => {
+          const meta = specialElementMeta.get(item.dataset.id);
+          return {
+            id: item.dataset.id,
+            label: meta ? meta.label : item.querySelector('.element-label').textContent,
+            hint: meta && meta.hint && meta.hint !== meta.label && meta.hint !== meta.category ? meta.hint : ''
+          };
+        });
+      }
+      const describeElement = element => element.hint ? `${element.label}（${element.hint}）` : element.label;
+      // 沒有標記核心時：3 個以內全部當核心；超過 3 個全部當點綴，交給逐章分配
+      function splitSpecialElements(elements) {
+        const marked = elements.filter(element => coreElementIds.has(element.id));
+        const core = marked.length ? marked : (elements.length <= MAX_CORE_ELEMENTS ? elements : []);
+        return { core, accents: elements.filter(element => !core.includes(element)) };
+      }
+      // 第 N 章輪到的點綴元素：依序輪流，每個點綴元素都會被用到，又不會擠在同一章
+      function accentElementsForChapter(accents, chapter) {
+        if (!accents.length || chapter < 1) return [];
+        const perChapter = Math.min(ACCENTS_PER_CHAPTER, accents.length);
+        return Array.from({ length: perChapter }, (_, k) => accents[((chapter - 1) * perChapter + k) % accents.length]);
+      }
+      // mode：story＝首次生成、outline＝大綱、chapter＝續寫第 chapter 章
+      function buildSpecialElementsBlock(elements, { mode = 'story', chapter = 0 } = {}) {
+        if (!elements.length) return '';
+        const { core, accents } = splitSpecialElements(elements);
+        const lines = [];
+        if (core.length) lines.push(`【核心元素（★貫穿主線，各章都要推進或呼應★）】\n${core.map(e => `• ${describeElement(e)}`).join('\n')}`);
+        if (accents.length && mode === 'chapter') {
+          const now = accentElementsForChapter(accents, chapter);
+          lines.push(`【本章點綴元素（在本章自然帶入，不必喧賓奪主）】\n${now.map(e => `• ${describeElement(e)}`).join('\n')}`);
+        } else if (accents.length) {
+          const where = mode === 'outline'
+            ? '分散安排在不同章節，每章最多 2 個，並在該章大綱註明用到哪些點綴元素；每個點綴元素至少出現在一章'
+            : '分散在不同章節自然帶入，每章最多 2 個，不必每章出現';
+          lines.push(`【點綴元素（${where}）】\n${accents.map(e => `• ${describeElement(e)}`).join('\n')}`);
+        }
+        return lines.join('\n\n') + '\n\n';
+      }
+
+      // 已選元素列：點元素切換「核心／點綴」，並顯示目前分配與數量提醒
+      function updateCoreElementBar() {
+        const bar = document.getElementById('coreElementBar');
+        const chips = document.getElementById('coreElementChips');
+        const hint = document.getElementById('coreElementHint');
+        if (!bar || !chips || !hint) return;
+        const elements = getSelectedSpecialElements();
+        for (const id of [...coreElementIds]) if (!elements.some(element => element.id === id)) coreElementIds.delete(id);
+        bar.hidden = elements.length === 0;
+        chips.replaceChildren(...elements.map(element => {
+          const chip = document.createElement('button');
+          const core = coreElementIds.has(element.id);
+          chip.type = 'button';
+          chip.className = 'core-element-chip';
+          chip.dataset.id = element.id;
+          chip.setAttribute('aria-pressed', String(core));
+          chip.textContent = (core ? '★ ' : '') + element.label;
+          chip.title = core ? '核心元素：點一下改回點綴' : '點綴元素：點一下設為核心';
+          return chip;
+        }));
+        const { core, accents } = splitSpecialElements(elements);
+        const tooMany = elements.length > 8;
+        hint.textContent = `核心 ${core.length}・點綴 ${accents.length}　點元素可標記為核心（最多 ${MAX_CORE_ELEMENTS} 個），點綴會分散到各章`
+          + (tooMany ? `。已選 ${elements.length} 項，建議 3–8 項，太多每章塞不下` : '');
+        hint.classList.toggle('is-warning', tooMany);
+      }
+      document.getElementById('coreElementChips')?.addEventListener('click', (event) => {
+        const chip = event.target.closest('.core-element-chip');
+        if (!chip) return;
+        const id = chip.dataset.id;
+        if (coreElementIds.has(id)) coreElementIds.delete(id);
+        else if (coreElementIds.size >= MAX_CORE_ELEMENTS) {
+          showStatus('warning', `核心元素最多 ${MAX_CORE_ELEMENTS} 個，請先取消一個`);
+          setTimeout(hideStatus, 2000);
+          return;
+        } else coreElementIds.add(id);
+        updateCoreElementBar();
+        saveSettingsToLocal();
+      });
+
       function buildForbiddenSpecialLabels() {
         const advancedValues = [
           narrativeOptions, eraOptions, pacingOptions, ratingOptions,
@@ -5797,6 +5908,7 @@
           .map(id => [id, document.getElementById(id)?.value || '']));
         settings.volumes = getPlannedVolumes();
         settings.notes = getUserNotesText();
+        Object.assign(settings, getStoryDepth());
         settings.specialElements = Array.from(specialElementsContainer.querySelectorAll('.special-element-item.selected')).map(el => el.querySelector('.element-label')?.textContent || '');
         const text = globalThis.NovelCharacterDesign?.buildContext(settings) || '';
         const names = getSelectedNamePool().map(entry => `${entry.name}:${entry.gender}`).sort();
@@ -5816,9 +5928,14 @@
           : 'AI 設計依據與目前設定一致；人物仍可自由微調，並非內容正確性保證。';
         panel.dataset.stale = String(stale > 0);
       }
+      // 人物關係表靠穩定 id 對應人物，改名或 AI 重新設計後關係仍跟著同一列
+      const newCharacterId = () => 'c' + Date.now().toString(36) + Math.random().toString(36).slice(2, 7);
+      const CHARACTER_ROLES = ['主角', '第二主角', '戀愛對象', '反派', '對手', '導師', '夥伴', '配角', '路人'];
+
       function addCharacterRow(randomize = false) {
         const row = document.createElement('div');
         row.className = 'character-row';
+        row.dataset.charId = newCharacterId();
         updateCharacterIndices();
         const index = charactersContainer.children.length + 1;
         row.innerHTML = `
@@ -5829,14 +5946,9 @@
               <option value="女">女</option>
               <option value="不明">不明</option>
             </select>
-            <select class="char-role" title="角色定位（影響戲份輕重）">
+            <select class="char-role" title="角色定位（影響戲份輕重；與性別無關）">
               <option value="">定位</option>
-              <option value="男主角">男主角</option>
-              <option value="女主角">女主角</option>
-              <option value="男配角">男配角</option>
-              <option value="女配角">女配角</option>
-              <option value="反派">反派</option>
-              <option value="路人">路人</option>
+              ${CHARACTER_ROLES.map(role => `<option value="${role}">${role}</option>`).join('')}
             </select>
             <input type="text" class="char-age" placeholder="年齡" maxlength="12" inputmode="text" />
             <input type="text" class="char-name" placeholder="姓名" />
@@ -5852,7 +5964,9 @@
             <label class="char-field"><span class="char-field-label">弱點</span><input type="text" class="char-weakness" placeholder="致命弱點…" autocomplete="off" /></label>
             <label class="char-field"><span class="char-field-label">祕密</span><input type="text" class="char-secret" placeholder="秘密、誰知道、揭露的後果…" autocomplete="off" /></label>
             <label class="char-field char-field-wide"><span class="char-field-label">人際</span><input type="text" class="char-relation" placeholder="與誰的關係、彼此利益與衝突…" autocomplete="off" /></label>
-            ${characterExtraFields.filter(field => !field.more).map(field => `<label class="char-field"><span class="char-field-label">${field.label}</span><textarea class="char-${field.key}" placeholder="${field.placeholder}" rows="2"></textarea></label>`).join('')}
+            ${characterExtraFields.filter(field => !field.more).map(field => field.tags
+              ? `<label class="char-field char-field-wide"><span class="char-field-label">${field.label}</span><input type="text" class="char-${field.key}" placeholder="${field.placeholder}" autocomplete="off" /></label>`
+              : `<label class="char-field"><span class="char-field-label">${field.label}</span><textarea class="char-${field.key}" placeholder="${field.placeholder}" rows="2"></textarea></label>`).join('')}
           </div>
           <details class="character-more"><summary>更多人物設定</summary><div class="char-fields">${characterExtraFields.filter(field => field.more).map(field => `<label class="char-field"><span class="char-field-label">${field.label}</span><textarea class="char-${field.key}" placeholder="${field.placeholder}" rows="2"></textarea></label>`).join('')}</div></details>
         `;
@@ -5899,6 +6013,7 @@
         attachCombobox(row.querySelector('.char-weakness'), weaknessOptions);
         attachCombobox(row.querySelector('.char-secret'), secretOptions);
         attachCombobox(row.querySelector('.char-relation'), relationOptions);
+        attachCombobox(row.querySelector('.char-traits'), characterTraitOptions, { multi: true });
 
         if (randomize) {
           // 新增人物時，先收集已有的名字避免重複
@@ -5961,6 +6076,7 @@
           characterTabs.appendChild(btn);
         });
         characterTabs.style.display = rows.length > 1 ? 'flex' : 'none';
+        refreshRelationshipSelects();
         if (rows.length > 0) setActiveCharacter(active < 0 ? 0 : active);
         if (typeof updateWorkspaceSummary === 'function') updateWorkspaceSummary();
       }
@@ -6072,6 +6188,8 @@
         row.querySelector('.char-weakness').value = pickRandomUnique(weaknessOptions, usedWeaknesses, true);
         row.querySelector('.char-secret').value = pickRandomUnique(secretOptions, usedSecrets, true);
         row.querySelector('.char-relation').value = pickRandomUnique(relationOptions, usedRelations, true);
+        const traitsInput = row.querySelector('.char-traits');
+        if (traitsInput) traitsInput.value = Math.random() < 0.5 ? pickRandom(characterTraitOptions) : '';
         
         // 年齡隨機（根據故事類型可能有不同範圍，這裡用通用範圍）
         const ageRanges = [
@@ -6215,10 +6333,10 @@
         const n = notes != null ? String(notes).trim() : getUserNotesText();
         const c = getCastGenderConstraintFromNotes(n);
         if (c === 'female-only') {
-          return `\n【卡司性別（★補充說明強制★）】補充說明明確要求全劇不可有男性 → 所有登場人物必須為女性（全女卡司）；gender 須為「女」，role 使用女主角／女配角等，不可有男角。`;
+          return `\n【卡司性別（★補充說明強制★）】補充說明明確要求全劇不可有男性 → 所有登場人物必須為女性（全女卡司）；gender 須為「女」，不可有男角。`;
         }
         if (c === 'male-only') {
-          return `\n【卡司性別（★補充說明強制★）】補充說明明確要求全劇不可有女性 → 所有登場人物必須為男性（全男卡司）；gender 須為「男」，role 使用男主角／男配角等，不可有女角。`;
+          return `\n【卡司性別（★補充說明強制★）】補充說明明確要求全劇不可有女性 → 所有登場人物必須為男性（全男卡司）；gender 須為「男」，不可有女角。`;
         }
         return `\n【卡司性別】卡司可全男、全女或男女混合，依劇情與補充說明決定；不必強求男女各一。`;
       }
@@ -6240,7 +6358,6 @@ ${bindingLines}
 - 需設計 ${count} 位人物：可優先從清單挑選 name（不可改字、不可重複）；不必依序使用。
 - ★ 僅約束「採用了清單姓名」的角色：該角色的 gender／role 必須與清單標記一致（男名不可配女角，女名不可配男角）。
 ${getNamePoolCastNoteForCharacters(notes)}
-- role 須與 gender 一致（gender=男 不可填「女主角／女配角」；gender=女 不可填「男主角／男配角」）。
 - 清單用盡後，其餘人物依姓名規則自行取名。`;
       }
 
@@ -6258,23 +6375,12 @@ ${getNamePoolCastNoteForCharacters(notes)}
         if (entry && (entry.gender === '男' || entry.gender === '女')) {
           out.gender = entry.gender;
           out.role = normalizeCharRole(out.role, entry.gender);
-          if (entry.gender === '男') {
-            if (out.role === '女主角') out.role = '男主角';
-            else if (out.role === '女配角') out.role = '男配角';
-          } else if (entry.gender === '女') {
-            if (out.role === '男主角') out.role = '女主角';
-            else if (out.role === '男配角') out.role = '女配角';
-          }
         }
         const castConstraint = getCastGenderConstraintFromNotes(getUserNotesText());
         if (castConstraint === 'female-only') {
           out.gender = '女';
-          if (out.role === '男主角') out.role = '女主角';
-          else if (out.role === '男配角') out.role = '女配角';
         } else if (castConstraint === 'male-only') {
           out.gender = '男';
-          if (out.role === '女主角') out.role = '男主角';
-          else if (out.role === '女配角') out.role = '男配角';
         }
         return out;
       }
@@ -6338,6 +6444,91 @@ ${getCharacterNamingRules(setting)}
       function stripInjectedOutlineFromNotes(text) {
         return extractOutlineFromNotes(text).cleanNotes;
       }
+
+      // ===== 故事深度：副主題、次要舞台、核心問題、支線 =====
+      const STORY_DEPTH_IDS = ['subTheme', 'secondarySetting', 'coreQuestion', 'subplots'];
+      const storyDepthEls = STORY_DEPTH_IDS.map(id => document.getElementById(id));
+      function getStoryDepth() {
+        return Object.fromEntries(STORY_DEPTH_IDS.map((id, i) => [id, (storyDepthEls[i]?.value || '').trim()]));
+      }
+      function storyDepthLines() {
+        const depth = getStoryDepth();
+        const lines = [];
+        if (depth.subTheme) lines.push(`副主題：${depth.subTheme}（與主題交織成第二條情節線，不可喧賓奪主）`);
+        if (depth.secondarySetting) lines.push(`次要舞台：${depth.secondarySetting}（故事推進後移動到此處，帶來新的衝突與景觀）`);
+        if (depth.coreQuestion) lines.push(`故事核心問題：${depth.coreQuestion}（全書圍繞它推進，結局必須給出回答）`);
+        const subplots = depth.subplots.split(/\n+/).map(line => line.trim()).filter(Boolean);
+        if (subplots.length) lines.push(`支線配置（各支線分散在不同章節推進，結局前收束或交代）：\n${subplots.map(line => `  - ${line}`).join('\n')}`);
+        return lines;
+      }
+
+      // ===== 人物關係表：A ↔ B、關係、張力與變化 =====
+      const relationshipList = document.getElementById('relationshipList');
+      const relationshipTypeOptions = ['戀人', '曖昧', '暗戀', '青梅竹馬', '夫妻', '前任', '師徒', '親子', '手足', '摯友', '戰友', '主從', '盟友',
+        '合作但互相提防', '競爭對手', '宿敵', '仇人', '利用與被利用', '救命之恩', '上司與下屬', '臥底與目標', '守護與被守護'];
+      function characterChoices() {
+        return Array.from(charactersContainer.children).map((row, i) => ({ id: row.dataset.charId, name: row.querySelector('.char-name').value.trim() || `人物 ${i + 1}` }));
+      }
+      function refreshRelationshipSelects() {
+        if (!relationshipList) return;
+        const choices = characterChoices();
+        relationshipList.querySelectorAll('select').forEach(select => {
+          const current = select.value || select.dataset.pending || '';
+          select.replaceChildren(new Option('選擇人物', ''), ...choices.map(choice => new Option(choice.name, choice.id)));
+          select.value = choices.some(choice => choice.id === current) ? current : '';
+          delete select.dataset.pending;
+        });
+      }
+      function addRelationshipRow(data = {}) {
+        if (!relationshipList) return null;
+        const row = document.createElement('div');
+        row.className = 'relationship-row';
+        row.innerHTML = `
+          <select class="rel-a" aria-label="人物 A"></select>
+          <span class="rel-link" aria-hidden="true">↔</span>
+          <select class="rel-b" aria-label="人物 B"></select>
+          <input type="text" class="rel-type" placeholder="關係，例如：師徒" autocomplete="off" aria-label="關係" />
+          <input type="text" class="rel-note" placeholder="張力與變化，例如：表面互信，暗中互相監視" autocomplete="off" aria-label="張力與變化" />
+          <button type="button" class="rel-remove" aria-label="移除這組關係" title="移除這組關係">✕</button>`;
+        row.querySelector('.rel-a').dataset.pending = data.a || '';
+        row.querySelector('.rel-b').dataset.pending = data.b || '';
+        row.querySelector('.rel-type').value = data.type || '';
+        row.querySelector('.rel-note').value = data.note || '';
+        relationshipList.appendChild(row);
+        attachCombobox(row.querySelector('.rel-type'), relationshipTypeOptions);
+        refreshRelationshipSelects();
+        return row;
+      }
+      function readRelationships() {
+        if (!relationshipList) return [];
+        return Array.from(relationshipList.children).map(row => ({
+          a: row.querySelector('.rel-a').value, b: row.querySelector('.rel-b').value,
+          type: row.querySelector('.rel-type').value.trim(), note: row.querySelector('.rel-note').value.trim()
+        })).filter(rel => rel.a || rel.b || rel.type || rel.note);
+      }
+      function relationshipLines() {
+        const names = new Map(characterChoices().map(choice => [choice.id, choice.name]));
+        return readRelationships().filter(rel => names.has(rel.a) && names.has(rel.b) && rel.a !== rel.b && (rel.type || rel.note))
+          .map(rel => `${names.get(rel.a)} ↔ ${names.get(rel.b)}：${rel.type || '關係待定'}${rel.note ? `；${rel.note}` : ''}`);
+      }
+      function renderRelationships(list) {
+        if (!relationshipList) return;
+        relationshipList.replaceChildren();
+        (Array.isArray(list) ? list : []).forEach(rel => rel && typeof rel === 'object' && addRelationshipRow(rel));
+      }
+      document.getElementById('addRelationshipBtn')?.addEventListener('click', () => {
+        const choices = characterChoices();
+        const row = addRelationshipRow({ a: choices[0]?.id, b: choices[1]?.id });
+        row?.querySelector('.rel-type').focus();
+        saveSettingsToLocal();
+      });
+      relationshipList?.addEventListener('click', (event) => {
+        if (!event.target.closest('.rel-remove')) return;
+        event.target.closest('.relationship-row').remove();
+        saveSettingsToLocal();
+      });
+      relationshipList?.addEventListener('change', () => saveSettingsToLocal());
+      relationshipList?.addEventListener('input', debounce(saveSettingsToLocal, 500));
 
       function getUserNotesText() {
         return stripInjectedOutlineFromNotes(notesInput?.value || '').trim();
@@ -6406,6 +6597,7 @@ ${n}
             length: lengthInput.value,
             volumes: getPlannedVolumes(),
             notes: stripInjectedOutlineFromNotes(notesInput.value),
+            ...getStoryDepth(),
             storyOutline: currentOutline || '',
             storyBookTitle: currentBookTitle || '',
             storyOutlineVolumeCount: getOutlineVolumeTotal(),
@@ -6420,13 +6612,16 @@ ${n}
             emotionalTone: emotionalToneSelect.value,
             ending: endingSelect.value,
             specialElements: validSpecialElements,
+            coreElements: [...coreElementIds].filter(id => validSpecialElements.includes(id)),
             customNamePool: customNamePool.map(e => ({ ...e })),
             autoContinue: !!(document.getElementById('autoContinueToggle')?.checked),
+            relationships: readRelationships(),
             characters: []
           };
           
           Array.from(charactersContainer.children).forEach(row => {
             settings.characters.push({
+              id: row.dataset.charId,
               gender: row.querySelector('.char-gender').value,
               role: row.querySelector('.char-role') ? row.querySelector('.char-role').value : '',
               age: row.querySelector('.char-age').value,
@@ -6503,6 +6698,10 @@ ${n}
             if (notesText || settings.notes === '') hasData = true;
           }
 
+          STORY_DEPTH_IDS.forEach((id, i) => {
+            if (storyDepthEls[i] && typeof settings[id] === 'string') { storyDepthEls[i].value = settings[id]; if (settings[id]) hasData = true; }
+          });
+
           // 載入進階設定
           if (settings.diversityMode) { setSelectValue(diversityModeSelect, settings.diversityMode); hasData = true; }
           if (settings.randomSeed) { randomSeedInput.value = String(settings.randomSeed); hasData = true; }
@@ -6514,9 +6713,11 @@ ${n}
           if (settings.emotionalTone) { setSelectValue(emotionalToneSelect, settings.emotionalTone); hasData = true; }
           if (settings.ending) { setSelectValue(endingSelect, settings.ending); hasData = true; }
 
-          // 載入特殊元素
+          // 載入特殊元素（舊存檔的人物類元素轉成第一位人物的特質標籤）
+          const migratedTraits = [];
           if (settings.specialElements && settings.specialElements.length > 0) {
             settings.specialElements.forEach(id => {
+              if (legacyTraitLabels.has(id)) migratedTraits.push(legacyTraitLabels.get(id));
               const item = specialElementsContainer.querySelector(`[data-id="${id}"]`);
               if (item) {
                 item.classList.add('selected');
@@ -6526,6 +6727,9 @@ ${n}
             });
             hasData = true;
           }
+          coreElementIds.clear();
+          (Array.isArray(settings.coreElements) ? settings.coreElements : []).forEach(id => coreElementIds.add(id));
+          updateCoreElementBar();
 
           if (settings.customNamePool && Array.isArray(settings.customNamePool) && settings.customNamePool.length) {
             customNamePool = normalizeCustomNamePool(settings.customNamePool);
@@ -6564,11 +6768,17 @@ ${n}
                 setVal('.char-relation', char.relation);
                 characterExtraFields.forEach(({ key }) => setVal(`.char-${key}`, char[key]));
                 if (typeof char.aiDesignContextKey === 'string') row.dataset.aiDesignContextKey = char.aiDesignContextKey;
+                if (typeof char.id === 'string' && char.id) row.dataset.charId = char.id;
               }
             });
+            renderRelationships(settings.relationships);
             renderCharacterTabs();
             setActiveCharacter(0);
             hasData = true;
+          }
+          const firstTraits = charactersContainer.querySelector('.char-traits');
+          if (migratedTraits.length && firstTraits) {
+            firstTraits.value = [...new Set([...firstTraits.value.split(/\s*[、,，]\s*/).filter(Boolean), ...migratedTraits])].join('、');
           }
           
           console.log('設定已從本地載入', settings);
@@ -6582,7 +6792,7 @@ ${n}
       // 監聽基本設定的變更
       [themeSelect, settingSelect, styleSelect, chaptersInput, lengthInput, notesInput,
        diversityModeSelect, randomSeedInput, narrativeSelect, eraSelect, pacingSelect, ratingSelect,
-       worldComplexitySelect, emotionalToneSelect, endingSelect, document.getElementById('volumes')].forEach(el => {
+       worldComplexitySelect, emotionalToneSelect, endingSelect, document.getElementById('volumes'), ...storyDepthEls.filter(Boolean)].forEach(el => {
         el.addEventListener('change', saveSettingsToLocal);
         el.addEventListener('input', debounce(saveSettingsToLocal, 500));
       });
@@ -6684,6 +6894,7 @@ ${n}
         function updateSelectedCount() {
           const count = specialElementsContainer.querySelectorAll('.special-element-item.selected').length;
           selectedCountSpan.textContent = `已選 ${count} 項`;
+          updateCoreElementBar();
           if (typeof updateWorkspaceSummary === 'function') updateWorkspaceSummary();
         }
         
@@ -7325,12 +7536,9 @@ ${n}
         const ending = endingSelect.value.trim();
         const diversityGuidance = getDiversityGuidance();
 
-        // 收集特殊元素
-        const selectedElements = [];
-        specialElementsContainer.querySelectorAll('.special-element-item.selected').forEach(item => {
-          const label = item.querySelector('.element-label').textContent;
-          selectedElements.push(label);
-        });
+        // 收集特殊元素（含說明與核心／點綴）
+        const specialElementList = getSelectedSpecialElements();
+        const selectedElements = specialElementList.map(element => element.label);
 
         const hasAdvanced = narrative || era || pacing || rating || worldComplexity || emotionalTone || ending;
         if (!theme && !setting && !charactersInfo && !style && !chapters && !length && !notes && !hasOutlineForGenerate && selectedElements.length === 0 && !hasAdvanced) {
@@ -7422,8 +7630,9 @@ ${n}
         let basicSettings = [];
         if (theme) basicSettings.push(`主題：${theme}`);
         if (setting) basicSettings.push(`背景設定：${setting}`);
-        if (era) basicSettings.push(`時代背景：${era}`);
+        if (era) basicSettings.push(`時代背景：${describeAdvanced('era', era)}`);
         if (style) basicSettings.push(`故事風格：${style}`);
+        basicSettings.push(...storyDepthLines());
         
         if (basicSettings.length > 0) {
           prompt += `【基本設定】\n${basicSettings.join('\n')}\n\n`;
@@ -7446,21 +7655,19 @@ ${n}
         
         // ===== 寫作風格設定區 =====
         let styleSettings = [];
-        if (narrative) styleSettings.push(`敘事視角：${narrative}`);
-        if (pacing) styleSettings.push(`故事節奏：${pacing}`);
-        if (emotionalTone) styleSettings.push(`情感基調：${emotionalTone}`);
-        if (worldComplexity) styleSettings.push(`世界觀複雜度：${worldComplexity}`);
-        if (rating) styleSettings.push(`內容分級：${rating}`);
-        if (ending) styleSettings.push(`結局傾向：${ending}`);
+        if (narrative) styleSettings.push(`敘事視角：${describeAdvanced('narrative', narrative)}`);
+        if (pacing) styleSettings.push(`故事節奏：${describeAdvanced('pacing', pacing)}`);
+        if (emotionalTone) styleSettings.push(`情感基調：${describeAdvanced('emotionalTone', emotionalTone)}`);
+        if (worldComplexity) styleSettings.push(`世界觀複雜度：${describeAdvanced('worldComplexity', worldComplexity)}`);
+        if (rating) styleSettings.push(`內容分級：${describeAdvanced('rating', rating)}`);
+        if (ending) styleSettings.push(`結局傾向：${describeAdvanced('ending', ending)}`);
         
         if (styleSettings.length > 0) {
           prompt += `【寫作風格設定（★必須嚴格遵守★）】\n${styleSettings.join('\n')}\n\n`;
         }
         
         // ===== 特殊元素區 =====
-        if (selectedElements.length > 0) {
-          prompt += `【特殊元素（★必須融入故事★）】\n${selectedElements.join('、')}\n\n`;
-        }
+        prompt += buildSpecialElementsBlock(specialElementList, { mode: 'story' });
         
         // ===== 篇幅設定區 =====
         let lengthSettings = [];
@@ -7579,8 +7786,11 @@ ${n}
         // 特殊元素強調
         let elementsReminder = '';
         if (selectedElements.length > 0) {
-          elementsReminder = `
-• 必須將特殊元素「${selectedElements.join('、')}」自然融入故事情節中`;
+          const { core, accents } = splitSpecialElements(specialElementList);
+          elementsReminder = core.length ? `
+• 核心元素「${core.map(e => e.label).join('、')}」必須貫穿主線` : '';
+          if (accents.length) elementsReminder += `
+• 點綴元素分散到不同章節，每章最多 2 個，不要全部擠在開頭`;
         }
         
         const openingQualityLine = isContinuedVolume
@@ -8082,27 +8292,25 @@ ${shouldGenerateChapterByChapter ? '\n⚠️ 本次僅需創作第1章，後續�
         const currentEnding = endingSelect.value.trim();
         
         // 收集特殊元素
-        const selectedElements = [];
-        specialElementsContainer.querySelectorAll('.special-element-item.selected').forEach(item => {
-          const label = item.querySelector('.element-label').textContent;
-          selectedElements.push(label);
-        });
-        
+        // 收集特殊元素：核心每章都提醒；點綴只提醒本章輪到的
+        const specialElementList = getSelectedSpecialElements();
+
         // 構建設定提醒
         let settingsReminder = '\n\n【必須遵守的設定提醒】\n';
         let hasSettings = false;
         
         if (currentTheme) { settingsReminder += `• 主題：${currentTheme}\n`; hasSettings = true; }
         if (currentSetting) { settingsReminder += `• 背景：${currentSetting}\n`; hasSettings = true; }
-        if (currentEra) { settingsReminder += `• 時代：${currentEra}\n`; hasSettings = true; }
+        if (currentEra) { settingsReminder += `• 時代：${describeAdvanced('era', currentEra)}\n`; hasSettings = true; }
         if (currentStyle) { settingsReminder += `• 風格：${currentStyle}\n`; hasSettings = true; }
-        if (currentNarrative) { settingsReminder += `• 視角：${currentNarrative}\n`; hasSettings = true; }
-        if (currentPacing) { settingsReminder += `• 節奏：${currentPacing}\n`; hasSettings = true; }
-        if (currentEmotionalTone) { settingsReminder += `• 基調：${currentEmotionalTone}\n`; hasSettings = true; }
-        if (currentWorldComplexity) { settingsReminder += `• 世界觀複雜度：${currentWorldComplexity}\n`; hasSettings = true; }
-        if (currentRating) { settingsReminder += `• 分級：${currentRating}\n`; hasSettings = true; }
-        if (currentEnding) { settingsReminder += `• 結局傾向：${currentEnding}\n`; hasSettings = true; }
-        if (selectedElements.length > 0) { settingsReminder += `• 特殊元素：${selectedElements.join('、')}\n`; hasSettings = true; }
+        storyDepthLines().forEach(line => { settingsReminder += `• ${line}\n`; hasSettings = true; });
+        if (currentNarrative) { settingsReminder += `• 視角：${describeAdvanced('narrative', currentNarrative)}\n`; hasSettings = true; }
+        if (currentPacing) { settingsReminder += `• 節奏：${describeAdvanced('pacing', currentPacing)}\n`; hasSettings = true; }
+        if (currentEmotionalTone) { settingsReminder += `• 基調：${describeAdvanced('emotionalTone', currentEmotionalTone)}\n`; hasSettings = true; }
+        if (currentWorldComplexity) { settingsReminder += `• 世界觀複雜度：${describeAdvanced('worldComplexity', currentWorldComplexity)}\n`; hasSettings = true; }
+        if (currentRating) { settingsReminder += `• 分級：${describeAdvanced('rating', currentRating)}\n`; hasSettings = true; }
+        if (currentEnding) { settingsReminder += `• 結局傾向：${describeAdvanced('ending', currentEnding)}\n`; hasSettings = true; }
+        if (specialElementList.length > 0) { settingsReminder += buildSpecialElementsBlock(specialElementList, { mode: 'chapter', chapter: continuationChapterNumber || (countChapters(latestStory) + 1) }); hasSettings = true; }
         if (contCharsInfo) { settingsReminder += `• 登場人物設定（性格、口吻、關係須與設定一致；出場輕重見下方人物調度）：\n${contCharsInfo}`; hasSettings = true; }
         const contNotesBlock = getSupplementaryNotesBlock(getUserNotesText());
         if (contNotesBlock) { settingsReminder += contNotesBlock; hasSettings = true; }
@@ -11864,42 +12072,24 @@ ${continueWordReq}
         if (!raw) return '';
         const s = String(raw).trim();
         if (!s) return '';
-        const VALID = ['男主角', '女主角', '男配角', '女配角', '反派', '路人'];
-        if (s === '配角') {
-          if (gender === '女') return '女配角';
-          if (gender === '男') return '男配角';
-          return '男配角';
-        }
-        if (VALID.includes(s)) return s;
+        // 定位與性別分開；舊存檔的「男主角／女配角」等在這裡轉成新定位
+        if (CHARACTER_ROLES.includes(s)) return s;
         const lower = s.toLowerCase();
-        // 反派類
-        if (/反派|反一|反二|大?boss|魔王|反角|對手|敵人|宿敵/i.test(s) || lower.includes('villain') || lower.includes('antagonist')) {
-          return '反派';
-        }
-        // 路人/龍套
-        if (/路人|龍套|跑龍套|背景|群眾/.test(s) || lower.includes('extra') || lower.includes('passerby')) {
-          return '路人';
-        }
-        const isMain = /主角|主人公|主役|男一|女一|男主|女主|主线|主線/.test(s) || lower.includes('protagonist') || lower.includes('lead') || lower.includes('main');
-        const isSub = /配角|配|男二|女二|男三|女三|次要|support/i.test(s);
-        const femaleHint = /女/.test(s) || gender === '女';
-        const maleHint = /男/.test(s) || gender === '男';
-        if (isMain) {
-          if (femaleHint && !maleHint) return '女主角';
-          if (maleHint && !femaleHint) return '男主角';
-          return gender === '女' ? '女主角' : '男主角';
-        }
-        if (isSub) {
-          if (femaleHint && !maleHint) return '女配角';
-          if (maleHint && !femaleHint) return '男配角';
-          return gender === '女' ? '女配角' : '男配角';
-        }
+        if (/路人|龍套|背景|群眾/.test(s) || lower.includes('extra') || lower.includes('passerby')) return '路人';
+        if (/反派|反一|反二|大?boss|魔王|反角|敵人/i.test(s) || lower.includes('villain') || lower.includes('antagonist')) return '反派';
+        if (/對手|宿敵|勁敵|競爭|rival/i.test(s)) return '對手';
+        if (/導師|師父|師傅|恩師|mentor/i.test(s)) return '導師';
+        if (/夥伴|伙伴|搭檔|同伴|戰友|助手|sidekick|partner/i.test(s)) return '夥伴';
+        if (/戀|情人|愛人|心上人|love/i.test(s)) return '戀愛對象';
+        if (/第二主角|雙主角|副主角|男二|女二|deuteragonist/i.test(s)) return '第二主角';
+        if (/主角|主人公|主役|男一|女一|男主|女主|主线|主線/.test(s) || lower.includes('protagonist') || lower.includes('lead') || lower.includes('main')) return '主角';
+        if (/配角|配|男三|女三|次要|support/i.test(s)) return '配角';
         return '';
       }
 
       // 收集人物設定（generate 與 continue 共用，確保一致）
       // 角色定位：男主角/女主角/反派 視為「主要」，其餘（男配/女配/路人）視為「次要」。
-      const MAIN_ROLE_SET = new Set(['男主角', '女主角', '主角', '反派']);
+      const MAIN_ROLE_SET = new Set(['主角', '第二主角', '戀愛對象', '反派', '男主角', '女主角']);
       function collectCharactersInfo() {
         const rows = Array.from(charactersContainer.querySelectorAll('.character-row'));
         let charactersInfo = '';
@@ -11930,7 +12120,9 @@ ${continueWordReq}
           if (weakness) fields.push(`弱點：${weakness}`);
           if (secret) fields.push(`秘密：${secret}`);
           if (relation) fields.push(`人際關係：${relation}`);
-          const extras = globalThis.NovelCharacterDesign?.formatExtras(readCharacterExtras(row));
+          const extrasData = readCharacterExtras(row);
+          if (extrasData.traits) extrasData.traits = describeTraits(extrasData.traits);
+          const extras = globalThis.NovelCharacterDesign?.formatExtras(extrasData);
           if (extras) fields.push(extras);
           if (fields.length > 0) {
             charactersInfo += `角色${idx + 1}：${fields.join('，')}。\n`;
@@ -11947,6 +12139,8 @@ ${continueWordReq}
           secondaryNames.length = 0;
           characterNames.forEach(n => mainNames.push(n));
         }
+        const relations = relationshipLines();
+        if (relations.length) charactersInfo += `人物關係表（關係與張力須前後一致；轉變必須有事件推動）：\n${relations.map(line => `• ${line}`).join('\n')}\n`;
         if (charactersInfo && globalThis.NovelCharacterDesign) charactersInfo += `人物行為約束：${globalThis.NovelCharacterDesign.rules}\n`;
         return { charactersInfo, characterNames, characterCount, mainNames, secondaryNames };
       }
@@ -12385,18 +12579,19 @@ ${anchor}
 【故事設定】
 ${theme ? `主題：${theme}` : ''}
 ${setting ? `背景：${setting}` : ''}
-${era ? `時代：${era}` : ''}
+${era ? `時代：${describeAdvanced('era', era)}` : ''}
 ${style ? `風格：${style}` : ''}
-${narrative ? `敘事視角：${narrative}` : ''}
-${pacing ? `節奏：${pacing}` : ''}
-${emotionalTone ? `基調：${emotionalTone}` : ''}
-${worldComplexity ? `世界觀複雜度：${worldComplexity}` : ''}
-${rating ? `內容分級：${rating}` : ''}
-${ending ? `結局傾向：${ending}` : ''}
+${storyDepthLines().join('\n')}
+${narrative ? `敘事視角：${describeAdvanced('narrative', narrative)}` : ''}
+${pacing ? `節奏：${describeAdvanced('pacing', pacing)}` : ''}
+${emotionalTone ? `基調：${describeAdvanced('emotionalTone', emotionalTone)}` : ''}
+${worldComplexity ? `世界觀複雜度：${describeAdvanced('worldComplexity', worldComplexity)}` : ''}
+${rating ? `內容分級：${describeAdvanced('rating', rating)}` : ''}
+${ending ? `結局傾向：${describeAdvanced('ending', ending)}` : ''}
 ${totalVolumes >= 2 ? `本集章節數：${chapters} 章` : `章節數：${chapters} 章`}
 ★★★ 嚴格限制：「各章節大綱」必須剛好 ${chapters} 章，不可多也不可少！ ★★★
 ${charactersInfo ? `\n【主要人物】\n${charactersInfo}` : ''}
-${selectedElements.length > 0 ? `\n【特殊元素】\n${selectedElements.join('、')}` : ''}
+${selectedElements.length > 0 ? `\n${buildSpecialElementsBlock(selectedElements, { mode: 'outline' }).trimEnd()}` : ''}
 ${notesBlock}${seriesBlock}${diversityGuidance}
 
 ═══════════════════════════════════════
@@ -12514,7 +12709,7 @@ ${chapterListTemplate}
         { label: '修仙玄幻', items: {
           fantasy: makeTemplate('凡人修仙', '逆境求生，一步步證道成仙', '仙俠修真', '凡人修仙界', '玄幻熱血', '第三人稱限知', '仙俠世界', '爽文節奏', '15+', '大陸級', '熱血燃向', '圓滿HE', 24, 120000),
           cultivation: makeTemplate('問道長生', '清修問心，仙途與人情的取捨', '道法自然', '修仙門派的靈山', '仙俠飄逸', '第三人稱限知', '仙俠世界', '慢熱鋪陳', '全年齡', '複雜', '超脫世俗', '昇華結局', 22, 110000),
-          'system-novel': makeTemplate('系統升級', '綁定系統，開局就逆襲', '系統流', '新手村村莊', '系統提示流', '第三人稱限知', '玄幻大陸', '爽文節奏', '無腦爽向', '高魔世界', '爽快解壓', 'HE', 30, 150000),
+          'system-novel': makeTemplate('系統升級', '綁定系統，開局就逆襲', '系統流', '新手村村莊', '系統提示流', '第三人稱限知', '玄幻大陸', '爽文節奏', '15+', '高魔世界', '爽快解壓', 'HE', 30, 150000),
           'spirit-revival': makeTemplate('靈氣復甦', '現代都市一夜之間靈氣歸來', '靈氣復甦', '靈氣復甦的現代都市', '熱血燃情', '第三人稱限知', '靈氣復甦紀元', '快節奏', '15+', '城市級', '熱血燃向', 'HE', 24, 120000)
         } },
         { label: '武俠江湖', items: {
@@ -12524,9 +12719,9 @@ ${chapterListTemplate}
         { label: '都市言情', items: {
           romance: makeTemplate('甜蜜日常', '小日子裡的心動與陪伴', '甜蜜寵愛', '溫馨的咖啡廳', '甜蜜浪漫', '第一人稱', '現代', '浪漫節奏', '全年齡', '簡單', '浪漫甜蜜', '圓滿HE', 15, 60000),
           'ceo-romance': makeTemplate('豪門總裁', '豪門恩怨裡的強強相愛', '霸道總裁', '頂級跨國企業總部', '甜寵溺愛', '第三人稱限知', '現代', '標準節奏', '輕度曖昧', '城市級', '浪漫甜蜜', 'HE', 20, 100000),
-          'campus-romance': makeTemplate('校園青春', '青澀的暗戀與成長', '校園青春', '普通高中校園', '青春活力', '第一人稱', '千禧年代', '日常節奏', '全年齡', '單場景深挖', '青春活力', '雙向奔赴HE', 15, 60000),
+          'campus-romance': makeTemplate('校園青春', '青澀的暗戀與成長', '校園青春', '普通高中校園', '校園純愛', '第一人稱', '千禧年代', '日常節奏', '全年齡', '單場景深挖', '青春活力', '雙向奔赴HE', 15, 60000),
           'contract-marriage': makeTemplate('先婚後愛', '一紙契約，假戲真做', '先婚後愛', '繁華的現代大都會', '都市輕熟', '雙線敘事', '現代', '慢熱鋪陳', '輕度曖昧', '簡單', '浪漫甜蜜', 'HE', 18, 80000),
-          reunion: makeTemplate('破鏡重圓', '分開多年後再次相遇', '破鏡重圓', '海邊小木屋', '溫柔細膩', '雙線敘事', '現代', '倒敘節奏', '中度情感', '簡單', '虐心糾結', '虐後HE', 16, 70000),
+          reunion: makeTemplate('破鏡重圓', '分開多年後再次相遇', '破鏡重圓', '海邊小木屋', '溫柔細膩', '雙線敘事', '現代', '慢熱鋪陳', '中度情感', '簡單', '虐心糾結', '虐後HE', 16, 70000),
           'enemies-lovers': makeTemplate('歡喜冤家', '互看不順眼，吵著吵著就愛上', '歡喜冤家', '律師事務所', '輕鬆幽默', '對立視角', '現代', '快節奏', '全年齡', '簡單', '歡樂輕鬆', 'HE', 16, 70000)
         } },
         { label: '古風宮廷', items: {
@@ -12536,35 +12731,35 @@ ${chapterListTemplate}
           'transmig-romance': makeTemplate('穿越古代', '現代人落腳盛唐長安', '歷史穿越', '唐朝長安城', '輕鬆幽默', '第一人稱', '隋唐時代', '標準節奏', '12+', '中等', '歡樂輕鬆', 'HE', 24, 110000)
         } },
         { label: '懸疑推理', items: {
-          mystery: makeTemplate('本格推理', '孤島上的密室連環案', '本格推理', '與世隔絕的孤島', '懸疑緊張', '第一人稱', '現代', '懸疑節奏', '15+', '單場景深挖', '懸疑緊張', '逆轉結局', 12, 60000),
+          mystery: makeTemplate('本格推理', '孤島上的密室連環案', '本格推理', '與世隔絕的孤島', '神秘詭異', '第一人稱', '現代', '懸疑節奏', '15+', '單場景深挖', '懸疑緊張', '逆轉結局', 12, 60000),
           detective: makeTemplate('刑偵重案', '重案組一案接一案', '刑偵重案', '刑警重案隊辦公室', '硬核寫實', '第三人稱限知', '現代', '單元劇節奏', '15+', '城市級', '懸疑緊張', '伏筆結局', 20, 100000),
           psychological: makeTemplate('心理懸疑', '不可靠的記憶與反轉', '心理懸疑', '心理診所', '陰森詭譎', '不可靠敘述者', '現代', '懸疑節奏', '18+', '單場景深挖', '神秘詭譎', '逆轉結局', 14, 70000),
-          revenge: makeTemplate('復仇計畫', '隱忍多年的精密復仇', '復仇計畫', '國際金融中心', '緊湊刺激', '雙線敘事', '現代', '快節奏', '15+', '城市級', '灰色地帶', '反殺結局', 20, 100000)
+          revenge: makeTemplate('復仇計畫', '隱忍多年的精密復仇', '復仇計畫', '國際金融中心', '黑色電影風', '雙線敘事', '現代', '快節奏', '15+', '城市級', '灰色地帶', '反殺結局', 20, 100000)
         } },
         { label: '恐怖詭異', items: {
           'supernatural-mystery': makeTemplate('靈異怪談', '老宅裡夜夜響起的腳步聲', '靈異鬼怪', '鬧鬼的老宅', '陰森詭譎', '第一人稱', '現代', '驚悚節奏', '驚悚向', '單場景深挖', '詭異驚悚', '半開放', 12, 60000),
           'rule-horror': makeTemplate('規則怪談', '遵守規則才能活下去', '規則怪談', '沒有出口的旅館', '規則驚悚', '第一人稱', '現代', '懸念鉤子連發', '驚悚向', '規則驅動', '壓迫窒息', '覺醒結局', 14, 60000),
-          'cthulhu-mythos': makeTemplate('克蘇魯', '不可名狀的知識與瘋狂', '克蘇魯神話', '被遺忘的古文明遺跡', '克系冷硬', '日記體', '維多利亞時代', '慢熱鋪陳', '驚悚向', '克系不可知', '絕望窒息', '死亡結局', 14, 70000),
+          'cthulhu-mythos': makeTemplate('克蘇魯', '不可名狀的知識與瘋狂', '克蘇魯神話', '被遺忘的古文明遺跡', '克系冷硬', '日記體', '維多利亞時代', '慢熱鋪陳', '驚悚向', '複雜', '絕望窒息', '死亡結局', 14, 70000),
           'folk-horror': makeTemplate('民俗志怪', '返鄉後遇上的古怪祭儀', '民俗恐怖', '古村落祠堂', '民俗風', '第一人稱', '現代', '驚悚節奏', '驚悚向', '中等', '神秘詭譎', '伏筆結局', 14, 70000)
         } },
         { label: '科幻未來', items: {
-          scifi: makeTemplate('太空歌劇', '艦隊、星際戰爭與文明存亡', '太空歌劇', '宇宙戰艦內部', '史詩壯闘', '多視角切換', '遠未來', '史詩節奏', '15+', '宇宙級', '史詩壯闘', '犧牲換新生', 30, 160000),
+          scifi: makeTemplate('太空歌劇', '艦隊、星際戰爭與文明存亡', '太空歌劇', '宇宙戰艦內部', '大氣磅礴', '多視角切換', '遠未來', '史詩節奏', '15+', '宇宙級', '史詩壯闘', '犧牲換新生', 30, 160000),
           cyberpunk: makeTemplate('賽博龐克', '義體、黑客與巨型企業', '賽博龐克', '賽博龐克的霓虹都市', '賽博冷硬', '第一人稱', '近未來', '快節奏', '18+', '城市級', '灰色地帶', 'OE', 20, 100000),
           apocalypse: makeTemplate('末日廢土', '文明崩毀後的生存與重建', '末世廢土', '廢土綠洲城邦', '廢土荒涼', '第三人稱限知', '末日後', '標準節奏', '15+', '大陸級', '現實殘酷', '犧牲換新生', 24, 120000),
           'mecha-pilot': makeTemplate('機甲戰爭', '少年駕駛員與鋼鐵防線', '機甲戰爭', '軍事基地', '中二熱血', '第三人稱限知', '中未來', '熱血節奏', '15+', '世界級', '燃中帶虐', '遺憾HE', 24, 120000),
-          'time-travel': makeTemplate('時間旅行', '改變過去的代價', '時間旅行', '時間裂縫之中', '多線並進', '多時間線交錯', '平行時空', '環形節奏', '12+', '雙世界對照', '複雜糾葛', '循環解脫', 18, 90000)
+          'time-travel': makeTemplate('時間旅行', '改變過去的代價', '時間旅行', '時間裂縫之中', '蒙太奇', '多時間線交錯', '平行時空', '懸念鉤子連發', '12+', '雙世界對照', '複雜糾葛', '循環解脫', 18, 90000)
         } },
         { label: '奇幻冒險', items: {
           'western-fantasy': makeTemplate('劍與魔法', '勇者小隊踏上屠龍之旅', '龍與魔法', '冒險者酒館', '熱血燃情', '第三人稱限知', '西幻大陸', '標準節奏', '12+', '世界級', '熱血燃向', 'HE', 24, 120000),
           'dark-fantasy': makeTemplate('黑暗奇幻', '殘酷世界裡的掙扎與救贖', '黑暗奇幻', '被詛咒的黑暗森林', '暗黑系', '第三人稱限知', '西方中世紀', '慢熱鋪陳', '18+', '大陸級', '黑暗沉重', '宿命BE', 24, 120000),
-          'magic-academy': makeTemplate('魔法學院', '新生入學，成長與友情', '魔法世界', '魔法結界保護的學院', '青春活力', '第三人稱限知', '西幻大陸', '養成漸進', '全年齡', '中等', '青春活力', 'HE', 20, 100000),
+          'magic-academy': makeTemplate('魔法學院', '新生入學，成長與友情', '魔法世界', '魔法結界保護的學院', '明亮歡快', '第三人稱限知', '西幻大陸', '養成漸進', '全年齡', '中等', '青春活力', 'HE', 20, 100000),
           'isekai-reborn': makeTemplate('異世界轉生', '死後轉生到劍與魔法的世界', '異世界轉生', '冒險者協會', '輕小說風', '第一人稱', '西幻大陸', '快節奏', '12+', '世界級', '爽快解壓', 'HE', 24, 110000)
         } },
         { label: '遊戲無限', items: {
-          'infinite-flow': makeTemplate('無限流', '一個個副本裡的生死考驗', '無限流', '遊戲副本空間', '緊湊刺激', '第三人稱限知', '平行時空', '單元劇節奏', '15+', '規則驅動', '驚險刺激', '覺醒結局', 30, 150000),
+          'infinite-flow': makeTemplate('無限流', '一個個副本裡的生死考驗', '無限流', '遊戲副本空間', '副本攻略記', '第三人稱限知', '平行時空', '單元劇節奏', '15+', '規則驅動', '驚險刺激', '覺醒結局', 30, 150000),
           esports: makeTemplate('電競熱血', '從替補打到世界賽冠軍', '電競熱血', '電競戰隊基地', '競技熱血', '第三人稱限知', '現代', '熱血節奏', '全年齡', '單場景深挖', '熱血燃向', 'HE', 20, 100000),
           'virtual-reality': makeTemplate('虛擬網遊', '全息網遊裡的隱藏職業', '虛擬實境', '虛擬實境世界', '遊戲化敘述', '遊戲日誌體', '近未來', '爽文節奏', '12+', '世界級', '爽快解壓', 'HE', 24, 120000),
-          'death-game': makeTemplate('死亡遊戲', '被迫參加的生存博弈', '詭異遊戲', '詭異的無限樓層', '懸疑緊張', '群像劇視角', '現代', '懸念鉤子連發', '18+', '規則驅動', '壓迫窒息', '逆轉結局', 16, 80000)
+          'death-game': makeTemplate('死亡遊戲', '被迫參加的生存博弈', '詭異遊戲', '詭異的無限樓層', '規則驚悚', '群像劇視角', '現代', '懸念鉤子連發', '18+', '規則驅動', '壓迫窒息', '逆轉結局', 16, 80000)
         } },
         { label: '重生逆襲', items: {
           reincarnation: makeTemplate('重生復仇', '重回十年前，這次不再任人宰割', '重生復仇', '繁華的現代大都會', '打臉爽文', '第一人稱', '現代', '爽文節奏', '15+', '城市級', '爽快解壓', '反殺結局', 24, 120000),
@@ -12578,10 +12773,10 @@ ${chapterListTemplate}
         } },
         { label: '生活職人', items: {
           farming: makeTemplate('種田經營', '回鄉種田，把日子過成詩', '空間種田', '鄉村農場', '種田慢綜', '第三人稱限知', '現代', '慢綜治癒', '全年齡', '單場景深挖', '慢生活', '圓滿HE', 24, 100000),
-          'shop-management': makeTemplate('暖心小店', '深夜小店裡的客人故事', '咖啡廳物語', '深夜食堂', '溫馨治癒', '第一人稱', '現代', '單元劇節奏', '全年齡', '單場景深挖', '溫馨治癒', 'HE', 16, 60000),
+          'shop-management': makeTemplate('暖心小店', '深夜小店裡的客人故事', '咖啡廳物語', '深夜食堂', '溫柔細膩', '第一人稱', '現代', '單元劇節奏', '全年齡', '單場景深挖', '溫馨治癒', 'HE', 16, 60000),
           medical: makeTemplate('醫療職人', '急診室裡的生死與抉擇', '醫療職人', '忙碌的三甲醫院', '硬核寫實', '群像劇視角', '現代', '單元劇節奏', '12+', '單場景深挖', '勵志向上', '開放暗示HE', 20, 100000),
           sports: makeTemplate('體育競技', '球隊從谷底奮起', '籃球青春', '室內籃球館', '競技熱血', '第三人稱限知', '現代', '熱血節奏', '全年齡', '單場景深挖', '熱血燃向', 'HE', 20, 100000),
-          showbiz: makeTemplate('偶像養成', '練習生一路走到舞台中央', '偶像養成', '娛樂公司練習室', '出道成長線', '第三人稱限知', '現代', '養成漸進', '全年齡', '城市級', '勵志向上', 'HE', 20, 100000)
+          showbiz: makeTemplate('偶像養成', '練習生一路走到舞台中央', '唱跳練習生', '娛樂公司練習室', '出道成長線', '第三人稱限知', '現代', '養成漸進', '全年齡', '城市級', '勵志向上', 'HE', 20, 100000)
         } }
       ];
       const templates = Object.assign({}, ...TEMPLATE_GROUPS.map(group => group.items));
@@ -12656,7 +12851,7 @@ ${chapterListTemplate}
             themeSelect, settingSelect, styleSelect,
             narrativeSelect, eraSelect, pacingSelect, ratingSelect,
             worldComplexitySelect, emotionalToneSelect, endingSelect,
-            chaptersInput, lengthInput, notesInput
+            chaptersInput, lengthInput, notesInput, ...storyDepthEls
           ];
           const hasFieldData = fields.some(el => el && el.value)
             || (volEl && String(volEl.value).trim() !== '' && String(volEl.value).trim() !== '1');
@@ -12688,10 +12883,13 @@ ${chapterListTemplate}
           seriesAborted = false;
           try { localStorage.removeItem('storySeries'); } catch (e) {}
           if (typeof renderSeriesBar === 'function') renderSeriesBar();
+          coreElementIds.clear();
+          renderRelationships([]);
           charactersContainer.innerHTML = '';
           addCharacterRow(false);
           renderCharacterTabs();
           setActiveCharacter(0);
+          updateCoreElementBar();
           saveSettingsToLocal();
           if (typeof updateStepper === 'function') updateStepper();
           showStatus('success', '已清除模組設定與大綱預覽（小說正文已保留）');
@@ -13073,10 +13271,7 @@ ${currentOutline.slice(0, 1600)}
 
         const { charactersInfo } = collectCharactersInfo();
 
-        const selectedElements = [];
-        specialElementsContainer.querySelectorAll('.special-element-item.selected').forEach(item => {
-          selectedElements.push(item.querySelector('.element-label').textContent);
-        });
+        const specialElementList = getSelectedSpecialElements();
 
         outlineLoading.style.display = 'flex';
         outlineContent.style.display = 'none';
@@ -13124,7 +13319,7 @@ ${currentOutline.slice(0, 1600)}
                 theme, setting, era, style, narrative, pacing, emotionalTone,
                 worldComplexity, rating, ending,
                 charactersInfo,
-                selectedElements,
+                selectedElements: specialElementList,
                 outlineEndingNote: isFinalVolume ? outlineEndingNote : '',
                 prevVolumeOutline: vi > 0 ? outlineParts[vi - 1] : ''
               });
@@ -13146,7 +13341,7 @@ ${currentOutline.slice(0, 1600)}
               theme, setting, era, style, narrative, pacing, emotionalTone,
               worldComplexity, rating, ending,
               charactersInfo,
-              selectedElements,
+              selectedElements: specialElementList,
               outlineEndingNote,
               prevVolumeOutline: ''
             });
@@ -15137,9 +15332,11 @@ ${currentOutline.slice(0, 1600)}
       }
 
       function characterResponseSchema() {
-        return JSON.stringify({ gender: '男/女/不明', role: '男主角/女主角/男配角/女配角/反派/路人 擇一', age: '數字或描述', name: '真實姓名',
+        return JSON.stringify({ gender: '男/女/不明', role: `${CHARACTER_ROLES.join('/')} 擇一（與性別無關）`, age: '數字或描述', name: '真實姓名',
           personality: '具體個性', goal: '目標、動機及失敗代價', weakness: '弱點', secret: '秘密、知情者與揭露後果', relation: '點名他人並寫出利益及衝突',
-          ...Object.fromEntries(characterExtraFields.map(({ key, label }) => [key, label + '（具體簡潔）'])) });
+          ...Object.fromEntries(characterExtraFields.map(({ key, label, tags }) => [key, tags
+            ? `${label}：0–3 個，以「、」分隔，優先從這些挑選：${characterTraitOptions.join('、')}`
+            : label + '（具體簡潔）'])) });
       }
 
       // AI 生成整組人物
@@ -15222,7 +15419,7 @@ ${currentOutline.slice(0, 1600)}
               ? `\n\n可參考使用者已提供的方向（盡量融入、保持協調，但以劇情合理為優先；可自由調整）：\n${JSON.stringify(hints, null, 0)}`
               : '';
             const prompt = `你是專業小說人物設計師。請依以下故事設定，「完整設計」剛好 ${count} 位人物，要彼此關聯、有戲劇張力且貼合劇情。請為角色群安排合理的「角色定位」：
-- 至少要有 1 位主角（男主角或女主角），依劇情與補充說明而定，也可多位主角。
+- 至少要有 1 位主角；可再安排第二主角、戀愛對象、反派、對手、導師、夥伴等，讓每個人在故事裡有不同功能。
 - 卡司性別依劇情與補充說明決定；若補充說明有明確限制（如全劇不可有某性別），必須嚴格遵守。
 - 避免所有人都是主角，但配角／反派數量不限。
 每位的所有欄位都要填寫完整、具體、避免空泛，讓使用者可直接使用並微調。

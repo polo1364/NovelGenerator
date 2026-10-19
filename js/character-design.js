@@ -5,9 +5,12 @@
 })(typeof globalThis !== 'undefined' ? globalThis : this, function () {
   'use strict';
   const fields = Object.freeze([
+    { key: 'traits', label: '特質標籤', placeholder: '點選或輸入，可多選，例如：重生者、醫生、精靈', tags: true, optional: true },
     { key: 'background', label: '身分與關鍵經歷', placeholder: '例如：前醫師，曾因誤判失去病人' },
+    { key: 'appearance', label: '外貌與標誌', placeholder: '一眼就認得的外型、穿著或小動作' },
     { key: 'ability', label: '能力與代價', placeholder: '擅長什麼、能力限制，以及使用的代價' },
     { key: 'belief', label: '信念與底線', placeholder: '相信什麼；即使付出代價也不願做什麼' },
+    { key: 'need', label: '內在恐懼與真正需要', placeholder: '最怕失去什麼；以為自己要的，和真正需要的' },
     { key: 'arc', label: '成長方向', placeholder: '從什麼狀態，逐步變成什麼樣的人' },
     { key: 'voice', label: '說話與行為習慣', placeholder: '用詞、反應與習慣；避免每句重複口頭禪', more: true },
     { key: 'allegiance', label: '陣營與利益牽絆', placeholder: '效忠誰、受誰牽制、想保護誰', more: true }
@@ -22,11 +25,12 @@
   }
   function isCompleteCharacter(value) {
     if (!value || typeof value !== 'object' || Array.isArray(value)) return false;
-    return ['gender', 'role', 'age', 'name', 'personality', 'goal', 'weakness', 'secret', 'relation', ...fields.map(field => field.key)]
+    return ['gender', 'role', 'age', 'name', 'personality', 'goal', 'weakness', 'secret', 'relation', ...fields.filter(field => !field.optional).map(field => field.key)]
       .every(key => (typeof value[key] === 'string' || (key === 'age' && typeof value[key] === 'number' && Number.isFinite(value[key]))) && text(value[key]));
   }
   function buildContext(settings = {}) {
-    const labels = { theme: '主題', setting: '背景', style: '風格', chapters: '每集章節數', length: '每集預計字數', volumes: '預計集數',
+    const labels = { theme: '主題', subTheme: '副主題', setting: '背景', secondarySetting: '次要舞台', style: '風格', coreQuestion: '故事核心問題', subplots: '支線配置',
+      chapters: '每集章節數', length: '每集預計字數', volumes: '預計集數',
       era: '時代', worldComplexity: '世界觀複雜度', rating: '內容分級', narrative: '敘事視角', pacing: '節奏', emotionalTone: '情感基調', ending: '結局傾向' };
     const parts = Object.entries(labels).filter(([key]) => text(settings[key])).map(([key, label]) => `${label}：${text(settings[key])}`);
     const modes = { stable: '穩定', rich: '豐富', experimental: '實驗' };
@@ -36,6 +40,6 @@
     if (text(settings.notes)) parts.push(`自訂規則（優先於隨機選項）：${text(settings.notes)}`);
     return parts.join('\n') || '尚未設定故事條件';
   }
-  const rules = '人物的能力與代價限制解法，不得突然獲得未建立的能力；突破信念與底線須有重大事件與合理動機；成長方向是尚未完成的轉變，必須逐步建立，不能一章跳到終點。目標須有動機與失敗代價；人際包含彼此利益與衝突；秘密須考慮知情者及揭露後果。特殊元素分配給適合的人物，不要人人塞滿；說話習慣自然點綴，不反覆套用。';
+  const rules = '人物的能力與代價限制解法，不得突然獲得未建立的能力；突破信念與底線須有重大事件與合理動機；成長方向是尚未完成的轉變，必須逐步建立，不能一章跳到終點。目標須有動機與失敗代價；人際包含彼此利益與衝突；秘密須考慮知情者及揭露後果。特殊元素分配給適合的人物，不要人人塞滿；說話習慣自然點綴，不反覆套用。外貌標誌用來讓讀者認人，不要每次出場重複描寫；人物的選擇受內在恐懼牽動，真正需要在成長中逐步浮現。人物關係表的關係與張力必須前後一致，關係轉變要有事件推動。';
   return { fields, normalizeExtras, formatExtras, isCompleteCharacter, buildContext, rules };
 });

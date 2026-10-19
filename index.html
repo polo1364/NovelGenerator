@@ -843,6 +843,16 @@
             <p class="char-hint">✨ <strong>AI 設計</strong>：依完整故事條件及「目前人物列數量」生成貼合劇情、彼此連貫的角色群，所有欄位一次設計好供你微調（覆蓋現有內容，覆蓋前會詢問；想要幾位先用「+ 新增人物」加列；建議先完成前三區故事條件，需付費 API）。🎲 <strong>隨機湊組</strong>：純詞庫亂數，快但不看劇情。</p>
             <div id="characterTabs" class="char-tabs"></div>
             <div id="charactersContainer"></div>
+            <section class="relationship-panel" aria-labelledby="relationshipTitle">
+              <div class="label-row">
+                <label id="relationshipTitle">人物關係</label>
+                <div class="label-row-actions">
+                  <button id="addRelationshipBtn" type="button" class="btn-outline btn-small">+ 新增關係</button>
+                </div>
+              </div>
+              <p class="char-hint">兩兩設定關係與張力；AI 會在全書維持一致，關係改變必須有事件推動。</p>
+              <div id="relationshipList" class="relationship-list"></div>
+            </section>
           </div>
         </div>
         <div class="workspace-modal-footer"><button type="button" class="btn-primary" data-modal-done="character">完成</button></div>
@@ -908,6 +918,26 @@
               <select id="style">
                 <option value="">請選擇風格</option>
               </select>
+            </div>
+          </div>
+          <div class="story-depth">
+            <div class="form-grid-2">
+              <div class="input-group input-group--flush">
+                <label for="subTheme">副主題</label>
+                <input type="text" id="subTheme" placeholder="第二條題材線，例如：宮廷鬥爭" autocomplete="off" />
+              </div>
+              <div class="input-group input-group--flush">
+                <label for="secondarySetting">次要舞台</label>
+                <input type="text" id="secondarySetting" placeholder="故事會移動到的另一個地點" autocomplete="off" />
+              </div>
+            </div>
+            <div class="input-group input-group--flush">
+              <label for="coreQuestion">故事核心問題</label>
+              <input type="text" id="coreQuestion" placeholder="全書要回答的一個問題，例如：復仇之後，他還剩下什麼？" autocomplete="off" />
+            </div>
+            <div class="input-group input-group--flush">
+              <label for="subplots">支線配置</label>
+              <textarea id="subplots" rows="3" placeholder="一行一條支線，例如：&#10;感情線：師妹暗戀主角，中段告白被拒&#10;陰謀線：長老暗中勾結魔教"></textarea>
             </div>
           </div>
           <div class="form-grid-2">
@@ -1029,6 +1059,10 @@
             <div class="special-elements-head special-elements-head--static" id="specialElementsToggle">
               <span class="se-head-title">特殊元素（可多選）</span>
               <span id="selectedCount" class="selected-count">已選 0 項</span>
+            </div>
+            <div id="coreElementBar" class="core-element-bar" hidden>
+              <p id="coreElementHint" class="core-element-hint" aria-live="polite"></p>
+              <div id="coreElementChips" class="core-element-chips" role="group" aria-label="已選元素：點一下切換核心或點綴"></div>
             </div>
             <div class="special-elements-body" id="specialElementsBody">
               <div class="special-elements-controls">
