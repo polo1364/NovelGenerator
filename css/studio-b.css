@@ -692,3 +692,160 @@ body.studio-b #stepSetup .editorial-module .wsl-sub { grid-column: 1 / -1; margi
 body.studio-b .container .desk-scene { overflow: visible; }
 body.studio-b .container > header .pipeline-header { background: var(--sb-hb); }
 body.studio-b #readingScene .output-header { background: var(--sb-sf); position: relative; z-index: 1; }
+
+/* 控制台與預覽大綱並排時等高：大綱預覽不撐高整列，高度跟著控制台，內容在框內捲動，不留白 */
+@media (min-width: 901px) {
+  body.studio-b #stepSetup > .primary-actions, body.studio-b #stepSetup > .editorial-workspace { align-self: stretch; }
+  body.studio-b #stepSetup .editorial-workspace { grid-template-rows: minmax(0, 1fr); align-items: stretch; }
+  body.studio-b #stepSetup .editorial-outline { align-self: stretch; display: flex; flex-direction: column; min-height: 0; }
+  body.studio-b #stepSetup .outline-attach-panel { flex: 1 1 auto; display: flex; flex-direction: column; min-height: 0; }
+  body.studio-b #stepSetup .outline-attach-preview { flex: 1 1 0; height: 0; min-height: 160px; max-height: none; }
+}
+
+/* =================== 右側工具列開啟的視窗：與主頁同風格 ===================
+ * 深藍標題列、白底內容、依功能上色（API 藍／朗讀紫／大綱琥珀／下載綠／書櫃玫瑰），輸入框與按鈕同主頁。 */
+body.studio-b #apiPanel { --c: var(--sb-m1); --cs: var(--sb-m1s); }
+body.studio-b #speechModal { --c: var(--sb-m2); --cs: var(--sb-m2s); }
+body.studio-b #outlineModal { --c: var(--sb-m3); --cs: var(--sb-m3s); }
+body.studio-b #editModal, body.studio-b #bookmarkNavPanel { --c: var(--sb-m4); --cs: var(--sb-m4s); }
+body.studio-b #toolbarDownloadMenu, body.studio-b #chapterNavPanel { --c: var(--sb-m5); --cs: var(--sb-m5s); }
+body.studio-b #settingsDropdown { --c: var(--sb-m1); --cs: var(--sb-m1s); }
+
+/* 外框 */
+body.studio-b #apiPanel, body.studio-b #settingsDropdown, body.studio-b #chapterNavPanel, body.studio-b #bookmarkNavPanel, body.studio-b #toolbarDownloadMenu,
+body.studio-b #speechModal .modal-content, body.studio-b #outlineModal .modal-content, body.studio-b #editModal .modal {
+  background: var(--sb-sf); color: var(--sb-ink); border: 1px solid var(--sb-line); border-radius: 14px;
+  box-shadow: 0 22px 48px -20px rgba(10, 18, 26, .45); font-family: var(--sb-sans);
+}
+body.studio-b #apiPanel, body.studio-b #settingsDropdown, body.studio-b #chapterNavPanel, body.studio-b #bookmarkNavPanel { overflow: hidden auto; padding: 0; }
+body.studio-b #speechModal, body.studio-b #outlineModal, body.studio-b #editModal { background: rgba(10, 12, 14, .38); backdrop-filter: none; }
+body.studio-b #speechModal .modal-content, body.studio-b #outlineModal .modal-content { overflow: hidden; padding: 0; }
+
+/* 深藍標題列 */
+body.studio-b #apiPanel .api-panel-header, body.studio-b #settingsDropdown .settings-header, body.studio-b #chapterNavPanel .chapter-nav-header,
+body.studio-b #bookmarkNavPanel .bookmark-nav-header, body.studio-b #speechModal .modal-header, body.studio-b #outlineModal .modal-header {
+  background: var(--sb-hb) !important; color: var(--sb-hbfg); border: 0; border-radius: 0; margin: 0; padding: 12px 10px 12px 18px;
+  display: flex; align-items: center; justify-content: space-between; gap: 10px; box-shadow: none;
+}
+body.studio-b #apiPanel .api-panel-title, body.studio-b #settingsDropdown .settings-title, body.studio-b #chapterNavPanel .chapter-nav-title,
+body.studio-b #bookmarkNavPanel .bookmark-nav-title, body.studio-b #speechModal .modal-title, body.studio-b #outlineModal .modal-title {
+  color: var(--sb-hbfg); font: 500 15px var(--sb-sans); letter-spacing: .02em; display: inline-flex; align-items: center; gap: 8px; margin: 0; background: none; -webkit-text-fill-color: currentColor;
+}
+body.studio-b #editModal .modal-title { font: 500 17px var(--sb-sans); color: var(--sb-ink); display: flex; align-items: center; gap: 8px; }
+body.studio-b #editModal .modal-title::before { content: "edit_note"; font-family: "Material Symbols Outlined"; font-size: 22px; color: var(--c); }
+/* 標題圖示用功能色的亮版，在深藍上清楚 */
+body.studio-b #apiPanel .api-panel-title .sb-ic, body.studio-b #settingsDropdown .settings-title .sb-ic { color: #8FB4F0; font-size: 20px; }
+body.studio-b #speechModal .modal-title .sb-ic { color: #C3A6F2; font-size: 20px; }
+body.studio-b #outlineModal .modal-title .sb-ic { color: var(--sb-gold); font-size: 20px; }
+body.studio-b #chapterNavPanel .chapter-nav-title .sb-ic { color: #86D3B0; font-size: 20px; }
+body.studio-b #bookmarkNavPanel .bookmark-nav-title .sb-ic { color: #F2A7BB; font-size: 20px; }
+/* 關閉鈕 */
+body.studio-b #apiPanel .api-panel-close, body.studio-b #settingsDropdown .settings-close, body.studio-b #chapterNavPanel .chapter-nav-close,
+body.studio-b #bookmarkNavPanel .bookmark-nav-close, body.studio-b #speechModal .modal-close, body.studio-b #outlineModal .modal-close {
+  width: 44px; height: 44px; min-width: 44px; border-radius: 10px; border: 0; background: transparent; color: var(--sb-hbmut);
+  font-size: 18px; display: grid; place-items: center; box-shadow: none; transform: none; padding: 0;
+}
+body.studio-b #apiPanel .api-panel-close:hover, body.studio-b #settingsDropdown .settings-close:hover, body.studio-b #chapterNavPanel .chapter-nav-close:hover,
+body.studio-b #bookmarkNavPanel .bookmark-nav-close:hover, body.studio-b #speechModal .modal-close:hover, body.studio-b #outlineModal .modal-close:hover { background: rgba(255,255,255,.12); color: var(--sb-hbfg); }
+
+/* 內容區 */
+body.studio-b #speechModal .modal-body, body.studio-b #outlineModal .modal-body { padding: 18px 20px 20px; background: var(--sb-sf); }
+body.studio-b #apiPanel > :not(.api-panel-header) { margin-left: 16px; margin-right: 16px; }
+body.studio-b #settingsDropdown .settings-section { padding: 14px 16px; border-top: 1px solid var(--sb-line); margin: 0; background: none; }
+body.studio-b #settingsDropdown .settings-header + .settings-section { border-top: 0; }
+body.studio-b #settingsDropdown .settings-section-title, body.studio-b #apiPanel .usage-panel-title, body.studio-b #apiPanel label,
+body.studio-b #speechModal label, body.studio-b #editModal label, body.studio-b #settingsDropdown label {
+  color: var(--sb-mut); font: 500 12.5px var(--sb-sans); letter-spacing: .04em;
+}
+body.studio-b #apiPanel .usage-panel-title { display: inline-flex; align-items: center; gap: 6px; color: var(--sb-ink); font-size: 13.5px; }
+body.studio-b #apiPanel .usage-panel-title .sb-ic { color: var(--c); font-size: 18px; }
+body.studio-b #apiPanel .usage-panel, body.studio-b #speechModal .speech-progress, body.studio-b #outlineModal .outline-title-box {
+  background: var(--sb-sf2); border: 1px solid var(--sb-line); border-radius: 12px; box-shadow: none;
+}
+body.studio-b #apiPanel .usage-item { background: var(--cs); border: 0; border-radius: 10px; }
+body.studio-b #apiPanel .usage-value { color: var(--c); font-family: var(--sb-mono); }
+body.studio-b #apiPanel .usage-label { color: var(--sb-mut); }
+body.studio-b #speechModal .segment-info, body.studio-b #outlineModal .modal-desc, body.studio-b #settingsDropdown .settings-hint, body.studio-b #apiPanel .usage-last {
+  color: var(--sb-mut); font-size: 12.5px; background: none; border: 0;
+}
+body.studio-b #outlineModal .modal-desc { background: var(--cs); border-radius: 10px; padding: 10px 12px; color: var(--sb-ink); }
+body.studio-b #outlineModal .outline-preview { background: var(--sb-paper); border: 1px solid var(--sb-line); border-radius: 12px; color: var(--sb-ink); }
+body.studio-b #outlineModal .otb-label { color: var(--sb-mut); }
+body.studio-b #outlineModal .otb-title { color: var(--c); font-family: var(--sb-serif); }
+
+/* 輸入框、下拉、滑桿 */
+body.studio-b #apiPanel :is(select, input:not([type=checkbox]):not([type=range])), body.studio-b #speechModal :is(select, input:not([type=checkbox]):not([type=range])),
+body.studio-b #editModal :is(input, textarea), body.studio-b #settingsDropdown select, body.studio-b #bookmarkNavPanel input[type=text] {
+  background: var(--sb-sf); color: var(--sb-ink); border: 1px solid var(--sb-line); border-radius: 10px; min-height: 44px; box-shadow: none; font-family: var(--sb-sans);
+}
+body.studio-b #apiPanel :is(select, input):focus-visible, body.studio-b #speechModal :is(select, input):focus-visible, body.studio-b #editModal :is(input, textarea):focus-visible,
+body.studio-b #settingsDropdown select:focus-visible, body.studio-b #bookmarkNavPanel input:focus-visible { outline: 2px solid var(--c); outline-offset: 1px; border-color: var(--c); }
+body.studio-b #speechModal input[type=range], body.studio-b #settingsDropdown input[type=range] { accent-color: var(--c); }
+body.studio-b #speechModal input[type=checkbox], body.studio-b #apiPanel input[type=checkbox] { accent-color: var(--c); }
+body.studio-b #speechModal .speech-progress-fill { background: var(--c); }
+
+/* 按鈕：主要＝功能色實心，其餘＝白底線框 */
+body.studio-b #speechModal button:not(.modal-close), body.studio-b #outlineModal button:not(.modal-close), body.studio-b #editModal button,
+body.studio-b #settingsDropdown button:not(.settings-close), body.studio-b #apiPanel button:not(.api-panel-close), body.studio-b #bookmarkNavPanel .btn-icon {
+  background: var(--sb-sf); color: var(--sb-ink); border: 1px solid var(--sb-line); border-radius: 10px; box-shadow: none; transform: none;
+  min-height: 44px; font: 500 13.5px var(--sb-sans); background-image: none; text-shadow: none;
+}
+body.studio-b #speechModal button:not(.modal-close):not(:disabled):hover, body.studio-b #outlineModal button:not(.modal-close):not(:disabled):hover,
+body.studio-b #editModal button:not(:disabled):hover, body.studio-b #settingsDropdown button:not(.settings-close):not(:disabled):hover,
+body.studio-b #apiPanel button:not(.api-panel-close):not(:disabled):hover { border-color: var(--c); color: var(--c); transform: none; box-shadow: none; }
+body.studio-b #speechModal #readAllBtn, body.studio-b #speechModal #playPauseBtn, body.studio-b #outlineModal .btn-primary, body.studio-b #outlineModal .btn-gold,
+body.studio-b #editModal .btn-primary, body.studio-b #settingsDropdown #applyTemplateBtn {
+  background: var(--c); border-color: var(--c); color: var(--sb-on);
+}
+body.studio-b #speechModal #readAllBtn:not(:disabled):hover, body.studio-b #speechModal #playPauseBtn:not(:disabled):hover, body.studio-b #outlineModal .btn-primary:not(:disabled):hover,
+body.studio-b #outlineModal .btn-gold:not(:disabled):hover, body.studio-b #editModal .btn-primary:not(:disabled):hover, body.studio-b #settingsDropdown #applyTemplateBtn:not(:disabled):hover {
+  color: var(--sb-on); filter: brightness(1.08);
+}
+body.studio-b #speechModal button:disabled, body.studio-b #outlineModal button:disabled { opacity: .45; }
+/* 顯示設定的切換鈕（主題、排版）：選中＝功能色 */
+body.studio-b #settingsDropdown .theme-toggle button.active, body.studio-b #settingsDropdown .theme-toggle button[aria-pressed="true"] { background: var(--c); border-color: var(--c); color: var(--sb-on); }
+body.studio-b #settingsDropdown .font-size-value { color: var(--c); font-family: var(--sb-mono); }
+
+/* 下載選單 */
+body.studio-b #toolbarDownloadMenu { padding: 6px; min-width: 200px; }
+body.studio-b #toolbarDownloadMenu button {
+  display: flex; align-items: center; gap: 10px; width: 100%; min-height: 44px; padding: 0 12px; border: 0; border-radius: 10px;
+  background: none; color: var(--sb-ink); font: 500 13.5px var(--sb-sans); text-align: left;
+}
+body.studio-b #toolbarDownloadMenu button .sb-ic { color: var(--c); font-size: 20px; }
+body.studio-b #toolbarDownloadMenu button:hover { background: var(--cs); color: var(--c); }
+
+/* 章節目錄、書籤清單 */
+body.studio-b #chapterNavPanel .chapter-nav-list { padding: 8px; background: var(--sb-sf); }
+body.studio-b #chapterNavPanel .chapter-nav-list button {
+  background: none; border: 0; border-radius: 10px; color: var(--sb-ink); min-height: 44px; font: 14px var(--sb-sans); box-shadow: none; transform: none;
+}
+body.studio-b #chapterNavPanel .chapter-nav-list button:hover, body.studio-b #chapterNavPanel .chapter-nav-list button.active { background: var(--cs); color: var(--c); }
+body.studio-b #chapterNavPanel .chapter-num { background: var(--cs); color: var(--c); border-radius: 8px; font-family: var(--sb-mono); }
+body.studio-b #bookmarkNavPanel .bookmark-nav-toolbar { padding: 12px 14px; background: var(--sb-sf2); border-bottom: 1px solid var(--sb-line); }
+body.studio-b #bookmarkNavPanel .btn-icon { width: 44px; min-width: 44px; padding: 0; }
+
+/* 暗色：外框與內容跟著主頁的暗色 token */
+html[data-theme="dark"] body.studio-b #apiPanel .usage-item { background: var(--cs); }
+/* 滑桿：功能色細軌＋圓鈕（原本是紅橘漸層） */
+body.studio-b #speechModal input[type=range], body.studio-b #settingsDropdown input[type=range] {
+  -webkit-appearance: none; appearance: none; height: 6px; border-radius: 3px; background: var(--sb-sf2); box-shadow: inset 0 0 0 1px var(--sb-line);
+}
+body.studio-b #speechModal input[type=range]::-webkit-slider-thumb, body.studio-b #settingsDropdown input[type=range]::-webkit-slider-thumb {
+  -webkit-appearance: none; width: 20px; height: 20px; border-radius: 50%; background: var(--c); border: 3px solid var(--sb-sf); box-shadow: 0 1px 4px rgba(10, 18, 26, .3);
+}
+body.studio-b #speechModal input[type=range]::-moz-range-thumb, body.studio-b #settingsDropdown input[type=range]::-moz-range-thumb {
+  width: 16px; height: 16px; border-radius: 50%; background: var(--c); border: 3px solid var(--sb-sf);
+}
+body.studio-b #speechModal .speed-value, body.studio-b #speechModal .segment-display { color: var(--c); font-family: var(--sb-mono); }
+body.studio-b #speechModal .speech-nav-buttons { background: var(--sb-sf2); border: 1px solid var(--sb-line); }
+/* 主要按鈕的選擇器要比上面「所有按鈕」更具體，才不會被蓋成白底 */
+body.studio-b #outlineModal button.btn-primary:not(.modal-close), body.studio-b #outlineModal button.btn-gold:not(.modal-close) { background: var(--c); border-color: var(--c); color: var(--sb-on); }
+body.studio-b #outlineModal button.btn-primary:not(.modal-close):not(:disabled):hover, body.studio-b #outlineModal button.btn-gold:not(.modal-close):not(:disabled):hover { color: var(--sb-on); filter: brightness(1.08); }
+
+/* 顯示設定：原本從按鈕往上展開，矮螢幕會超出頂端、標題列被切掉；改成固定在工具列左側、頁首下方 */
+@media (min-width: 769px) {
+  body.studio-b #settingsDropdown {
+    position: fixed; right: 92px; top: 84px; bottom: auto; max-height: calc(100vh - 108px); transform: none; transition: opacity .2s, visibility .2s;
+  }
+}

@@ -107,8 +107,8 @@
           <span class="toolbar-tooltip">下載小說</span>
         </button>
         <div id="toolbarDownloadMenu" class="toolbar-download-menu">
-          <button type="button" data-format="txt">📄 TXT 純文字檔</button>
-          <button type="button" data-format="html">📱 HTML 手機閱讀版</button>
+          <button type="button" data-format="txt"><span class="sb-ic" aria-hidden="true">description</span>TXT 純文字檔</button>
+          <button type="button" data-format="html"><span class="sb-ic" aria-hidden="true">smartphone</span>HTML 手機閱讀版</button>
         </div>
       </div>
 
@@ -145,7 +145,7 @@
     <!-- API 設定面板 -->
     <div id="apiPanel" class="api-panel">
       <div class="api-panel-header">
-        <span class="api-panel-title">⚙️ 模型與用量</span>
+        <span class="api-panel-title"><span class="sb-ic" aria-hidden="true">tune</span>模型與用量</span>
         <button id="apiPanelClose" class="api-panel-close">✕</button>
       </div>
       <div class="input-group">
@@ -160,7 +160,7 @@
       <!-- 用量統計 -->
       <div class="usage-panel">
         <div class="usage-panel-header">
-          <span class="usage-panel-title">📊 用量統計</span>
+          <span class="usage-panel-title"><span class="sb-ic" aria-hidden="true">bar_chart</span>用量統計</span>
           <button type="button" id="resetUsageBtn" class="usage-reset-btn" title="重設統計">重設</button>
         </div>
         <div class="usage-grid">
@@ -500,7 +500,7 @@
     <div id="speechModal" class="modal-overlay">
       <div class="modal-content" style="max-width: 600px;">
         <div class="modal-header speech-header">
-          <span class="modal-title">🎙️ 朗讀控制</span>
+          <span class="modal-title"><span class="sb-ic" aria-hidden="true">record_voice_over</span>朗讀控制</span>
           <button id="closeSpeechModal" class="modal-close">✕</button>
         </div>
         <div class="modal-body">
@@ -630,7 +630,7 @@
         </button>
         <div id="chapterNavPanel" class="chapter-nav-panel">
           <div class="chapter-nav-header">
-            <span class="chapter-nav-title">📖 章節目錄</span>
+            <span class="chapter-nav-title"><span class="sb-ic" aria-hidden="true">format_list_numbered</span>章節目錄</span>
             <button id="chapterNavClose" class="chapter-nav-close">✕</button>
           </div>
           <div id="chapterNavList" class="chapter-nav-list"></div>
@@ -648,7 +648,7 @@
         </button>
         <div id="bookmarkNavPanel" class="bookmark-nav-panel">
           <div class="bookmark-nav-header">
-            <span class="bookmark-nav-title">🔖 我的書籤</span>
+            <span class="bookmark-nav-title"><span class="sb-ic" aria-hidden="true">bookmarks</span>我的書籤</span>
             <button id="bookmarkNavClose" class="bookmark-nav-close">✕</button>
           </div>
           
@@ -767,7 +767,7 @@
         </button>
         <div id="settingsDropdown" class="settings-dropdown">
           <div class="settings-header">
-            <span class="settings-title">⚙️ 顯示設定</span>
+            <span class="settings-title"><span class="sb-ic" aria-hidden="true">text_fields</span>顯示設定</span>
             <button id="settingsClose" class="settings-close" type="button" aria-label="關閉">✕</button>
           </div>
 
@@ -1197,8 +1197,8 @@
     <!-- 大綱預覽模態視窗 -->
     <div id="outlineModal" class="modal-overlay">
       <div class="modal-content" style="max-width: 700px;">
-        <div class="modal-header" style="background: linear-gradient(135deg, #6c5ce7 0%, #a29bfe 100%);">
-          <span class="modal-title">📋 故事大綱預覽</span>
+        <div class="modal-header outline-modal-header">
+          <span class="modal-title"><span class="sb-ic" aria-hidden="true">account_tree</span>故事大綱預覽</span>
           <button id="closeOutlineModal" class="modal-close">✕</button>
         </div>
         <div class="modal-body">
