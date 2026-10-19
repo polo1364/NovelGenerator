@@ -14430,6 +14430,7 @@ ${currentOutline.slice(0, 1600)}
         let opener = null;
         let backgroundState = [];
         let previousOverflow = '';
+        let readerScrollY = 0;
 
         const isSingle = () => !DOUBLE_PAGE_MODES.includes(readerMode) || window.matchMedia('(max-width: 820px)').matches;
         const isRightToLeft = () => readerMode === 'guji';
@@ -14524,6 +14525,7 @@ ${currentOutline.slice(0, 1600)}
                 if (finishFlip) finishFlip();
                 setToc(false); tocToggle.focus();
                 if (readerMode === 'scroll') restoreScrollAnchor(chapterOffset);
+                finishPagination();
                 pos = positionAtOffset(chapterOffset); clampPos(); render();
               });
               chapters.push({ offset, button }); tocList.appendChild(button);
@@ -14544,8 +14546,8 @@ ${currentOutline.slice(0, 1600)}
           if (!readerReady) return;
           if (finishFlip) finishFlip();
           if (anchor === undefined) anchor = currentAnchor();
-          paginate();
-          pos = positionAtOffset(anchor); clampPos();
+          paginate(anchor);
+          clampPos();
           if (readerMode === 'scroll') restoreScrollAnchor(anchor);
           render();
         }
@@ -14688,7 +14690,7 @@ ${currentOutline.slice(0, 1600)}
         }
 
         function updateBookmarkStatus(resumed = false) {
-          if (!bookmarkStatusEl) return;
+          if (!bookmarkStatusEl || paginationJob) return;
           const pageNum = pos + 1;
           const total = pages.length;
           if (resumed && pos > 0) {
@@ -14724,13 +14726,148 @@ ${currentOutline.slice(0, 1600)}
         const titleHtml = (t) => `<h3 class="book-chapter">${escapeHtml(t)}</h3>`;
         const pHtml = (t) => `<p>${escapeHtml(t)}</p>`;
 
-        // 量測分頁
-        function paginate() {
+        // 量測分頁（不凍結畫面）：先排「閱讀位置」那一兩頁馬上顯示，其餘在背景分批排。
+        // 閱讀位置固定當作頁界，排完後目前這頁不會跳動；往回翻、跳章、從頭閱讀時才把剩下的立刻排完。
+        let paginationJob = null;
+        let paginationSerial = 0;
+        const paginationChannel = typeof MessageChannel === 'function' ? new MessageChannel() : null;
+        const schedulePaginationSlice = (id) => {
+          if (paginationChannel) paginationChannel.port2.postMessage(id);
+          else setTimeout(() => runPaginationSlice(id), 0);
+        };
+        if (paginationChannel) paginationChannel.port1.onmessage = (event) => runPaginationSlice(event.data);
+
+        const overflows = () => measure.scrollHeight > measure.clientHeight || measure.scrollWidth > measure.clientWidth;
+        const probe = (type) => {
+          const el = document.createElement(type === 'title' ? 'h3' : 'p');
+          if (type === 'title') el.className = 'book-chapter';
+          measure.appendChild(el);
+          return el;
+        };
+        // 文字已整段放進 el 且溢出時，二分搜尋最後一個仍在量測框內的字（只讀位置，不改 DOM）
+        const estimateFit = (el, chars, start) => {
+          const node = el.firstChild;
+          if (!node) return 0;
+          const box = measure.getBoundingClientRect();
+          const right = box.left + measure.clientWidth + 0.5, bottom = box.top + measure.clientHeight + 0.5;
+          const units = [0];
+          for (let i = start; i < chars.length; i++) units.push(units[units.length - 1] + chars[i].length);
+          const range = document.createRange();
+          const inside = (i) => {
+            range.setStart(node, units[i]); range.setEnd(node, units[i + 1]);
+            const r = range.getBoundingClientRect();
+            return r.bottom <= bottom && r.right <= right && r.left >= box.left - 0.5 && r.top >= box.top - 0.5;
+          };
+          let lo = 0, hi = chars.length - start;
+          while (lo < hi) { const mid = Math.ceil((lo + hi) / 2); if (inside(mid - 1)) lo = mid; else hi = mid - 1; }
+          return lo;
+        };
+
+        // 逐頁產生 [html, 起點字元位置]，範圍是 from～to（to 當作硬性頁界）。
+        // 逐段量測：已排進本頁的段落留在量測框裡，只改最後一段的文字，不必每次重排整頁。
+        function* pagesBetween(blocks, starts, from, to) {
+          let current = '', offset = from, pageStart = from;
+          const take = () => { const page = current; current = ''; measure.replaceChildren(); return page; };
+          measure.replaceChildren();
+          for (let bi = 0; bi < blocks.length; bi++) {
+            const b = blocks[bi], bStart = starts[bi];
+            if (bStart >= to) break;
+            const all = Array.from(b.text);
+            if (bStart + all.length <= from) continue;
+            const chars = all.slice(0, Math.min(all.length, to - bStart));
+            const html = b.type === 'title' ? titleHtml : pHtml;
+            let start = Math.max(0, from - bStart);
+            if (b.type === 'title' && current && start === 0) {
+              const el = probe(b.type);
+              el.textContent = chars.join('');
+              const fitsHere = !overflows();
+              el.remove();
+              if (!fitsHere) { yield [take(), pageStart]; pageStart = offset; }
+            }
+            while (start < chars.length) {
+              const rest = chars.slice(start).join('');
+              const el = probe(b.type);
+              el.textContent = rest;
+              if (!overflows()) { current += html(rest); offset += chars.length - start; break; }
+              // 找可容納的最長文字（無標點的單句與長標題也能跨頁）：先用字元位置估算，再前後驗證
+              let low = estimateFit(el, chars, start);
+              el.textContent = chars.slice(start, start + low).join('');
+              if (overflows()) {
+                let lo = 0, hi = low - 1; // 估多了（多半是段落下邊距把最後一行擠出去）
+                while (lo < hi) {
+                  const mid = Math.ceil((lo + hi) / 2);
+                  el.textContent = chars.slice(start, start + mid).join('');
+                  if (!overflows()) lo = mid; else hi = mid - 1;
+                }
+                low = lo;
+              } else {
+                while (start + low < chars.length) {
+                  el.textContent = chars.slice(start, start + low + 1).join('');
+                  if (overflows()) break;
+                  low++;
+                }
+              }
+              if (!low && current) { el.remove(); yield [take(), pageStart]; pageStart = offset; continue; }
+              const count = Math.max(1, low);
+              current += html(chars.slice(start, start + count).join(''));
+              offset += count; start += count;
+              yield [take(), pageStart]; pageStart = offset;
+            }
+          }
+          if (current) yield [take(), pageStart];
+        }
+
+        function pullPage(job, part) {
+          const next = job[part].next();
+          if (next.done) { job[part + 'Done'] = true; return false; }
+          job[part + 'Pages'].push(next.value[0]); job[part + 'Offsets'].push(next.value[1]);
+          return true;
+        }
+
+        function finalizePagination(job) {
+          let prefix = job.beforePages, prefixOffsets = job.beforeOffsets;
+          // 雙頁版型左頁須為偶數頁：前段頁數為奇數時補一張空白頁，閱讀位置那頁才留在原位
+          if (!isSingle() && prefix.length % 2) { prefix = prefix.concat(''); prefixOffsets = prefixOffsets.concat(job.anchor); }
+          pages = prefix.concat(job.forwardPages);
+          pageOffsets = prefixOffsets.concat(job.forwardOffsets);
+          pos += prefix.length;
+          paginationJob = null;
+          if (pages.length === 0) { pages = ['<p class="book-empty">（沒有內容）</p>']; pageOffsets = [0]; pos = 0; }
+          clampPos();
+        }
+
+        // 立刻把背景還沒排完的頁排完（往回翻、跳章、從頭閱讀時用）
+        function finishPagination() {
+          const job = paginationJob;
+          if (!job) return;
+          while (!job.forwardDone) pullPage(job, 'forward');
+          while (!job.beforeDone) pullPage(job, 'before');
+          pages = job.forwardPages; pageOffsets = job.forwardOffsets;
+          finalizePagination(job);
+        }
+
+        function runPaginationSlice(id) {
+          const job = paginationJob;
+          if (!job || job.id !== id || !overlay.classList.contains('open')) return;
+          const started = performance.now();
+          while (performance.now() - started < 10) {
+            if (!job.forwardDone) pullPage(job, 'forward');
+            else if (!job.beforeDone) pullPage(job, 'before');
+            else break;
+          }
+          pages = job.forwardPages; pageOffsets = job.forwardOffsets;
+          if (job.forwardDone && job.beforeDone) { finalizePagination(job); render(); }
+          else { updatePaginationControls(); schedulePaginationSlice(id); }
+        }
+
+        function paginate(anchorOffset) {
           if (finishFlip) finishFlip();
+          const anchorWanted = Number.isFinite(anchorOffset) ? anchorOffset : (pageOffsets[pos] || 0);
           const blocks = parseBlocks(latestStory);
-          const anchor = pageOffsets[pos] || 0;
-          pages = [];
-          pageOffsets = [];
+          const starts = [];
+          let total = 0;
+          for (const b of blocks) { starts.push(total); total += Array.from(b.text).length; }
+          const anchor = anchorWanted > 0 && anchorWanted < total ? anchorWanted : 0;
 
           // 必須先切換單／雙頁、套用字級，再量測實際文字區。
           bookEl.classList.toggle('single', isSingle());
@@ -14740,92 +14877,30 @@ ${currentOutline.slice(0, 1600)}
           measure.style.height = rect.height + 'px';
           measure.style.fontSize = fontSize + 'px';
 
-          // 逐段量測：已排進本頁的段落留在量測框裡，只改最後一段的文字，
-          // 不必每次把整頁 HTML 重新解析排版（長篇切換版型才不會卡住）。分頁結果與逐頁重排相同。
-          measure.replaceChildren();
-          const overflows = () => measure.scrollHeight > measure.clientHeight || measure.scrollWidth > measure.clientWidth;
-          const probe = (type) => {
-            const el = document.createElement(type === 'title' ? 'h3' : 'p');
-            if (type === 'title') el.className = 'book-chapter';
-            measure.appendChild(el);
-            return el;
+          const job = {
+            id: ++paginationSerial, anchor, totalChars: total,
+            forward: pagesBetween(blocks, starts, anchor, Infinity), forwardPages: [], forwardOffsets: [], forwardDone: false,
+            before: anchor > 0 ? pagesBetween(blocks, starts, 0, anchor) : null, beforePages: [], beforeOffsets: [], beforeDone: anchor === 0
           };
-          // 文字已整段放進 el 且溢出時，二分搜尋最後一個仍在量測框內的字（只讀位置，不改 DOM）
-          const estimateFit = (el, chars, start) => {
-            const node = el.firstChild;
-            if (!node) return 0;
-            const box = measure.getBoundingClientRect();
-            const right = box.left + measure.clientWidth + 0.5, bottom = box.top + measure.clientHeight + 0.5;
-            const units = [0];
-            for (let i = start; i < chars.length; i++) units.push(units[units.length - 1] + chars[i].length);
-            const range = document.createRange();
-            const inside = (i) => {
-              range.setStart(node, units[i]); range.setEnd(node, units[i + 1]);
-              const r = range.getBoundingClientRect();
-              return r.bottom <= bottom && r.right <= right && r.left >= box.left - 0.5 && r.top >= box.top - 0.5;
-            };
-            let lo = 0, hi = chars.length - start;
-            while (lo < hi) { const mid = Math.ceil((lo + hi) / 2); if (inside(mid - 1)) lo = mid; else hi = mid - 1; }
-            return lo;
-          };
-          let current = '';
-          let offset = 0, pageStart = 0;
-          const pushPage = () => {
-            if (current) { pages.push(current); pageOffsets.push(pageStart); current = ''; pageStart = offset; }
-            measure.replaceChildren();
-          };
+          paginationJob = job;
+          // 閱讀位置的頁先排好（雙頁版型排兩頁）
+          const need = isSingle() ? 1 : 2;
+          while (job.forwardPages.length < need && pullPage(job, 'forward')) { /* 繼續 */ }
+          pages = job.forwardPages; pageOffsets = job.forwardOffsets;
+          pos = 0;
+          if (job.forwardDone && job.beforeDone) finalizePagination(job);
+          else schedulePaginationSlice(job.id);
+        }
 
-          for (const b of blocks) {
-            const chars = Array.from(b.text);
-            const html = b.type === 'title' ? titleHtml : pHtml;
-            let start = 0;
-            if (b.type === 'title' && current) {
-              const el = probe(b.type);
-              el.textContent = b.text;
-              const fitsHere = !overflows();
-              el.remove();
-              if (!fitsHere) pushPage();
-            }
-            while (start < chars.length) {
-              const rest = chars.slice(start).join('');
-              const el = probe(b.type);
-              el.textContent = rest;
-              if (!overflows()) {
-                current += html(rest); offset += chars.length - start; break;
-              }
-              // 找可容納的最長文字（無標點的單句與長標題也能跨頁）：先用字元位置估算，不必重排，
-              // 再逐字前後驗證到「再多一字就溢出」為止，結果與逐次二分搜尋相同。
-              let low = estimateFit(el, chars, start);
-              el.textContent = chars.slice(start, start + low).join('');
-              if (overflows()) {
-                // 估多了（多半是段落下邊距把最後一行擠出去）：在 0..low-1 二分搜尋
-                let lo = 0, hi = low - 1;
-                while (lo < hi) {
-                  const mid = Math.ceil((lo + hi) / 2);
-                  el.textContent = chars.slice(start, start + mid).join('');
-                  if (!overflows()) lo = mid; else hi = mid - 1;
-                }
-                low = lo;
-                el.textContent = chars.slice(start, start + low).join('');
-              } else {
-                while (start + low < chars.length) {
-                  el.textContent = chars.slice(start, start + low + 1).join('');
-                  if (overflows()) break;
-                  low++;
-                }
-              }
-              if (!low && current) { el.remove(); pushPage(); continue; }
-              const count = Math.max(1, low);
-              current += html(chars.slice(start, start + count).join(''));
-              offset += count; start += count;
-              pushPage();
-            }
-          }
-          pushPage();
-          if (pages.length === 0) { pages.push('<p class="book-empty">（沒有內容）</p>'); pageOffsets.push(0); }
-
-          pos = positionAtOffset(anchor);
-          clampPos();
+        // 背景排版中：上一頁／下一頁是否可按、頁碼顯示
+        function updatePaginationControls() {
+          const job = paginationJob;
+          if (!job) return;
+          prevBtn.disabled = pos <= 0 && job.anchor === 0;
+          nextBtn.disabled = pos + step() >= pages.length && job.forwardDone;
+          indicator.textContent = '排版中…';
+          numLeft.textContent = ''; numRight.textContent = ''; // 總頁數還沒算完
+          progressFill.style.width = (job.totalChars ? ((pageOffsets[pos] || 0) / job.totalChars) * 100 : 0) + '%';
         }
 
         function clampPos() {
@@ -14873,6 +14948,7 @@ ${currentOutline.slice(0, 1600)}
           progressFill.style.width = (total <= 1 ? 100 : (shownEnd / total) * 100) + '%';
           prevBtn.disabled = pos <= 0;
           nextBtn.disabled = pos + step() >= total;
+          updatePaginationControls();
           if (readerMode === 'scroll') {
             const fraction = scrollView.scrollTop / Math.max(1, scrollView.scrollHeight - scrollView.clientHeight);
             indicator.textContent = `連續閱讀 · ${Math.round(fraction * 100)}%`;
@@ -14885,6 +14961,7 @@ ${currentOutline.slice(0, 1600)}
 
         function go(dir) {
           if (!readerReady || animating) return;
+          if (paginationJob && ((dir < 0 && pos <= 0) || (dir > 0 && pos + step() >= pages.length))) { finishPagination(); render(); }
           const total = pages.length;
           const s = step();
           if (dir > 0 && pos + s >= total) return;
@@ -14970,6 +15047,9 @@ ${currentOutline.slice(0, 1600)}
           document.body.style.overflow = 'hidden';
           backgroundState = Array.from(document.body.children).filter(el => el !== overlay).map(el => [el, el.inert]);
           backgroundState.forEach(([el]) => { el.inert = true; });
+          // 閱讀器蓋住整個主頁時，主頁不必再排版與繪製（數萬字手稿也不會因捲軸消失重新排字）
+          readerScrollY = window.scrollY;
+          document.body.classList.add('book-reader-open');
           updateCharacterDesignStatus();
           overlay.classList.add('open');
           applyReaderMode();
@@ -14986,15 +15066,14 @@ ${currentOutline.slice(0, 1600)}
                 fontSize = Math.max(14, Math.min(28, saved.fontSize));
                 localStorage.setItem('bookFontSize', fontSize);
               }
-              paginate();
-              let resumed = false;
-              if (saved) {
+              const savedOffset = Number.isFinite(saved?.offset) && saved.offset > 0 ? saved.offset : 0;
+              paginate(savedOffset);
+              let resumed = savedOffset > 0;
+              if (saved && !Number.isFinite(saved.offset)) {
+                // 舊版紀錄只有頁碼比例，需要完整分頁才能換算
+                finishPagination();
                 const restored = restorePosFromProgress(saved);
-                if (restored > 0) {
-                  pos = restored;
-                  clampPos();
-                  resumed = true;
-                }
+                if (restored > 0) { pos = restored; clampPos(); resumed = true; }
               }
               readerReady = true;
               if (readerMode === 'scroll') restoreScrollAnchor(Number.isFinite(saved?.offset) ? saved.offset : (pageOffsets[pos] || 0));
@@ -15014,6 +15093,8 @@ ${currentOutline.slice(0, 1600)}
           saveBookProgress();
           readerReady = false;
           overlay.classList.remove('open');
+          document.body.classList.remove('book-reader-open');
+          if (Math.abs(window.scrollY - readerScrollY) > 2) window.scrollTo(0, readerScrollY);
           backgroundState.forEach(([el, inert]) => { el.inert = inert; });
           backgroundState = [];
           document.body.style.overflow = previousOverflow;
@@ -15022,6 +15103,7 @@ ${currentOutline.slice(0, 1600)}
 
         function resetToStart() {
           if (finishFlip) finishFlip();
+          finishPagination();
           pos = 0;
           if (readerMode === 'scroll') { scrollAnchor = 0; scrollView.scrollTop = 0; }
           clearBookProgress();

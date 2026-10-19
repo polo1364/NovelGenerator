@@ -210,3 +210,8 @@ html #bookReaderOverlay[data-reader-tone="dark"] { --reader-paper: #222a2b; --re
   #bookReaderOverlay .book-book { width: calc(100% - 112px) !important; }
   #bookReaderOverlay .book-page { padding-top: 26px; padding-bottom: 32px; }
 }
+
+/* 閱讀器開著時主頁被完全蓋住：跳過主頁的樣式、排版與繪製（保留上次大小，關閉後捲動位置不變） */
+/* contain-intrinsic-size 平時就設（可見時沒有作用），瀏覽器才會記住各區塊大小，隱藏時頁面高度不塌 */
+body > .container { contain-intrinsic-size: auto none; }
+body.book-reader-open > .container { content-visibility: hidden; }

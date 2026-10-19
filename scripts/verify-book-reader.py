@@ -58,6 +58,8 @@ def switch_book(page, title):
     page.locator('#bookDetailRead').click()
 
 def snapshot(page):
+    # 閱讀器先顯示目前頁、其餘頁在背景排版（指示列顯示「排版中…」）；等總頁數出來再檢查
+    page.wait_for_function("bookIndicator.textContent.includes('共')", timeout=15000)
     return page.evaluate(r'''() => ({indicator:bookIndicator.textContent,
       total:Number(bookIndicator.textContent.match(/共 (\d+)/)[1]),
       focusInside:bookReaderOverlay.contains(document.activeElement),
