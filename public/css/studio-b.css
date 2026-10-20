@@ -952,7 +952,10 @@ body.studio-b .relationship-panel { margin-top: 16px; padding-top: 14px; border-
 body.studio-b .relationship-panel .char-hint { margin: 0; }
 body.studio-b .relationship-list { display: grid; gap: 8px; }
 body.studio-b .relationship-list:empty::before { content: '尚未設定關係，點「+ 新增關係」開始'; color: var(--sb-mut); font-size: 13px; padding: 10px 0; }
-body.studio-b .relationship-row { display: grid; grid-template-columns: minmax(96px, 1fr) auto minmax(96px, 1fr) minmax(120px, 1.2fr) minmax(160px, 2fr) 40px; gap: 8px; align-items: center; }
+/* 第一行：人物 A ↔ 人物 B、關係、移除；第二行：張力與變化（AI 推導的說明較長，給整行寬度） */
+body.studio-b .relationship-row { display: grid; grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr) minmax(0, 1.2fr) 40px; gap: 8px; align-items: center; padding: 10px; border: 1px solid var(--sb-line); border-radius: 10px; }
+body.studio-b .relationship-row > .rel-note { grid-column: 1 / -1; }
+body.studio-b .relationship-row > .rel-remove { grid-column: -2; grid-row: 1; }
 body.studio-b .relationship-row select, body.studio-b .relationship-row input { min-height: 40px; min-width: 0; width: 100%; }
 /* 人物列以外的下拉輸入框（故事深度、人物關係）：箭頭要定位在輸入框內，不能蓋到其他按鈕 */
 body.studio-b :is(.relationship-row, .story-depth) .combo { position: relative; min-width: 0; display: flex; align-items: stretch; }

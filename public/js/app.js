@@ -6527,6 +6527,73 @@ ${getCharacterNamingRules(setting)}
         event.target.closest('.relationship-row').remove();
         saveSettingsToLocal();
       });
+      // AI 依人物資料推導關係：只能用現有人物，關係要從目標、秘密、人際、陣營推得出來，不隨機配對
+      const aiRelationshipsBtn = document.getElementById('aiRelationshipsBtn');
+      aiRelationshipsBtn?.addEventListener('click', async () => {
+        if (aiRelationshipsBtn.disabled) return;
+        const named = characterChoices().filter((choice, i) => charactersContainer.children[i].querySelector('.char-name').value.trim());
+        if (named.length < 2) {
+          showStatusInView('warning', '至少要有兩位已命名的人物，才能推導關係；可先用「AI 設計角色群」或手動填寫姓名。');
+          return;
+        }
+        if (readRelationships().length && !confirm('會用 AI 推導的結果取代目前的人物關係，確定嗎？')) return;
+        if (!confirmPeakPricing()) return;
+        if (!navigator.onLine) { showStatusInView('error', '📴 離線模式下無法使用 AI，請連接網路後再試'); return; }
+        const before = JSON.stringify(characterChoices());
+        aiRelationshipsBtn.disabled = true;
+        aiRelationshipsBtn.classList.add('ai-loading');
+        showStatusInView('loading', '✨ AI 正在依人物設定推導關係…');
+        try {
+          const cast = collectCharactersInfo().charactersInfo.replace(/人物關係表[\s\S]*?(?=人物行為約束|$)/, '');
+          const names = named.map(choice => choice.name);
+          const most = Math.min(names.length * (names.length - 1) / 2, Math.max(names.length + 2, 4), 10);
+          const prompt = `你是小說人物關係設計師。請依故事設定與人物資料，整理人物之間最重要的關係。
+規則：
+- 只能使用這些人物：${names.join('、')}；不可新增人物，姓名一字不差。
+- 關係必須從人物的目標、秘密、人際、陣營與成長方向推得出來，人物資料已寫到的關係要沿用，不可隨意配對或與資料矛盾。
+- 共 ${Math.min(names.length - 1, most)}–${most} 組，每位人物至少出現在一組；同一對人物只寫一次。
+- type：關係本身，2–8 字，例如：師徒、宿敵、青梅竹馬、合作但互相提防。
+- note：彼此的利益與衝突，以及關係可能怎麼轉變，30 字以內，要具體。
+
+【故事設定】
+${collectCharacterDesignSnapshot().text}
+
+【人物資料】
+${cast}
+只回傳 JSON 陣列，不要任何說明文字，格式：[{"a":"姓名","b":"姓名","type":"關係","note":"張力與變化"}]`;
+          const resp = await callDeepSeek(prompt, null, modelSelect.value, { retries: 1 });
+          const list = parseJsonFromText(resp);
+          if (JSON.stringify(characterChoices()) !== before) {
+            showStatusInView('warning', '人物已在等待期間變更，未套用過期的 AI 結果；沒有自動重試。');
+            return;
+          }
+          const idByName = new Map(named.map(choice => [choice.name, choice.id]));
+          const seen = new Set();
+          const relations = (Array.isArray(list) ? list : []).map(item => item && typeof item === 'object' ? {
+            a: idByName.get(String(item.a || '').trim()), b: idByName.get(String(item.b || '').trim()),
+            type: String(item.type || '').trim().slice(0, 20), note: String(item.note || '').trim().slice(0, 80)
+          } : null).filter(rel => {
+            if (!rel || !rel.a || !rel.b || rel.a === rel.b || !rel.type) return false;
+            const key = [rel.a, rel.b].sort().join('|');
+            if (seen.has(key)) return false;
+            seen.add(key);
+            return true;
+          });
+          if (!relations.length) {
+            showStatusInView('error', 'AI 回傳的關係無法對應到現有人物，未變更目前的關係；可稍後再試。');
+            return;
+          }
+          renderRelationships(relations);
+          saveSettingsToLocal();
+          showStatusInView('success', `✨ 已依人物設定推導 ${relations.length} 組關係，可自由微調`);
+        } catch (err) {
+          const msg = err && err.message ? err.message : String(err);
+          showStatusInView('error', 'AI 推導關係失敗：' + msg + (/尚未設定|DEEPSEEK_API_KEY|金鑰/.test(msg) ? '；請管理員設定 DEEPSEEK_API_KEY' : ''));
+        } finally {
+          aiRelationshipsBtn.disabled = false;
+          aiRelationshipsBtn.classList.remove('ai-loading');
+        }
+      });
       relationshipList?.addEventListener('change', () => saveSettingsToLocal());
       relationshipList?.addEventListener('input', debounce(saveSettingsToLocal, 500));
 
