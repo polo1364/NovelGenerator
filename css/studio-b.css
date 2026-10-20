@@ -384,10 +384,10 @@ body.studio-b #readingScene .output.vertical-writing {
 }
 body.studio-b #readingScene .output.vertical-writing .manuscript-chapter { padding: 0 var(--lh); }
 /* WebKit（iPhone、iPad、Mac Safari，含 iOS 上的 Chrome）：直排稿紙寬度隨全書長度增加（長篇可達數萬 px），
- * iPhone 畫不出橫跨整個寬度的漸層，欄框與欄間紙色會整片消失。改成一欄寬的小圖塊往左重複鋪，橫格線仍是一整張。 */
+ * iPhone 畫不出橫跨整個寬度的漸層，欄框與欄間紙色會整片消失。改成一欄寬的小圖塊往左重複鋪（含最下面的框線），橫格線仍是一整張。 */
 html.engine-webkit body.studio-b #readingScene .output.vertical-writing {
-  background-size: 100% 1px, 100% 28px, 100% 28px, 28px 100%, 28px 100%, var(--lh) calc(100% + 1px), 100% calc(100% + 1px), var(--lh) calc(100% + 1px), var(--lh) calc(100% + 1px);
-  background-repeat: no-repeat, no-repeat, no-repeat, no-repeat, no-repeat, repeat-x, no-repeat, repeat-x, repeat-x;
+  background-size: var(--lh) 1px, 100% 28px, 100% 28px, 28px 100%, 28px 100%, var(--lh) calc(100% + 1px), 100% calc(100% + 1px), var(--lh) calc(100% + 1px), var(--lh) calc(100% + 1px);
+  background-repeat: repeat-x, no-repeat, no-repeat, no-repeat, no-repeat, repeat-x, no-repeat, repeat-x, repeat-x;
 }
 
 /* ---------- 我的藏書：頁首 ---------- */
