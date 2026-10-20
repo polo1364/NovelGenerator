@@ -6,6 +6,8 @@
     (function(){
       var p=location.pathname.replace(/\\/g,'/');
       if(/\/NovelGenerator$/i.test(p)) location.replace(p+'/'+location.search+location.hash);
+      // WebKit 排版引擎（Safari、iPhone／iPad 上所有瀏覽器）：稿紙直排要修正字距位置
+      if(navigator.vendor==='Apple Computer, Inc.') document.documentElement.classList.add('engine-webkit');
     })();
     </script>
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
