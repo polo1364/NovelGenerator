@@ -12956,12 +12956,16 @@ ${chapterListTemplate}
           const hasSpecial = specialElementsContainer
             && specialElementsContainer.querySelectorAll('.special-element-item.selected').length > 0;
           const hasSeries = !!(storySeries && storySeries.totalVolumes > 1);
-          if (!hasFieldData && !hasCharData && !hasOutline && !hasSpecial && !hasSeries) {
+          const autoContinueEl = document.getElementById('autoContinueToggle');
+          const hasOptions = diversityModeSelect.value !== 'rich' || (autoContinueEl && !autoContinueEl.checked)
+            || !!document.getElementById('dramaComboToggle')?.checked || readRelationships().length > 0
+            || charactersContainer.children.length !== 2;
+          if (!hasFieldData && !hasCharData && !hasOutline && !hasSpecial && !hasSeries && !hasOptions) {
             showStatus('info', '目前沒有可清除的模組設定');
             setTimeout(hideStatus, 2000);
             return;
           }
-          if (!confirm('確定要清除目前的模組設定嗎？\n\n將重置主題、背景、風格、進階、篇幅、自訂規則、大綱預覽與特殊元素，並把人物清空為一位空白人物。\n\n人名清單不受影響（請至「📋 人名清單」手動刪除）。已生成的小說正文會保留。')) return;
+          if (!confirm('確定要清除目前的模組設定嗎？\n\n將所有設定恢復成剛開啟時的狀態：故事設定、進階設定（含創意幅度與隨機種子）、特殊元素與規則、大綱預覽，人物恢復為兩位空白人物、人物關係清空。\n\n人名清單不受影響（請至「📋 人名清單」手動刪除）。已生成的小說正文會保留。')) return;
           fields.forEach(el => { if (el) el.value = ''; });
           if (volEl) volEl.value = '1';
           quickTemplateSelect.value = '';
@@ -12977,16 +12981,32 @@ ${chapterListTemplate}
           seriesAborted = false;
           try { localStorage.removeItem('storySeries'); } catch (e) {}
           if (typeof renderSeriesBar === 'function') renderSeriesBar();
+          // 其餘選項回到剛開啟時的預設值
+          diversityModeSelect.value = 'rich';
+          randomSeedInput.value = createLocalRandomSeed();
+          if (autoContinueEl) autoContinueEl.checked = true;
+          // 特殊元素視窗：沿用各控制項自己的事件，關閉戲劇化、清空搜尋與分類、更新已選數量
+          const dramaToggleEl = document.getElementById('dramaComboToggle');
+          if (dramaToggleEl?.checked) { dramaToggleEl.checked = false; dramaToggleEl.dispatchEvent(new Event('change')); }
+          const searchEl = document.getElementById('elementSearch');
+          if (searchEl) { searchEl.value = ''; searchEl.dispatchEvent(new Event('input')); }
+          const categoryEl = document.getElementById('categoryJumpSelect');
+          if (categoryEl) { categoryEl.value = 'all'; categoryEl.dispatchEvent(new Event('change')); }
+          document.getElementById('clearElementsBtn')?.click();
           coreElementIds.clear();
           renderRelationships([]);
           charactersContainer.innerHTML = '';
+          addCharacterRow(false);
           addCharacterRow(false);
           renderCharacterTabs();
           setActiveCharacter(0);
           updateCoreElementBar();
           saveSettingsToLocal();
           if (typeof updateStepper === 'function') updateStepper();
-          showStatus('success', '已清除模組設定與大綱預覽（小說正文已保留）');
+          endingSelect.dispatchEvent(new Event('change', { bubbles: true }));
+          updatePerChapterHint();
+          if (typeof updateWorkspaceSummary === 'function') updateWorkspaceSummary();
+          showStatus('success', '已將所有設定恢復成初始狀態（小說正文與人名清單已保留）');
           setTimeout(hideStatus, 2000);
         });
       }
