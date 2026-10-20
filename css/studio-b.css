@@ -613,6 +613,10 @@ body.studio-b .container > header .desk-tube-light .tube-body { width: 100%; hei
 body.studio-b #stepSetup > .workspace-setup-launchers { grid-row: 1; }
 body.studio-b #stepSetup > .workspace-config-summary { grid-row: 2; }
 body.studio-b #stepSetup > .primary-actions, body.studio-b #stepSetup > .editorial-workspace { grid-row: 3; }
+/* 手機只有一欄：兩塊不能同在第 3 列（會疊在一起，預覽大綱被控制台蓋住），改照順序往下排 */
+@media (max-width: 900px) {
+  body.studio-b #stepSetup > .primary-actions, body.studio-b #stepSetup > .editorial-workspace { grid-row: auto; }
+}
 /* 卡片已經顯示摘要，重複的明細區不顯示（元素保留給程式使用） */
 body.studio-b #stepSetup #workspaceConfigSummary { display: none; }
 
